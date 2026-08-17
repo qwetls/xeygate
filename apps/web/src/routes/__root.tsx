@@ -24,7 +24,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
                     <AppSidebar />
                     <SidebarInset className="h-svh overflow-hidden">
                         <Topbar />
-                        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
+                        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6 bg-grid-pattern">
                             <Outlet />
                         </main>
                     </SidebarInset>

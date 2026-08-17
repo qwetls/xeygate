@@ -27,6 +27,7 @@ import { LoggingSettings } from "@/components/settings/LoggingSettings";
 import { PlaygroundSettings } from "@/components/settings/PlaygroundSettings";
 import { DataSettings } from "@/components/settings/DataSettings";
 import { SystemSettings } from "@/components/settings/SystemSettings";
+import { SettingsSkeleton } from "@/components/skeletons";
 
 export const Route = createFileRoute("/settings")({
     staticData: { title: "Settings" },
@@ -59,10 +60,11 @@ function SettingsPage() {
     const [activeTab, setActiveTab] = useState<SettingsTab>("security");
 
     // Fetch server settings from /v1/settings
-    const { data: serverSettings } = useQuery<ServerSettingsResponse>({
-        queryKey: ["server_settings"],
-        queryFn: () => api.get<ServerSettingsResponse>("/v1/settings")
-    });
+    const { data: serverSettings, isPending: isLoadingServerSettings } =
+        useQuery<ServerSettingsResponse>({
+            queryKey: ["server_settings"],
+            queryFn: () => api.get<ServerSettingsResponse>("/v1/settings")
+        });
 
     const [requireApiKey, setRequireApiKey] = useState<boolean>(false);
 
@@ -109,18 +111,22 @@ function SettingsPage() {
         { id: "system", label: "System Diagnostics", icon: Cpu, hasBadge: hasUpdate }
     ];
 
+    if (isLoadingServerSettings) {
+        return <SettingsSkeleton />;
+    }
+
     return (
         <div className="mx-auto w-full max-w-5xl flex flex-col gap-6 font-mono">
             {/* Header */}
-            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/70 pb-5">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h1 className="text-xl font-bold tracking-tight text-foreground">
+            <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end border-b border-border/80 pb-5">
+                <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
+                        Control Plane
+                    </p>
+                    <div className="flex items-center gap-2 flex-wrap mt-1.5">
+                        <h1 className="text-2xl font-bold tracking-tight text-foreground">
                             Settings & Operations
                         </h1>
-                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold border border-border bg-muted/50 text-muted-foreground">
-                            Preferences
-                        </span>
                         {hasUpdate && latestVersion && (
                             <button
                                 type="button"
@@ -132,21 +138,21 @@ function SettingsPage() {
                             </button>
                         )}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="mt-1 max-w-2xl text-xs text-muted-foreground leading-relaxed">
                         Manage gateway routing rules, authentication requirements, telemetry
                         logging, and UI preferences.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
                         onClick={exportSettings}
-                        className="font-semibold cursor-pointer shadow-2xs"
+                        className="h-8 text-xs font-medium cursor-pointer gap-1.5 border-border/80 bg-card hover:bg-secondary/60 transition-colors shadow-2xs"
                     >
-                        <Download className="size-3.5" />
+                        <Download className="size-3.5 text-muted-foreground" />
                         <span>Export Config</span>
                     </Button>
                     <Button
@@ -154,7 +160,7 @@ function SettingsPage() {
                         variant="outline"
                         size="sm"
                         onClick={resetToDefaults}
-                        className="font-semibold text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 cursor-pointer shadow-2xs"
+                        className="h-8 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border-border/80 bg-card transition-colors cursor-pointer shadow-2xs gap-1.5"
                     >
                         <RotateCcw className="size-3.5" />
                         <span>Reset</span>

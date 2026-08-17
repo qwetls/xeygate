@@ -14,9 +14,10 @@ import {
     Zap
 } from "lucide-react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
+import { QuotaSkeleton } from "@/components/skeletons";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ProviderIcon } from "@/components/ProviderIcon";
+import { cn } from "@/lib/utils";
 import { useQuota } from "@/hooks/useQuota";
 import type { LiveModelQuotaItem, ProviderUsageMetric } from "@srouter/types";
 
@@ -189,17 +190,7 @@ function QuotaPage() {
         }
     };
 
-    if (isLoading) {
-        return (
-            <div className="mx-auto w-full max-w-6xl space-y-6 font-mono">
-                <Skeleton className="h-8 w-48 rounded-[6px]" />
-                <Skeleton className="h-28 rounded-[12px]" />
-                <Skeleton className="h-64 rounded-[12px]" />
-            </div>
-        );
-    }
-
-    if (error || !data) {
+    if (error || (!data && !isLoading)) {
         return (
             <div className="mx-auto w-full max-w-6xl space-y-4 font-mono">
                 <div className="rounded-[12px] border border-rose-500/30 bg-rose-500/10 p-6 text-xs text-rose-500 space-y-2">
@@ -219,7 +210,7 @@ function QuotaPage() {
         );
     }
 
-    const allProviders = data.providers ?? [];
+    const allProviders = data?.providers ?? [];
     // Only display provider cards that actually have live quotas or recorded usage metrics
     const activeProviders = allProviders.filter(
         (p) => (p.quotas && p.quotas.length > 0) || (p.usageMetrics && p.usageMetrics.length > 0)
@@ -260,29 +251,30 @@ function QuotaPage() {
 
     const isSpinning = isFetching || isManualRefreshing;
 
+    if (isLoading) {
+        return <QuotaSkeleton />;
+    }
+
     return (
         <div className="mx-auto w-full max-w-6xl flex flex-col gap-6 font-mono">
-            {/* Header Section */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[var(--line)] pb-5">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h1 className="text-xl font-bold tracking-tight text-[var(--ink)]">
-                            Quotas & Limits
-                        </h1>
-                        <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Live Tracking
-                        </span>
-                    </div>
-                    <p className="text-xs text-[var(--ink-3)]">
+            {/* Editorial Header Section */}
+            <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end border-b border-border/80 pb-5">
+                <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
+                        Capacity & Usage
+                    </p>
+                    <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
+                        Quotas & Limits
+                    </h1>
+                    <p className="mt-1 max-w-2xl text-xs text-muted-foreground leading-relaxed">
                         Upstream provider rate limits, live token quotas, and per-account usage
                         consumption.
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex shrink-0 items-center gap-2">
                     {/* Last updated timestamp */}
-                    <span className="text-[10.5px] text-[var(--ink-3)] hidden md:inline-block">
+                    <span className="hidden xl:inline-block text-[10.5px] text-muted-foreground mr-1">
                         Updated{" "}
                         {lastUpdated.toLocaleTimeString([], {
                             hour: "2-digit",
@@ -292,50 +284,57 @@ function QuotaPage() {
                     </span>
 
                     {activeProviders.length > 0 && (
-                        <button
+                        <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
                             onClick={toggleAll}
-                            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--field)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition-colors cursor-pointer shadow-2xs"
+                            className="h-8 text-xs font-medium cursor-pointer gap-1.5 border-border/80 bg-card hover:bg-secondary/60 transition-colors shadow-2xs"
                             title={
                                 isAllCollapsed ? "Expand all providers" : "Collapse all providers"
                             }
                         >
                             {isAllCollapsed ? (
                                 <>
-                                    <ChevronsUpDown className="size-3.5" />
+                                    <ChevronsUpDown className="size-3.5 text-muted-foreground" />
                                     <span>Expand All</span>
                                 </>
                             ) : (
                                 <>
-                                    <ChevronsDownUp className="size-3.5" />
+                                    <ChevronsDownUp className="size-3.5 text-muted-foreground" />
                                     <span>Collapse All</span>
                                 </>
                             )}
-                        </button>
+                        </Button>
                     )}
 
-                    <button
+                    <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => void handleRefresh()}
                         disabled={isSpinning}
-                        className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--line)] bg-[var(--surface)] hover:bg-[var(--field)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] transition-colors cursor-pointer disabled:opacity-50 shadow-2xs active:scale-[0.98]"
+                        className="h-8 text-xs font-medium cursor-pointer gap-1.5 border-border/80 bg-card hover:bg-secondary/60 transition-colors shadow-2xs"
                         title="Refresh live quota and usage stats"
                     >
                         <RefreshCw
-                            className={`size-3.5 ${isSpinning ? "animate-spin text-amber-500" : ""}`}
+                            className={`size-3.5 ${isSpinning ? "animate-spin text-amber-500" : "text-muted-foreground"}`}
                         />
-                        <span>{isSpinning ? "Refreshing..." : "Refresh"}</span>
-                    </button>
+                        <span>{isSpinning ? "Refreshing…" : "Refresh"}</span>
+                    </Button>
 
                     <Link
                         to="/providers"
-                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--ink)] text-[var(--canvas)] hover:opacity-90 px-3.5 py-1.5 text-xs font-semibold shadow-xs transition-transform active:scale-[0.98] cursor-pointer"
+                        className={cn(
+                            buttonVariants({ size: "sm" }),
+                            "h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+                        )}
                     >
                         <Plus className="size-3.5" />
                         <span>Add Provider</span>
                     </Link>
                 </div>
-            </div>
+            </header>
 
             {/* Bento Metrics 4-Card Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

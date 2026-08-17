@@ -11,7 +11,6 @@ import {
     Search,
     X
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProviderIcon } from "@/components/ProviderIcon";
@@ -23,40 +22,12 @@ import { ConnectionCard } from "@/components/providers/ConnectionCard";
 import { ConnectionForm, type ConnectionFormInput } from "@/components/providers/ConnectionForm";
 import { ProviderModelCard } from "@/components/providers/ProviderModelCard";
 import { ProviderModelTable } from "@/components/providers/ProviderModelTable";
+import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
 
 export const Route = createFileRoute("/providers/$providerId")({
     component: ProviderDetailPage
 });
-
-function ProviderDetailSkeleton() {
-    return (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 font-mono animate-in fade-in-50 duration-300">
-            <Skeleton className="h-4 w-40" />
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
-                <div className="flex items-center gap-3">
-                    <Skeleton className="size-12 rounded-xl" />
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Skeleton className="h-6 w-36" />
-                            <Skeleton className="h-5 w-24 rounded-full" />
-                        </div>
-                        <Skeleton className="h-3 w-48" />
-                    </div>
-                </div>
-                <Skeleton className="h-8 w-32 rounded-md" />
-            </div>
-            <Skeleton className="h-44 rounded-xl" />
-            <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton className="h-8 w-60 rounded-md" />
-                </div>
-                <Skeleton className="h-80 rounded-xl" />
-            </div>
-        </div>
-    );
-}
 
 function ProviderDetailPage() {
     const { providerId } = Route.useParams();
@@ -139,35 +110,49 @@ function ProviderDetailPage() {
         });
     };
 
-    if (isLoading) {
-        return <ProviderDetailSkeleton />;
-    }
-
-    if (error || !provider) {
-        return (
-            <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 font-mono">
-                <Link
-                    to="/providers"
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                >
-                    <ArrowLeft className="size-3.5" />
-                    <span>Back to Providers Catalog</span>
-                </Link>
-                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-6 text-xs text-destructive space-y-2">
-                    <p className="font-bold text-sm">Provider '{providerId}' not found.</p>
-                    <p className="text-muted-foreground">
-                        {error instanceof Error
-                            ? error.message
-                            : "Provider definition missing in gateway registry."}
-                    </p>
+    if (isLoading || !provider) {
+        if (!provider && error) {
+            return (
+                <div className="mx-auto flex w-full max-w-7xl flex-col font-mono">
+                    <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-destructive/30 bg-destructive/5 px-6 py-14 text-center">
+                        <div className="flex size-10 items-center justify-center rounded-full bg-destructive/10 text-destructive mb-3.5">
+                            <AlertTriangle className="size-5" strokeWidth={1.75} />
+                        </div>
+                        <h2 className="text-sm font-bold text-foreground">Provider not found</h2>
+                        <p className="mt-1 max-w-md text-xs text-muted-foreground leading-relaxed">
+                            {error instanceof Error
+                                ? error.message
+                                : `Unable to find driver configuration for "${providerId}".`}
+                        </p>
+                        <div className="mt-4 flex items-center gap-2">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs cursor-pointer"
+                                onClick={() => void refetch()}
+                            >
+                                Retry
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                className="h-8 text-xs cursor-pointer"
+                                render={<Link to="/providers" />}
+                            >
+                                Back to Catalog
+                            </Button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        }
+        return <ProviderDetailSkeleton />;
     }
 
     const connections = provider.connections ?? [];
     const activeConnectionsCount = connections.filter((c) => c.enabled).length;
-    const activeModels = provider.models.filter((m) => !deletedModelIds.includes(m.id));
+    const activeModels = (provider.models ?? []).filter((m) => !deletedModelIds.includes(m.id));
     const filteredModels = activeModels.filter((m) =>
         m.id.toLowerCase().includes(modelSearch.toLowerCase())
     );

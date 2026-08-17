@@ -5,7 +5,7 @@ import { Search } from "lucide-react";
 import { api } from "@/lib/api";
 import type { RequestLogEntry } from "@srouter/types";
 import type { ListResponse } from "@/lib/types";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LogsSkeleton } from "@/components/skeletons";
 import { useLogs } from "@/hooks/useLogs";
 import { LogTable } from "@/components/logs/LogTable";
 import { LogDetailSheet } from "@/components/logs/LogDetailSheet";
@@ -27,33 +27,34 @@ function LogsPage() {
     const filter = useLogs(logs);
 
     if (isLoading) {
-        return (
-            <div className="space-y-6">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-96 rounded-xl" />
-            </div>
-        );
+        return <LogsSkeleton />;
     }
 
     if (error || !data) {
         return (
-            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-                Gagal memuat log aktivitas:{" "}
+            <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive font-mono">
+                Failed to load audit stream:{" "}
                 {error instanceof Error ? error.message : "Unknown error"}
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col gap-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                    Request Audit Logs
-                </h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                    Riwayat 100 request API gateway terbaru beserta token usage & latency.
-                </p>
-            </div>
+        <div className="flex flex-col gap-6 font-mono">
+            {/* Header */}
+            <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end border-b border-border/80 pb-5">
+                <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
+                        Observability & Auditing
+                    </p>
+                    <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
+                        Request Audit Logs
+                    </h1>
+                    <p className="mt-1 max-w-2xl text-xs text-muted-foreground leading-relaxed">
+                        Recent 100 API gateway requests with token usage and latency telemetry.
+                    </p>
+                </div>
+            </header>
 
             {/* Filter Toolbar */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-border/60 pb-4">
@@ -108,7 +109,7 @@ function LogsPage() {
 
             {filter.filteredLogs.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border/60 bg-secondary/10 p-12 text-center text-xs text-muted-foreground">
-                    Tidak ada log request yang cocok dengan filter saat ini.
+                    No matching audit logs for current filter.
                 </div>
             ) : (
                 <LogTable logs={filter.filteredLogs} onSelect={setSelectedLog} />

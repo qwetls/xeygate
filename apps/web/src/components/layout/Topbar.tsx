@@ -1,5 +1,5 @@
 import { useMatches } from "@tanstack/react-router";
-import { LogOut, Moon, Sun } from "lucide-react";
+import { LogOut, Moon, Sun, Terminal } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "@/context/Theme";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,6 @@ export function Topbar() {
             await api.post<void>("/v1/admin/logout");
             window.location.reload();
         } catch {
-            // An expired session should still return the user to the login screen.
             window.location.reload();
         } finally {
             setIsLoggingOut(false);
@@ -31,34 +30,58 @@ export function Topbar() {
     }
 
     return (
-        <header className="sticky top-0 z-30 flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 border-b border-border/70 bg-background px-3 sm:px-4">
-            <div className="flex min-w-0 items-center gap-3">
-                <SidebarTrigger className="size-7 rounded-none text-muted-foreground outline-offset-0 hover:bg-transparent hover:text-foreground focus-visible:ring-1" />
-                <h1 className="truncate text-xs font-semibold text-foreground">{title}</h1>
+        <header className="sticky top-0 z-30 flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-3 sm:px-5 backdrop-blur-md font-mono">
+            {/* Left: Sidebar toggle + Tactical Breadcrumb */}
+            <div className="flex min-w-0 items-center gap-2.5 sm:gap-3.5">
+                <SidebarTrigger className="size-7 rounded-md text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring cursor-pointer" />
+
+                <div className="flex items-center gap-1.5 text-xs">
+                    <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                        <Terminal className="size-3 text-muted-foreground/60" />
+                        <span>SROUTER</span>
+                        <span className="text-muted-foreground/40">/</span>
+                    </span>
+                    <span className="font-bold text-foreground text-xs tracking-tight">
+                        {title}
+                    </span>
+                </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-1">
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={(event) => toggleTheme(event)}
-                    aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-                    className="rounded-none text-muted-foreground hover:bg-transparent hover:text-foreground"
-                >
-                    {theme === "dark" ? <Sun /> : <Moon />}
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => void handleLogout()}
-                    disabled={isLoggingOut}
-                    aria-label="Sign out"
-                    className="rounded-none text-muted-foreground hover:bg-transparent hover:text-foreground"
-                >
-                    <LogOut />
-                </Button>
+            {/* Right: Live Telemetry Status + Actions */}
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                {/* Controls */}
+                <div className="flex items-center gap-1">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={(event) => toggleTheme(event)}
+                        aria-label={
+                            theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+                        }
+                        className="size-8 rounded-md text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground cursor-pointer"
+                        title={theme === "dark" ? "Light theme" : "Dark theme"}
+                    >
+                        {theme === "dark" ? (
+                            <Sun className="size-3.5" strokeWidth={1.75} />
+                        ) : (
+                            <Moon className="size-3.5" strokeWidth={1.75} />
+                        )}
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => void handleLogout()}
+                        disabled={isLoggingOut}
+                        aria-label="Sign out"
+                        className="size-8 rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                        title="Sign out of control plane"
+                    >
+                        <LogOut className="size-3.5" strokeWidth={1.75} />
+                    </Button>
+                </div>
             </div>
         </header>
     );

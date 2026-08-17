@@ -40,6 +40,7 @@ export function useCatalog() {
     });
 
     const liveData = query.data;
+    const isLoading = query.isPending || !liveData;
 
     const allProviders = useMemo(() => {
         // Base list from static known providers
@@ -81,7 +82,8 @@ export function useCatalog() {
         [allProviders, filter, normalizedSearch]
     );
 
-    const syntheticCatalogSummary: CatalogSummary = useMemo(() => {
+    const syntheticCatalogSummary: CatalogSummary | undefined = useMemo(() => {
+        if (!liveData) return undefined;
         const categories: Record<string, ProviderDefinition[]> = {
             oauth: allProviders.filter((p) => p.category === "oauth"),
             api_key: allProviders.filter((p) => p.category === "api_key"),
@@ -92,15 +94,19 @@ export function useCatalog() {
             total: allProviders.length,
             categories: categories as CatalogSummary["categories"]
         };
-    }, [allProviders]);
+    }, [liveData, allProviders]);
 
     const summaryItems = useMemo(
-        () => buildSummaryItems(syntheticCatalogSummary, allProviders),
+        () =>
+            syntheticCatalogSummary ? buildSummaryItems(syntheticCatalogSummary, allProviders) : [],
         [syntheticCatalogSummary, allProviders]
     );
 
     const filterOptions = useMemo(
-        () => buildFilterOptions(syntheticCatalogSummary, allProviders),
+        () =>
+            syntheticCatalogSummary
+                ? buildFilterOptions(syntheticCatalogSummary, allProviders)
+                : [],
         [syntheticCatalogSummary, allProviders]
     );
 
@@ -108,6 +114,8 @@ export function useCatalog() {
 
     return {
         ...query,
+        isLoading,
+        isPending: isLoading,
         data: syntheticCatalogSummary,
         allProviders,
         filter,

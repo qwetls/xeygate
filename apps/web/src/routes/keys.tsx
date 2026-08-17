@@ -4,7 +4,7 @@ import { Plus } from "lucide-react";
 import { useKeys } from "@/hooks/useKeys";
 import type { DBAPIKey } from "@srouter/types";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { KeysSkeleton } from "@/components/skeletons";
 
 import { KeyMetrics } from "@/components/keys/KeyMetrics";
 import { KeyTable } from "@/components/keys/KeyTable";
@@ -16,31 +16,6 @@ export const Route = createFileRoute("/keys")({
     staticData: { title: "API Keys" },
     component: KeysPage
 });
-
-function KeysSkeleton() {
-    return (
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                <div>
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="mt-3 h-7 w-48" />
-                    <Skeleton className="mt-2 h-4 w-72 max-w-full" />
-                </div>
-                <Skeleton className="h-9 w-32 rounded-lg" />
-            </div>
-
-            <div className="grid grid-cols-1 border-y border-border/70 sm:grid-cols-2 [&>*+*]:border-t sm:[&>*+*]:border-t-0 sm:[&>*+*]:border-l sm:[&>*+*]:border-border/70">
-                {Array.from({ length: 2 }).map((_, i) => (
-                    <div key={i} className="py-4 sm:px-4 sm:first:pl-0 sm:last:pr-0">
-                        <Skeleton className="h-20 rounded-lg" />
-                    </div>
-                ))}
-            </div>
-
-            <Skeleton className="h-80 rounded-xl" />
-        </div>
-    );
-}
 
 function KeysPage() {
     const {
@@ -85,7 +60,7 @@ function KeysPage() {
     return (
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
             {/* Header */}
-            <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end border-b border-border/80 pb-5">
                 <div className="min-w-0">
                     <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                         Access Control
