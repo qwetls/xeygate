@@ -8,7 +8,6 @@ import type {
     FallbackRule,
     ToolCall
 } from "@srouter/types";
-import { isAutoModel } from "@srouter/providers";
 import { registry } from "@/services/registry.js";
 import { ensureFreshToken } from "@/services/tokenRefresh.js";
 import { executeInterceptedSearch, shouldInterceptToolCall } from "@/services/toolInterceptor.js";
@@ -96,9 +95,6 @@ export class ChatLogic {
                 await ensureFreshToken(providerId);
                 const response = await registry.chatCompletion(currentReq);
 
-                const isAuto = isAutoModel(currentModel);
-                const resolvedModel = isAuto ? response.model || currentModel : undefined;
-
                 if (isFallbackAttempt) {
                     fallbackOccurred = true;
                     fallbackPath.push(currentModel);
@@ -140,15 +136,14 @@ export class ChatLogic {
 
                 const latencyMs = Date.now() - startTime;
                 const breakdown = extractUsageBreakdown(providerId, response.usage);
-                const effectiveModel = resolvedModel || currentModel;
+                const effectiveModel = currentModel;
                 const effectiveProvider = effectiveModel.includes("/")
                     ? effectiveModel.split("/")[0]!
                     : providerId;
 
                 logRequestDB({
-                    providerId: isAuto ? effectiveProvider : providerId,
+                    providerId,
                     model: currentModel,
-                    resolvedModel,
                     promptTokens: breakdown.promptTokens,
                     completionTokens: breakdown.completionTokens,
                     totalTokens: breakdown.totalTokens,
@@ -237,8 +232,6 @@ export class ChatLogic {
             const currentReq: ChatCompletionRequest = { ...body, model: currentModel };
             const providerId = currentModel.split("/")[0] || "default";
 
-            const isAuto = isAutoModel(currentModel);
-            let resolvedModel: string | undefined = undefined;
             let yieldedAny = false;
             let usage: unknown = null;
 
@@ -254,17 +247,10 @@ export class ChatLogic {
                 for await (const chunk of generator) {
                     if (!yieldedAny) {
                         yieldedAny = true;
-                        if (isAuto && chunk.model) {
-                            resolvedModel = chunk.model;
-                        }
                         if (isFallbackAttempt) {
                             fallbackOccurred = true;
                             fallbackPath.push(currentModel);
                         }
-                    }
-
-                    if (isAuto && chunk.model && !resolvedModel) {
-                        resolvedModel = chunk.model;
                     }
 
                     if (chunk.usage) {
@@ -352,15 +338,14 @@ export class ChatLogic {
                 }
 
                 const breakdown = extractUsageBreakdown(providerId, usage);
-                const effectiveModel = resolvedModel || currentModel;
+                const effectiveModel = currentModel;
                 const effectiveProvider = effectiveModel.includes("/")
                     ? effectiveModel.split("/")[0]!
                     : providerId;
 
                 logRequestDB({
-                    providerId: isAuto ? effectiveProvider : providerId,
+                    providerId,
                     model: currentModel,
-                    resolvedModel,
                     promptTokens: breakdown.promptTokens,
                     completionTokens: breakdown.completionTokens,
                     totalTokens: breakdown.totalTokens,

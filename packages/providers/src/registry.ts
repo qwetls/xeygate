@@ -29,50 +29,6 @@ function stripModelPrefix(modelId: string, alias: string, providerId: string): s
     return modelId;
 }
 
-export function isAutoModel(modelId: string): boolean {
-    return (
-        modelId === "auto" ||
-        modelId === "srouter/auto" ||
-        modelId === "srouter/smart" ||
-        modelId.startsWith("auto/")
-    );
-}
-
-const PREFERRED_MODEL_PATTERNS: RegExp[] = [
-    /claude-opus-4-6/i,
-    /claude-sonnet-4-6/i,
-    /claude-3-7-sonnet/i,
-    /claude-3-5-sonnet/i,
-    /gemini-3\.7-flash/i,
-    /gemini-3\.6-flash/i,
-    /gemini-3\.5-flash/i,
-    /gemini-3\.1-pro/i,
-    /gpt-4o/i,
-    /o3-mini/i,
-    /o1/i,
-    /gpt-oss-120b/i,
-    /gemini-2\.5-pro/i,
-    /gemini-2\.5-flash/i,
-    /deepseek-r1/i,
-    /deepseek-v3/i,
-    /claude-3-5-haiku/i,
-    /gemini-2\.0-flash/i
-];
-
-function scoreModelRank(modelId: string): number {
-    for (let i = 0; i < PREFERRED_MODEL_PATTERNS.length; i++) {
-        if (PREFERRED_MODEL_PATTERNS[i]!.test(modelId)) {
-            return i;
-        }
-    }
-    return PREFERRED_MODEL_PATTERNS.length;
-}
-
-export interface AutoCandidateTarget {
-    provider: AIProvider;
-    modelId: string;
-}
-
 interface CachedProviderModels {
     models: ModelObject[];
     cachedAt: number;
@@ -379,87 +335,7 @@ export class ProviderRegistry {
         return catalog;
     }
 
-    async getAutoCandidates(): Promise<AutoCandidateTarget[]> {
-        const activeProviders = Array.from(this.providers.values()).filter(
-            (p) => p.id !== "default"
-        );
-
-        if (activeProviders.length === 0) {
-            if (this.defaultProvider.id !== "default") {
-                return [{ provider: this.defaultProvider, modelId: "default" }];
-            }
-            throw new Error(
-                `No active provider connection found for "srouter/auto". Please connect a provider account in the Providers tab (e.g. Claude, OpenAI, Antigravity, Qoder).`
-            );
-        }
-
-        const modelLists = await Promise.all(
-            activeProviders.map(async (provider) => {
-                const models = await this.getProviderModels(provider);
-                return { provider, models };
-            })
-        );
-
-        const targets: AutoCandidateTarget[] = [];
-        for (const { provider, models } of modelLists) {
-            for (const m of models) {
-                targets.push({ provider, modelId: m.id });
-            }
-        }
-
-        if (targets.length === 0) {
-            for (const provider of activeProviders) {
-                targets.push({ provider, modelId: provider.id });
-            }
-        }
-
-        // Sort candidates:
-        // 1. Healthy circuit breaker state first
-        // 2. High-capability model quality ranking
-        const now = Date.now();
-        targets.sort((a, b) => {
-            const aHealth = this.circuitBreaker.getHealth(a.provider.id);
-            const bHealth = this.circuitBreaker.getHealth(b.provider.id);
-
-            const aIsHealthy = aHealth.state === "healthy" ? 1 : 0;
-            const bIsHealthy = bHealth.state === "healthy" ? 1 : 0;
-
-            if (aIsHealthy !== bIsHealthy) {
-                return bIsHealthy - aIsHealthy;
-            }
-
-            const aRank = scoreModelRank(a.modelId);
-            const bRank = scoreModelRank(b.modelId);
-            if (aRank !== bRank) {
-                return aRank - bRank;
-            }
-
-            if (!aIsHealthy) {
-                const aRemaining = Math.max(0, (aHealth.cooldownUntil ?? now) - now);
-                const bRemaining = Math.max(0, (bHealth.cooldownUntil ?? now) - now);
-                return aRemaining - bRemaining;
-            }
-
-            return 0;
-        });
-
-        return targets;
-    }
-
     async getCandidateProvidersForModel(modelId: string): Promise<AIProvider[]> {
-        if (isAutoModel(modelId)) {
-            const autoCandidates = await this.getAutoCandidates();
-            const seen = new Set<string>();
-            const unique: AIProvider[] = [];
-            for (const { provider } of autoCandidates) {
-                if (!seen.has(provider.id)) {
-                    seen.add(provider.id);
-                    unique.push(provider);
-                }
-            }
-            return unique;
-        }
-
         const candidates: AIProvider[] = [];
 
         // 1. Direct match from registered providers' listModels() (cached)
@@ -526,10 +402,6 @@ export class ProviderRegistry {
     }
 
     async getProviderForModel(modelId: string): Promise<AIProvider> {
-        if (isAutoModel(modelId)) {
-            const autoCandidates = await this.getAutoCandidates();
-            return autoCandidates[0]?.provider ?? this.defaultProvider;
-        }
         const candidates = await this.getCandidateProvidersForModel(modelId);
         return candidates[0] ?? this.defaultProvider;
     }
@@ -547,13 +419,6 @@ export class ProviderRegistry {
                 seenIds.add(id);
                 allModels.push({ id, object: "model", owned_by: alias });
             }
-        }
-
-        if (allModels.length > 0) {
-            allModels.unshift(
-                { id: "srouter/auto", object: "model", owned_by: "srouter" },
-                { id: "auto", object: "model", owned_by: "srouter" }
-            );
         }
 
         return allModels;
@@ -607,34 +472,6 @@ export class ProviderRegistry {
     }
 
     async chatCompletion(req: ChatCompletionRequest): Promise<ChatCompletionResponse> {
-        if (isAutoModel(req.model)) {
-            const autoCandidates = await this.getAutoCandidates();
-            let lastError: unknown = null;
-            for (let i = 0; i < autoCandidates.length; i++) {
-                const { provider, modelId } = autoCandidates[i]!;
-                try {
-                    const targetReq: ChatCompletionRequest = { ...req, model: modelId };
-                    const response = await provider.chatCompletion(targetReq);
-                    this.circuitBreaker.recordSuccess(provider.id);
-                    if (
-                        !response.model ||
-                        response.model === "default" ||
-                        isAutoModel(response.model)
-                    ) {
-                        response.model = modelId;
-                    }
-                    return response;
-                } catch (err) {
-                    lastError = err;
-                    this.circuitBreaker.recordFailure(provider.id, err);
-                    if (i < autoCandidates.length - 1) {
-                        continue;
-                    }
-                }
-            }
-            throw lastError;
-        }
-
         const candidates = await this.getCandidateProvidersForModel(req.model);
         let lastError: unknown = null;
 
@@ -659,43 +496,6 @@ export class ProviderRegistry {
     async *chatCompletionStream(
         req: ChatCompletionRequest
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
-        if (isAutoModel(req.model)) {
-            const autoCandidates = await this.getAutoCandidates();
-            let lastError: unknown = null;
-            for (let i = 0; i < autoCandidates.length; i++) {
-                const { provider, modelId } = autoCandidates[i]!;
-                let yieldedAny = false;
-                try {
-                    const targetReq: ChatCompletionRequest = { ...req, model: modelId };
-                    const stream = provider.chatCompletionStream(targetReq);
-                    for await (const chunk of stream) {
-                        if (!yieldedAny) {
-                            yieldedAny = true;
-                            this.circuitBreaker.recordSuccess(provider.id);
-                        }
-                        if (
-                            chunk &&
-                            (!chunk.model || chunk.model === "default" || isAutoModel(chunk.model))
-                        ) {
-                            chunk.model = modelId;
-                        }
-                        yield chunk;
-                    }
-                    if (yieldedAny) {
-                        return;
-                    }
-                } catch (err) {
-                    lastError = err;
-                    this.circuitBreaker.recordFailure(provider.id, err);
-                    if (yieldedAny || i === autoCandidates.length - 1) {
-                        throw err;
-                    }
-                }
-            }
-            if (lastError) throw lastError;
-            return;
-        }
-
         const candidates = await this.getCandidateProvidersForModel(req.model);
         let lastError: unknown = null;
 

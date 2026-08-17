@@ -137,11 +137,6 @@ export function LogTable({ logs, onSelect }: LogTableProps) {
                 },
                 cell: ({ row }) => {
                     const model = row.original.model;
-                    const isAuto =
-                        model === "auto" ||
-                        model === "srouter/auto" ||
-                        model === "srouter/smart" ||
-                        model.startsWith("auto/");
                     const resolved = row.original.resolvedModel;
 
                     return (
@@ -150,11 +145,6 @@ export function LogTable({ logs, onSelect }: LogTableProps) {
                                 <span className="font-mono text-xs font-semibold text-foreground truncate block">
                                     {model}
                                 </span>
-                                {isAuto && (
-                                    <span className="shrink-0 inline-flex items-center rounded px-1 py-0.2 text-[9px] font-mono font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                                        Auto
-                                    </span>
-                                )}
                                 {row.original.fallbackOccurred && (
                                     <span className="shrink-0 inline-flex items-center rounded px-1 py-0.2 text-[9px] font-mono font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
                                         Fallback
