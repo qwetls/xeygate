@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Key, X, Eye, EyeOff } from "lucide-react";
+import { Key, X, Eye, EyeOff, Loader2, Plug, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
+import type { ProviderProtocol } from "@srouter/types";
 import {
     Dialog,
     DialogContent,
@@ -7,6 +9,7 @@ import {
     DialogTitle,
     DialogDescription
 } from "@/components/ui/dialog";
+import { api } from "@/lib/api";
 
 export interface ConnectionFormInput {
     name?: string;
@@ -14,10 +17,19 @@ export interface ConnectionFormInput {
     apiKey: string;
 }
 
+type VerifyResponse = {
+    success: boolean;
+    message: string;
+    modelsCount?: number;
+};
+
+type VerifyStatus = "idle" | "testing" | "success" | "error";
+
 interface ConnectionFormProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     providerName: string;
+    protocol: ProviderProtocol;
     defaultBaseUrl?: string;
     isSaving: boolean;
     error?: string | null;
@@ -28,6 +40,7 @@ export function ConnectionForm({
     open,
     onOpenChange,
     providerName,
+    protocol,
     defaultBaseUrl,
     isSaving,
     error,
@@ -36,20 +49,56 @@ export function ConnectionForm({
     const [apiKey, setApiKey] = useState("");
     const [showKey, setShowKey] = useState(false);
     const [formError, setFormError] = useState("");
+    const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>("idle");
 
     useEffect(() => {
         if (open) {
             setApiKey("");
             setShowKey(false);
             setFormError("");
+            setVerifyStatus("idle");
         }
     }, [open]);
+
+    const handleTest = async () => {
+        const trimmedKey = apiKey.trim();
+        if (!trimmedKey) {
+            setFormError("API key is required");
+            return;
+        }
+
+        setFormError("");
+        setVerifyStatus("testing");
+        try {
+            const res = await api.post<VerifyResponse>("/v1/providers/verify", {
+                protocol,
+                baseUrl: defaultBaseUrl || undefined,
+                apiKey: trimmedKey
+            });
+            if (res.success) {
+                setVerifyStatus("success");
+                toast.success(res.message || "API key valid.");
+            } else {
+                setVerifyStatus("error");
+                toast.error(res.message || "API key test failed.");
+            }
+        } catch (err) {
+            setVerifyStatus("error");
+            toast.error(err instanceof Error ? err.message : "Gagal menguji koneksi API key.");
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const trimmedKey = apiKey.trim();
         if (!trimmedKey) {
             setFormError("API key is required");
+            return;
+        }
+        // Enforce a successful test before saving.
+        if (verifyStatus !== "success") {
+            setFormError("Test the API key first — it must pass before saving.");
+            toast.error("Test the API key first — it must pass before saving.");
             return;
         }
 
@@ -62,6 +111,7 @@ export function ConnectionForm({
     };
 
     const displayError = error || formError;
+    const canSave = verifyStatus === "success" && !isSaving;
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -93,7 +143,7 @@ export function ConnectionForm({
                     <DialogTitle className="sr-only">Add API Key for {providerName}</DialogTitle>
                     <DialogDescription className="text-xs text-[var(--ink-3)]">
                         Masukkan API Key / Access Token untuk menghubungkan {providerName} ke
-                        SRouter.
+                        SRouter, lalu uji koneksinya sebelum menyimpan.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -120,6 +170,10 @@ export function ConnectionForm({
                                 onChange={(e) => {
                                     setApiKey(e.target.value);
                                     if (formError) setFormError("");
+                                    // Any edit invalidates a prior test result.
+                                    if (verifyStatus !== "idle") {
+                                        setVerifyStatus("idle");
+                                    }
                                 }}
                                 autoFocus
                                 required
@@ -140,6 +194,35 @@ export function ConnectionForm({
                         </div>
                     </div>
 
+                    {/* Test connection row */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => void handleTest()}
+                            disabled={verifyStatus === "testing" || !apiKey.trim() || isSaving}
+                            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--line)] px-3 py-1.5 text-xs font-semibold text-[var(--ink)] hover:bg-[var(--field)] disabled:opacity-50 transition-colors cursor-pointer"
+                        >
+                            {verifyStatus === "testing" ? (
+                                <>
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                    Testing…
+                                </>
+                            ) : (
+                                <>
+                                    <Plug className="size-3.5" />
+                                    Test Connection
+                                </>
+                            )}
+                        </button>
+
+                        {verifyStatus === "success" && (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-500">
+                                <CheckCircle2 className="size-3.5" />
+                                Verified
+                            </span>
+                        )}
+                    </div>
+
                     <div className="pt-3 border-t border-[var(--line)] flex items-center justify-end gap-2">
                         <button
                             type="button"
@@ -150,8 +233,13 @@ export function ConnectionForm({
                         </button>
                         <button
                             type="submit"
-                            disabled={isSaving || !apiKey.trim()}
-                            className="rounded-[6px] bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 text-xs font-bold disabled:opacity-50 transition-all cursor-pointer shadow-xs"
+                            disabled={!canSave}
+                            title={
+                                verifyStatus === "success"
+                                    ? undefined
+                                    : "Test the API key successfully before saving"
+                            }
+                            className="rounded-[6px] bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer shadow-xs"
                         >
                             {isSaving ? "Saving…" : "Save API Key"}
                         </button>

@@ -401,6 +401,7 @@ function ProviderDetailPage() {
                 open={isAddOpen}
                 onOpenChange={setIsAddOpen}
                 providerName={provider.name}
+                protocol={provider.protocol}
                 defaultBaseUrl={provider.defaultBaseUrl}
                 isSaving={addMutation.isPending}
                 error={formError}
