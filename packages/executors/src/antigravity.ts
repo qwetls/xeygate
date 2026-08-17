@@ -149,6 +149,7 @@ export class AntigravityExecutor implements AIProvider {
         if (
             !this.baseUrl ||
             this.baseUrl.includes("generativelanguage.googleapis.com") ||
+            this.baseUrl.includes("cloudcode-pa.googleapis.com") ||
             this.baseUrl === ANTIGRAVITY_BASE_URL
         ) {
             return ANTIGRAVITY_IDE_BASE_URL;
@@ -230,6 +231,43 @@ export class AntigravityExecutor implements AIProvider {
         return { url, body: envelope };
     }
 
+    private async ensureProjectId(): Promise<string> {
+        if (
+            this.projectId &&
+            !this.projectId.includes("-core-") &&
+            !this.projectId.includes("-flow-")
+        ) {
+            return this.projectId;
+        }
+        const token = this.getToken();
+        if (token && token.startsWith("ya29.")) {
+            try {
+                const res = await fetch(
+                    "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
+                    {
+                        method: "POST",
+                        headers: this.getHeaders(),
+                        body: JSON.stringify({})
+                    }
+                );
+                if (res.ok) {
+                    const data = (await res.json()) as {
+                        cloudaicompanionProject?: string;
+                        projectId?: string;
+                    };
+                    const fetchedProject = data.cloudaicompanionProject || data.projectId;
+                    if (fetchedProject) {
+                        this.projectId = fetchedProject;
+                        return fetchedProject;
+                    }
+                }
+            } catch {
+                // fall back to default
+            }
+        }
+        return this.projectId;
+    }
+
     async chatCompletion(req: ChatCompletionRequest): Promise<ChatCompletionResponse> {
         const isLocalProxy = this.isLocalProxy();
         const isApiKey = this.isApiKey();
@@ -258,6 +296,7 @@ export class AntigravityExecutor implements AIProvider {
             return;
         }
 
+        await this.ensureProjectId();
         const { url, body } = this.buildRequest(req.model, req, true);
         const streamUrl = url.includes("?") ? url : `${url}?alt=sse`;
         const res = await fetchWithRetry(streamUrl, body, this.getHeaders());

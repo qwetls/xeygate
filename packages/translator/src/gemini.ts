@@ -413,6 +413,33 @@ function ensureObjectType(obj: unknown): void {
     for (const v of Object.values(o)) if (v && typeof v === "object") ensureObjectType(v);
 }
 
+/**
+ * Google's GenerateContentRequest rejects `type: "array"` schemas without `items`
+ * ("properties[x].items: missing field"). Client tool schemas frequently omit it,
+ * so synthesize one: reuse prefixItems/contains when present, else a string item.
+ */
+function ensureArrayItems(obj: unknown): void {
+    if (!obj || typeof obj !== "object") return;
+    if (Array.isArray(obj)) {
+        for (const item of obj) ensureArrayItems(item);
+        return;
+    }
+    const o = obj as Record<string, unknown>;
+    const type = typeof o.type === "string" ? o.type.toLowerCase() : undefined;
+    if (type === "array" && (!o.items || typeof o.items !== "object")) {
+        const prefix = Array.isArray(o.prefixItems)
+            ? (o.prefixItems as unknown[]).find((s) => s && typeof s === "object")
+            : undefined;
+        const fallback =
+            prefix ?? (o.contains && typeof o.contains === "object" ? o.contains : undefined);
+        o.items = fallback ? structuredClone(fallback) : { type: "string" };
+    }
+    delete o.prefixItems;
+    for (const value of Object.values(o)) {
+        if (value && typeof value === "object") ensureArrayItems(value);
+    }
+}
+
 function cleanupRequired(obj: unknown): void {
     if (!obj || typeof obj !== "object") return;
     const o = obj as Record<string, unknown>;
@@ -472,6 +499,7 @@ export function cleanJSONSchemaForAntigravity(schema: unknown): unknown {
     flattenAnyOfOneOf(cleaned);
     flattenTypeArrays(cleaned);
     ensureObjectType(cleaned);
+    ensureArrayItems(cleaned);
     removeUnsupportedKeywords(cleaned, UNSUPPORTED_SCHEMA_CONSTRAINTS);
     cleanupRequired(cleaned);
     addPlaceholders(cleaned);
@@ -725,9 +753,31 @@ export function parseImageConfig(model: string): Record<string, string> {
     return config;
 }
 
-// Strip any {alias}/ or {providerId}/ prefix — keep the real model id
+// Strip any {alias}/ or {providerId}/ prefix and map to Google CloudCode internal model names
 export function parseAntigravityModelName(rawModel: string): string {
-    return rawModel.includes("/") ? (rawModel.split("/")[1] ?? rawModel) : rawModel;
+    const model = rawModel.includes("/") ? (rawModel.split("/")[1] ?? rawModel) : rawModel;
+    if (model === "gemini-3.7-flash-high") {
+        return "gemini-3.7-flash-tiered";
+    }
+    if (model === "gemini-3.7-flash-medium") {
+        return "gemini-3.7-flash-tiered";
+    }
+    if (model === "gemini-3.7-flash-low") {
+        return "gemini-3.7-flash-tiered";
+    }
+    if (model === "gemini-3.5-flash-high") {
+        return "gemini-3-flash-agent";
+    }
+    if (model === "gemini-3.1-pro-high") {
+        return "gemini-pro-agent";
+    }
+    if (model === "gemini-3.5-flash-medium") {
+        return "gemini-3.5-flash-low";
+    }
+    if (model === "gemini-3.5-flash-low") {
+        return "gemini-3.5-flash-extra-low";
+    }
+    return model;
 }
 
 /**
