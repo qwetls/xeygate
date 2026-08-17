@@ -208,7 +208,7 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
         name: "Google Antigravity",
         category: "oauth",
         protocol: "openai",
-        baseUrl: ANTIGRAVITY_BASE_URL,
+        baseUrl: ANTIGRAVITY_IDE_BASE_URL,
         websiteUrl: "https://ai.google.dev",
         requiresApiKey: false,
         requiresOAuth: true,

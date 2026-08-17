@@ -145,6 +145,17 @@ export class AntigravityExecutor implements AIProvider {
         return [];
     }
 
+    private getAntigravityBaseUrl(): string {
+        if (
+            !this.baseUrl ||
+            this.baseUrl.includes("generativelanguage.googleapis.com") ||
+            this.baseUrl === ANTIGRAVITY_BASE_URL
+        ) {
+            return ANTIGRAVITY_IDE_BASE_URL;
+        }
+        return this.baseUrl.replace(/\/openai$/, "").replace(/\/$/, "");
+    }
+
     /**
      * Build the Antigravity request envelope + sanitized request body.
      * Port of 9router transformRequest (standard agent request path).
@@ -154,7 +165,7 @@ export class AntigravityExecutor implements AIProvider {
         req: ChatCompletionRequest,
         stream: boolean
     ): { url: string; body: Record<string, unknown> } {
-        const cleanBaseUrl = this.baseUrl.replace(/\/openai$/, "");
+        const cleanBaseUrl = this.getAntigravityBaseUrl();
         const modelName = parseAntigravityModelName(model);
 
         // Build contents (with tool support)
