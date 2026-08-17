@@ -1,4 +1,8 @@
-import { ANTIGRAVITY_BASE_URL, ANTIGRAVITY_IDE_BASE_URL } from "@srouter/constants";
+import {
+    ANTIGRAVITY_BASE_URL,
+    ANTIGRAVITY_IDE_BASE_URL,
+    ANTIGRAVITY_MODELS
+} from "@srouter/constants";
 import type {
     AIProvider,
     ChatCompletionChunk,
@@ -128,83 +132,16 @@ export class AntigravityExecutor implements AIProvider {
             return await this.openaiFallback.listModels();
         }
 
-        // 2. Native Gemini models endpoint
-        const cleanBaseUrl = this.baseUrl.replace(/\/openai$/, "");
-        const baseId = this.id.split("_")[0]?.split("-")[0] ?? this.id;
-        const models: ModelObject[] = [];
-        const seenIds = new Set<string>();
-
-        const pushModel = (rawId: string): void => {
-            const id = rawId.replace(/^models\//, "");
-            if (seenIds.has(id)) return;
-            seenIds.add(id);
-            models.push({
-                id,
-                object: "model",
+        // 2. Return the official Antigravity exposed models
+        if (token) {
+            return ANTIGRAVITY_MODELS.map((m) => ({
+                id: m.id,
+                object: "model" as const,
                 created: Math.floor(Date.now() / 1000),
                 owned_by: "antigravity"
-            });
-            if (!id.startsWith(`${baseId}/`)) {
-                models.push({
-                    id: `${baseId}/${id}`,
-                    object: "model",
-                    created: Math.floor(Date.now() / 1000),
-                    owned_by: "antigravity"
-                });
-            }
-        };
-
-        try {
-            const res = await fetch(`${cleanBaseUrl}/models`, {
-                method: "GET",
-                headers: this.getHeaders()
-            });
-            if (res.ok) {
-                const json = (await res.json()) as { models?: Array<{ name?: string }> };
-                if (json.models && Array.isArray(json.models)) {
-                    for (const m of json.models) {
-                        if (m.name) pushModel(m.name);
-                    }
-                    if (models.length > 0) return models;
-                }
-            }
-        } catch {
-            // fall through to CloudCode attempt
+            }));
         }
 
-        // 3. ya29 OAuth token: CloudCode fetchAvailableModels
-        if (token.startsWith("ya29.")) {
-            try {
-                const res = await fetch(
-                    "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
-                    {
-                        method: "POST",
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                            "Content-Type": "application/json",
-                            "User-Agent": ANTIGRAVITY_IDE_USER_AGENT,
-                            "x-goog-api-client": "gl-node/18.0.0 gd/1.0.0"
-                        },
-                        body: JSON.stringify({})
-                    }
-                );
-                if (res.ok) {
-                    const data = (await res.json()) as {
-                        models?: Record<string, { displayName?: string }>;
-                    };
-                    if (data.models && Object.keys(data.models).length > 0) {
-                        for (const modelId of Object.keys(data.models)) {
-                            pushModel(modelId);
-                        }
-                        return models;
-                    }
-                }
-            } catch {
-                // no models available
-            }
-        }
-
-        // 4. Never return hardcoded models — provider could not verify its model list
         return [];
     }
 

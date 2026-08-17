@@ -39,11 +39,18 @@ export function isAutoModel(modelId: string): boolean {
 }
 
 const PREFERRED_MODEL_PATTERNS: RegExp[] = [
+    /claude-opus-4-6/i,
+    /claude-sonnet-4-6/i,
     /claude-3-7-sonnet/i,
     /claude-3-5-sonnet/i,
+    /gemini-3\.7-flash/i,
+    /gemini-3\.6-flash/i,
+    /gemini-3\.5-flash/i,
+    /gemini-3\.1-pro/i,
     /gpt-4o/i,
     /o3-mini/i,
     /o1/i,
+    /gpt-oss-120b/i,
     /gemini-2\.5-pro/i,
     /gemini-2\.5-flash/i,
     /deepseek-r1/i,
