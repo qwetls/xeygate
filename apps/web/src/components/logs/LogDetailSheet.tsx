@@ -67,6 +67,46 @@ export function LogDetailSheet({ log, onClose }: LogDetailSheetProps) {
                                 </div>
                             </div>
 
+                            {log.resolvedModel && log.resolvedModel !== log.model && (
+                                <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-3 space-y-1.5">
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-400">
+                                        <span>⚡ Smart Auto-Routing Target</span>
+                                    </div>
+                                    <div className="text-[11px] font-mono text-foreground">
+                                        <span className="text-muted-foreground">Requested: </span>
+                                        {log.model}
+                                    </div>
+                                    <div className="text-[11px] font-mono text-foreground">
+                                        <span className="text-muted-foreground">
+                                            Dispatched To:{" "}
+                                        </span>
+                                        <span className="text-indigo-300 font-semibold">
+                                            {log.resolvedModel}
+                                        </span>
+                                    </div>
+                                </div>
+                            )}
+
+                            {log.fallbackOccurred && (
+                                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5">
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500">
+                                        <span>⚡ Smart Fallback Activated</span>
+                                    </div>
+                                    {log.fallbackPath && (
+                                        <div className="text-[11px] font-mono text-foreground">
+                                            <span className="text-muted-foreground">Path: </span>
+                                            {log.fallbackPath}
+                                        </div>
+                                    )}
+                                    {log.fallbackReason && (
+                                        <div className="text-[11px] text-muted-foreground">
+                                            <span className="text-muted-foreground">Trigger: </span>
+                                            {log.fallbackReason}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             <div className="rounded-lg border border-border/60 bg-card p-3 space-y-2">
                                 <span className="font-semibold text-foreground block">
                                     Token Usage Breakdown

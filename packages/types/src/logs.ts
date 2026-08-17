@@ -12,6 +12,10 @@ export interface RequestLogEntry {
     cacheCreationTokens?: number;
     reasoningTokens?: number;
     estimatedCost?: number;
+    fallbackOccurred?: boolean;
+    fallbackPath?: string;
+    fallbackReason?: string;
+    resolvedModel?: string;
     createdAt: number;
 }
 
