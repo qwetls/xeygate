@@ -66,8 +66,8 @@ test("Pricing resolution across different provider prefixes", () => {
         "commandcode/deepseek/deepseek-v4-flash:free"
     );
 
-    assert.equal(directPrice.input, 0.14);
-    assert.equal(directPrice.output, 0.28);
+    assert.equal(directPrice.input, 0.44);
+    assert.equal(directPrice.output, 1.32);
 
     // All variations resolve to the exact same price
     assert.deepEqual(deepseekPrefixPrice, directPrice);
@@ -93,6 +93,27 @@ test("Alias pricing resolution", () => {
     const opusCommandCode = getPricingForModel("commandcode", "commandcode/claude-opus-5");
     assert.deepEqual(opusAlias, opusCanonical);
     assert.deepEqual(opusCommandCode, opusCanonical);
+
+    const gptProPrice = getPricingForModel(undefined, "gpt-5.5-pro");
+    assert.equal(gptProPrice.input, 30.0);
+    assert.equal(gptProPrice.output, 180.0);
+
+    const gptNanoPrice = getPricingForModel(undefined, "gpt-5.4-nano");
+    assert.equal(gptNanoPrice.input, 0.2);
+    assert.equal(gptNanoPrice.output, 1.25);
+    assert.equal(gptNanoPrice.cached, 0.02);
+
+    const llamaAlias = getPricingForModel(undefined, "meta-llama/Llama-3.3-70B-Instruct");
+    assert.equal(llamaAlias.input, 0.13);
+    assert.equal(llamaAlias.output, 0.4);
+
+    const mistralAlias = getPricingForModel(undefined, "mistral");
+    assert.equal(mistralAlias.input, 2.0);
+    assert.equal(mistralAlias.output, 6.0);
+
+    const r1Alias = getPricingForModel(undefined, "deepseek-ai/DeepSeek-R1");
+    assert.equal(r1Alias.input, 0.55);
+    assert.equal(r1Alias.output, 2.19);
 });
 
 test("Unknown model fallback to DEFAULT_PRICING", () => {
