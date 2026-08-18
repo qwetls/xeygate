@@ -14,6 +14,7 @@ import {
     antigravityAuthHandler,
     bluesMindsAuthHandler,
     claudeAuthHandler,
+    codeBuddyAuthHandler,
     commandCodeAuthHandler,
     goRouterAuthHandler,
     openaiCodexAuthHandler,
@@ -272,6 +273,11 @@ export class AuthLogic {
     // TabiToken (API key)
     public static processTabiTokenTokenImport(params: TokenImportParams): ProviderConfig {
         return processTokenImportFor(tabiTokenAuthHandler, params);
+    }
+
+    // CodeBuddy (API key / token)
+    public static processCodeBuddyTokenImport(params: TokenImportParams): ProviderConfig {
+        return processTokenImportFor(codeBuddyAuthHandler, params);
     }
 
     // Qoder OAuth & Token Import

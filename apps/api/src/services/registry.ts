@@ -1,5 +1,6 @@
 import {
     BLUESMINDS_BASE_URL,
+    CODEBUDDY_BASE_URL,
     DEFAULT_PROVIDERS,
     GOROUTER_BASE_URL,
     isProviderBaseId,
@@ -14,6 +15,7 @@ import {
     AntigravityExecutor,
     AnthropicExecutor,
     BluesMindsExecutor,
+    CodeBuddyExecutor,
     CodexExecutor,
     CommandCodeExecutor,
     GoRouterExecutor,
@@ -87,6 +89,17 @@ export function loadSavedProvidersFromDB(): void {
                         accessToken: p.accessToken,
                         refreshToken: p.refreshToken,
                         providerSpecificData: p.providerSpecificData
+                    })
+                );
+                break;
+            case isProviderBaseId(p.id, "codebuddy"):
+                registry.registerProvider(
+                    new CodeBuddyExecutor({
+                        id: p.id || p.providerId,
+                        name: p.name,
+                        baseUrl: baseUrl || CODEBUDDY_BASE_URL,
+                        apiKey: p.apiKey,
+                        accessToken: p.accessToken
                     })
                 );
                 break;

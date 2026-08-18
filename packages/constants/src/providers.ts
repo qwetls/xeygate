@@ -15,6 +15,32 @@ export const CODEX_BASE_URL = "https://chatgpt.com/backend-api/codex/responses";
 export const CODEX_MODELS_URL = "https://chatgpt.com/backend-api/codex/models";
 export const ANTIGRAVITY_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 export const ANTIGRAVITY_IDE_BASE_URL = "https://daily-cloudcode-pa.googleapis.com";
+export const CODEBUDDY_BASE_URL = "https://www.codebuddy.ai/v2/chat/completions";
+
+export interface CodeBuddyModelDefinition {
+    id: string;
+    name: string;
+}
+
+export const CODEBUDDY_MODELS: CodeBuddyModelDefinition[] = [
+    { id: "glm-5.2", name: "GLM-5.2" },
+    { id: "glm-5.1", name: "GLM-5.1" },
+    { id: "glm-5.0", name: "GLM-5.0" },
+    { id: "glm-5.0-turbo", name: "GLM-5.0-Turbo" },
+    { id: "glm-5v-turbo", name: "GLM-5v-Turbo" },
+    { id: "glm-4.7", name: "GLM-4.7" },
+    { id: "minimax-m3", name: "MiniMax-M3" },
+    { id: "minimax-m2.7", name: "MiniMax-M2.7" },
+    { id: "kimi-k2.7", name: "Kimi-K2.7-Code" },
+    { id: "kimi-k2.6", name: "Kimi-K2.6" },
+    { id: "kimi-k2.5", name: "Kimi-K2.5" },
+    { id: "hy3-preview", name: "Hy3 Preview" },
+    { id: "deepseek-v4-pro", name: "DeepSeek-V4-Pro" },
+    { id: "deepseek-v4-flash", name: "DeepSeek-V4-Flash" },
+    { id: "deepseek-v3-2-volc", name: "DeepSeek-V3.2" }
+];
+
+export const CODEBUDDY_MODEL_IDS: string[] = CODEBUDDY_MODELS.map((m) => m.id);
 
 export interface AntigravityModelDefinition {
     id: string;
@@ -237,6 +263,18 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
         requiresOAuth: true,
         supportsCustomUrl: true,
         statusMessage: "Qoder token or session missing"
+    },
+    {
+        id: "codebuddy",
+        name: "CodeBuddy",
+        category: "api_key",
+        protocol: "openai",
+        alias: "codebuddy",
+        baseUrl: CODEBUDDY_BASE_URL,
+        websiteUrl: "https://www.codebuddy.ai",
+        requiresApiKey: true,
+        supportsCustomUrl: true,
+        statusMessage: "CodeBuddy API key or token missing"
     }
 ];
 
@@ -279,6 +317,7 @@ export function providerAlias(baseId: string): string {
  */
 export function providerTypeForAlias(alias: string): string | null {
     if (alias === "claude") return "claude";
+    if (alias === "cbai") return "codebuddy";
     const provider = KNOWN_PROVIDERS.find((p) => p.alias === alias || p.id === alias);
     return provider ? provider.id : null;
 }

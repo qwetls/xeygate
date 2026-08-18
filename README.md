@@ -190,6 +190,7 @@ SRouter supports a wide range of official and community AI providers out of the 
 | **SeekAI**                 | Bearer API Key       | `seekai/*`       |       ✅        |            ✅             |      ✅      |
 | **TabiToken**              | Bearer API Key       | `tabitoken/*`    |       ✅        |            ✅             |      ✅      |
 | **Command Code**           | Bearer API Key       | `commandcode/*`  |       ✅        |            ✅             |      ✅      |
+| **CodeBuddy**              | Bearer API Key       | `codebuddy/*`    |       ✅        |            ✅             |      ✅      |
 | **Custom Endpoints**       | Custom Bearer / URL  | `custom/*`       |       ✅        |       Configurable        | Configurable |
 
 ---

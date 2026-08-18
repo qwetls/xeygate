@@ -5,6 +5,7 @@ import {
     antigravityAuthHandler,
     bluesMindsAuthHandler,
     claudeAuthHandler,
+    codeBuddyAuthHandler,
     commandCodeAuthHandler,
     goRouterAuthHandler,
     openaiCodexAuthHandler,
@@ -299,6 +300,15 @@ export class AuthController {
         return importTokenFor(
             tabiTokenAuthHandler,
             (b) => AuthLogic.processTabiTokenTokenImport(b),
+            c
+        );
+    }
+
+    // CodeBuddy Provider (API key / token)
+    public static async importCodeBuddyToken(c: Context): Promise<Response> {
+        return importTokenFor(
+            codeBuddyAuthHandler,
+            (b) => AuthLogic.processCodeBuddyTokenImport(b),
             c
         );
     }

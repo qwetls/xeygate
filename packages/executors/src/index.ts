@@ -2,6 +2,7 @@ export * from "./anthropic.js";
 export * from "./antigravity.js";
 export * from "./base.js";
 export * from "./bluesminds.js";
+export * from "./codebuddy.js";
 export * from "./codex.js";
 export * from "./kiro.js";
 export * from "./commandcode.js";

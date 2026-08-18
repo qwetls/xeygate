@@ -8,6 +8,7 @@ export const handleOAuthCallback = AuthController.handleOAuthCallback;
 export const handleAntigravityOAuthCallback = AuthController.handleAntigravityOAuthCallback;
 export const handleClaudeOAuthCallback = AuthController.handleClaudeOAuthCallback;
 export const handleCommandCodeTokenImport = AuthController.importCommandCodeToken;
+export const handleCodeBuddyTokenImport = AuthController.importCodeBuddyToken;
 export const handleQoderOAuthCallback = AuthController.handleQoderOAuthCallback;
 
 // --- OpenAI OAuth ---
@@ -75,6 +76,11 @@ authRoute.post("/auth/seekai/import-token", adminAuth, AuthController.importSeek
 // 1. POST /v1/auth/tabitoken/token & POST /v1/auth/tabitoken/import-token
 authRoute.post("/auth/tabitoken/token", adminAuth, AuthController.importTabiTokenToken);
 authRoute.post("/auth/tabitoken/import-token", adminAuth, AuthController.importTabiTokenToken);
+
+// --- CodeBuddy Provider (API key / token) ---
+// 1. POST /v1/auth/codebuddy/token & POST /v1/auth/codebuddy/import-token
+authRoute.post("/auth/codebuddy/token", adminAuth, AuthController.importCodeBuddyToken);
+authRoute.post("/auth/codebuddy/import-token", adminAuth, AuthController.importCodeBuddyToken);
 
 // --- Qoder Provider (OAuth & PAT) ---
 // 1. GET /v1/auth/qoder/login - Initiate Qoder OAuth PKCE Login Flow

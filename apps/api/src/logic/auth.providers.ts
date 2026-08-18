@@ -4,6 +4,7 @@ import {
     ANTIGRAVITY_OAUTH_REDIRECT_URI,
     ANTHROPIC_BASE_URL,
     BLUESMINDS_BASE_URL,
+    CODEBUDDY_BASE_URL,
     CODEX_OAUTH_CLIENT_ID,
     CODEX_OAUTH_REDIRECT_URI,
     COMMANDCODE_BASE_URL,
@@ -15,6 +16,7 @@ import {
     AntigravityExecutor,
     AnthropicExecutor,
     BluesMindsExecutor,
+    CodeBuddyExecutor,
     CodexExecutor,
     CommandCodeExecutor,
     GoRouterExecutor,
@@ -345,6 +347,25 @@ export const tabiTokenAuthHandler: AuthProviderHandler = {
         new TabiTokenExecutor({ id, name, baseUrl: baseUrl || TABITOKEN_BASE_URL, apiKey })
 };
 
+export const codeBuddyAuthHandler: AuthProviderHandler = {
+    providerId: "codebuddy",
+    displayName: "CodeBuddy",
+    category: "api_key",
+    protocol: "openai",
+    idPrefix: "codebuddy",
+    baseUrl: () => CODEBUDDY_BASE_URL,
+    oauthSuccessMessage: "",
+    tokenImportMessage:
+        "CodeBuddy API Key / Token registered and saved directly to SQLite database!",
+    mapImportTokens: (params) => ({
+        apiKey: params.accessToken,
+        refreshToken: params.refreshToken,
+        baseUrl: params.baseUrl
+    }),
+    buildExecutor: ({ id, name, baseUrl, apiKey }) =>
+        new CodeBuddyExecutor({ id, name, baseUrl: baseUrl || CODEBUDDY_BASE_URL, apiKey })
+};
+
 export const authProviderHandlers: Record<string, AuthProviderHandler> = {
     openai_codex: openaiCodexAuthHandler,
     antigravity: antigravityAuthHandler,
@@ -355,5 +376,6 @@ export const authProviderHandlers: Record<string, AuthProviderHandler> = {
     gorouter: goRouterAuthHandler,
     bluesminds: bluesMindsAuthHandler,
     seekai: seekAIAuthHandler,
-    tabitoken: tabiTokenAuthHandler
+    tabitoken: tabiTokenAuthHandler,
+    codebuddy: codeBuddyAuthHandler
 };
