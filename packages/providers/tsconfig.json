@@ -8,11 +8,6 @@
         "skipLibCheck": true,
         "declaration": true,
         "types": ["node"],
-        "baseUrl": ".",
-        "paths": {
-            "@srouter/types": ["../types/src/index.ts"],
-            "@srouter/constants": ["../constants/src/index.ts"]
-        },
         "rootDir": "./src",
         "outDir": "./dist"
     },
