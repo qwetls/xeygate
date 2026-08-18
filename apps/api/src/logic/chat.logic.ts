@@ -45,8 +45,15 @@ function shouldTriggerFallback(rule: FallbackRule, err: unknown): boolean {
     const status = extractStatusCode(err);
     if (status && rule.triggerOnStatus.includes(status)) return true;
     const msg = err instanceof Error ? err.message : String(err);
-    if (/rate\s*limit|too\s+many\s+requests|quota|exhausted|capacity|high\s+traffic/i.test(msg)) {
-        return rule.triggerOnStatus.includes(429) || rule.triggerOnStatus.includes(403);
+    if (
+        /rate\s*limit|too\s+many\s+requests|quota|exhausted|capacity|high\s+traffic|overloaded|no active provider connection|not found|unknown model|invalid model|no provider found/i.test(
+            msg
+        )
+    ) {
+        return true;
+    }
+    if (status === undefined) {
+        return true;
     }
     return false;
 }

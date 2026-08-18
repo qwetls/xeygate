@@ -23,10 +23,38 @@ import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry } from "@/services/registry.js";
 
+import { HTTPException } from "hono/http-exception";
+
 const app = new Hono();
 
 // Global Error Handler
 app.onError((err, c) => {
+    if (err instanceof HTTPException) {
+        return c.json(
+            {
+                error: {
+                    message: err.message || "Invalid request",
+                    type: "invalid_request_error",
+                    code: err.status === 400 ? "invalid_request" : undefined
+                }
+            },
+            err.status
+        );
+    }
+
+    if (err instanceof SyntaxError && "message" in err && (err as Error).message.includes("JSON")) {
+        return c.json(
+            {
+                error: {
+                    message: "Malformed JSON in request body",
+                    type: "invalid_request_error",
+                    code: "invalid_json"
+                }
+            },
+            400
+        );
+    }
+
     console.error("🔥 API Route Exception:", err);
     return c.json(
         {
@@ -61,8 +89,10 @@ app.route("/", messagesRoute);
 
 // Serve Web Dashboard in production if built dist exists
 const webDistPath = resolveWebDistPath();
+const hasWebDist =
+    fs.existsSync(webDistPath) && fs.existsSync(path.join(webDistPath, "index.html"));
 
-if (fs.existsSync(webDistPath) && fs.existsSync(path.join(webDistPath, "index.html"))) {
+if (hasWebDist) {
     const relWebDist = path.relative(process.cwd(), webDistPath) || ".";
     app.use("/*", serveStatic({ root: relWebDist }));
     app.get("*", serveStatic({ path: path.join(relWebDist, "index.html") }));
@@ -72,7 +102,7 @@ if (fs.existsSync(webDistPath) && fs.existsSync(path.join(webDistPath, "index.ht
         return c.json({
             name: "SRouter API",
             status: "ok",
-            version: "0.1.0-beta",
+            version: "0.1.1",
             documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
         });
     });
@@ -86,13 +116,56 @@ serve(
         port
     },
     (info) => {
-        console.log(`🚀 SRouter API Server running at http://localhost:${info.port}`);
+        console.log(`🚀 SRouter Server running at http://localhost:${info.port}`);
+        if (hasWebDist) {
+            console.log(`🌐 Web Dashboard & API live at http://localhost:${info.port}`);
+        } else {
+            console.log(
+                `ℹ️ Web dist not found. Running in API-only mode at http://localhost:${info.port}`
+            );
+        }
         warmModelRegistry();
     }
 );
 
 // Secondary listener on Port 1455 for OAuth callbacks and local Anthropic proxy
 const oauthApp = new Hono();
+oauthApp.onError((err, c) => {
+    if (err instanceof HTTPException) {
+        return c.json(
+            {
+                error: {
+                    message: err.message || "Invalid request",
+                    type: "invalid_request_error",
+                    code: err.status === 400 ? "invalid_request" : undefined
+                }
+            },
+            err.status
+        );
+    }
+    if (err instanceof SyntaxError && "message" in err && (err as Error).message.includes("JSON")) {
+        return c.json(
+            {
+                error: {
+                    message: "Malformed JSON in request body",
+                    type: "invalid_request_error",
+                    code: "invalid_json"
+                }
+            },
+            400
+        );
+    }
+    console.error("🔥 OAuth API Route Exception:", err);
+    return c.json(
+        {
+            error: {
+                message: err.message || "Internal Server Error",
+                type: "internal_error"
+            }
+        },
+        500
+    );
+});
 oauthApp.get("/auth/callback", (c) => handleOAuthCallback(c));
 oauthApp.post("/auth/callback", (c) => handleOAuthCallback(c));
 oauthApp.get("/auth/antigravity/callback", (c) => handleAntigravityOAuthCallback(c));
