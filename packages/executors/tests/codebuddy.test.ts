@@ -28,13 +28,14 @@ afterEach(() => {
     globalThis.fetch = originalFetch;
 });
 
-test("CodeBuddy lists all 15 catalog models namespaced with codebuddy/", async () => {
+test("CodeBuddy lists all catalog models namespaced with codebuddy/", async () => {
     const models = await executor().listModels();
     assert.equal(models.length, CODEBUDDY_MODELS.length);
     assert.equal(models[0]?.id, `codebuddy/${CODEBUDDY_MODELS[0]?.id}`);
     assert.equal(models[0]?.owned_by, "codebuddy");
     assert.ok(models.some((m) => m.id === "codebuddy/glm-5.2"));
-    assert.ok(models.some((m) => m.id === "codebuddy/deepseek-v4-pro"));
+    assert.ok(models.some((m) => m.id === "codebuddy/deepseek-v3"));
+    assert.ok(models.some((m) => m.id === "codebuddy/gpt-5.5"));
 });
 
 test("CodeBuddy transforms chat request: forces stream, wraps user message in typed blocks, and prepends system prompt", async () => {
@@ -148,7 +149,7 @@ test("CodeBuddy streaming yields ChatCompletionChunk elements correctly", async 
         id: "chunk-stream-1",
         object: "chat.completion.chunk",
         created: 1,
-        model: "deepseek-v4-pro",
+        model: "deepseek-v3",
         choices: [
             {
                 index: 0,
@@ -171,9 +172,7 @@ test("CodeBuddy streaming yields ChatCompletionChunk elements correctly", async 
     };
 
     const output = [];
-    for await (const item of executor().chatCompletionStream(
-        request("codebuddy/deepseek-v4-pro")
-    )) {
+    for await (const item of executor().chatCompletionStream(request("codebuddy/deepseek-v3"))) {
         output.push(item);
     }
 
