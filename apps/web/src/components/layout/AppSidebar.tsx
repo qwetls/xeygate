@@ -50,17 +50,43 @@ export function AppSidebar() {
                         <SidebarMenuButton
                             size="lg"
                             render={<Link to="/" aria-label="SRouter dashboard" />}
-                            className="h-10 w-full rounded-md px-2.5 text-foreground hover:bg-secondary/50 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0! transition-colors cursor-pointer"
+                            className="group h-10 w-full rounded-lg px-2 text-foreground transition-all duration-150 hover:bg-secondary/60 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0! cursor-pointer"
                         >
-                            <div className="flex size-7 shrink-0 items-center justify-center rounded-md bg-foreground text-background shadow-xs">
-                                <Zap className="size-4 fill-current" strokeWidth={2} />
+                            {/* Logo Mark: Double-bezel Machined Emblem with Beacon */}
+                            <div className="relative flex size-7.5 shrink-0 items-center justify-center rounded-lg border border-border/80 bg-linear-to-b from-secondary/90 via-secondary/50 to-background p-1 text-foreground shadow-2xs transition-all duration-200 group-hover:border-foreground/30 group-hover:bg-secondary/80">
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    className="size-4 text-foreground transition-transform duration-200 group-hover:scale-105"
+                                >
+                                    <path
+                                        d="M13 2.5L5 13H11.5L9.5 21.5L18.5 10H12L13.5 2.5Z"
+                                        fill="currentColor"
+                                        fillOpacity="0.92"
+                                        stroke="currentColor"
+                                        strokeWidth="0.5"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                                <span
+                                    className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full border border-background bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
+                                    title="Gateway Online"
+                                    aria-hidden="true"
+                                />
                             </div>
-                            <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden text-left">
-                                <span className="text-xs font-bold tracking-tight text-foreground leading-none">
-                                    SRouter
-                                </span>
-                                <span className="text-[9px] font-semibold text-muted-foreground tracking-wider uppercase mt-0.5">
-                                    Gateway Mesh
+
+                            {/* Label & Tactical Subtitle */}
+                            <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden text-left pl-1">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[13px] font-bold tracking-tight text-foreground leading-tight">
+                                        SRouter
+                                    </span>
+                                    <span className="rounded-xs border border-border/70 bg-secondary/70 px-1 py-0.2 font-mono text-[8px] font-semibold text-muted-foreground/80 leading-none">
+                                        MESH
+                                    </span>
+                                </div>
+                                <span className="text-[9px] font-mono font-medium text-muted-foreground/75 tracking-[0.14em] uppercase mt-0.5 truncate">
+                                    Gateway Proxy
                                 </span>
                             </div>
                         </SidebarMenuButton>

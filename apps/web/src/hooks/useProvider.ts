@@ -21,7 +21,8 @@ export function useProvider(providerId: string) {
 
     const query = useQuery({
         queryKey: ["providers", providerId],
-        queryFn: () => api.get<ProviderDefinition>(`/v1/providers/${providerId}`)
+        queryFn: () => api.get<ProviderDefinition>(`/v1/providers/${providerId}`),
+        enabled: Boolean(providerId)
     });
 
     const addMutation = useMutation({

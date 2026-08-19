@@ -1,19 +1,48 @@
-import { useMatches } from "@tanstack/react-router";
+import { Link, useMatches } from "@tanstack/react-router";
 import { LogOut, Moon, Sun, Terminal } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "@/context/Theme";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
+import { KNOWN_PROVIDER_MAP, providerBaseId } from "@srouter/constants";
+import { useProvider } from "@/hooks/useProvider";
 
-function usePageTitle(): string {
+type BreadcrumbInfo = {
+    section: string;
+    sectionHref?: string;
+    detail?: string;
+};
+
+function useBreadcrumb(): BreadcrumbInfo {
     const matches = useMatches();
+
+    const providerMatch = matches.find((m) => m.routeId === "/providers/$providerId");
+    const rawId = (providerMatch?.params as { providerId?: string })?.providerId;
+    const { data: providerData } = useProvider(rawId ?? "");
+
+    if (rawId) {
+        const fallbackName =
+            KNOWN_PROVIDER_MAP[rawId]?.name ??
+            KNOWN_PROVIDER_MAP[providerBaseId(rawId)]?.name ??
+            rawId;
+        const displayName = providerData?.name || fallbackName;
+
+        return {
+            section: "Providers",
+            sectionHref: "/providers",
+            detail: displayName
+        };
+    }
+
     const match = [...matches].reverse().find((item) => item.staticData?.title);
-    return (match?.staticData?.title as string | undefined) ?? "Dashboard";
+    return {
+        section: (match?.staticData?.title as string | undefined) ?? "Dashboard"
+    };
 }
 
 export function Topbar() {
-    const title = usePageTitle();
+    const crumb = useBreadcrumb();
     const { theme, toggleTheme } = useTheme();
     const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -41,9 +70,23 @@ export function Topbar() {
                         <span>SROUTER</span>
                         <span className="text-muted-foreground/40">/</span>
                     </span>
-                    <span className="font-bold text-foreground text-xs tracking-tight">
-                        {title}
-                    </span>
+
+                    {crumb.detail && crumb.sectionHref ? (
+                        <div className="flex items-center gap-1.5 font-bold text-xs tracking-tight">
+                            <Link
+                                to={crumb.sectionHref}
+                                className="text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {crumb.section}
+                            </Link>
+                            <span className="text-muted-foreground/40 font-normal">/</span>
+                            <span className="text-foreground">{crumb.detail}</span>
+                        </div>
+                    ) : (
+                        <span className="font-bold text-foreground text-xs tracking-tight">
+                            {crumb.section}
+                        </span>
+                    )}
                 </div>
             </div>
 

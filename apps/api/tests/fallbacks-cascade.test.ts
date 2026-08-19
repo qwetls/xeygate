@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { createFallbackRuleDB, deleteFallbackRuleDB, getRecentLogsDB } from "@srouter/db";
+import {
+    createFallbackRuleDB,
+    deleteFallbackRuleDB,
+    deleteLogsByProviderDB,
+    getRecentLogsDB
+} from "@srouter/db";
 import type { AIProvider } from "@srouter/types";
 import { ChatLogic } from "../src/logic/chat.logic.js";
 import { registry } from "../src/services/registry.js";
@@ -13,6 +18,7 @@ afterEach(() => {
         deleteFallbackRuleDB(id);
     }
     for (const id of registeredProviderIds.splice(0)) {
+        deleteLogsByProviderDB(id);
         registry.unregisterProvider(id);
     }
 });

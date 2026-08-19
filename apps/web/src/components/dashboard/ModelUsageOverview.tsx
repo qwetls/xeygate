@@ -51,7 +51,10 @@ export function ModelUsageOverview({ models }: ModelUsageOverviewProps) {
     }, [topModels]);
 
     return (
-        <section className="min-w-0 p-4 sm:p-5 lg:p-6" aria-labelledby="model-usage-title">
+        <section
+            className="flex h-full min-w-0 flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 sm:p-5 lg:p-6 shadow-2xs font-mono"
+            aria-labelledby="model-usage-title"
+        >
             {/* Header */}
             <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-3.5 border-b border-border/50">
                 <div className="flex items-center gap-2.5 min-w-0">

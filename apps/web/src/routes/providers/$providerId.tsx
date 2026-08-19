@@ -27,6 +27,7 @@ import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
 
 export const Route = createFileRoute("/providers/$providerId")({
+    staticData: { title: "Providers" },
     component: ProviderDetailPage
 });
 

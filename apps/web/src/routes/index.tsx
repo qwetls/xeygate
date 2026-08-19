@@ -122,10 +122,7 @@ function DashboardPage() {
             {/* Header */}
             <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end border-b border-border/80 pb-5">
                 <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
-                        Ops Cockpit
-                    </p>
-                    <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
+                    <h1 className="text-2xl font-bold tracking-tight text-foreground">
                         Gateway Operations
                     </h1>
                     <p className="mt-1 max-w-2xl text-xs text-muted-foreground leading-relaxed">
@@ -187,18 +184,12 @@ function DashboardPage() {
                 aria-label="Operational overview"
                 className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]"
             >
-                <div className="rounded-xl border border-border/80 bg-card/60 p-4 shadow-2xs">
-                    <ModelUsageOverview models={stats?.byModel ?? []} />
-                </div>
-                <div className="rounded-xl border border-border/80 bg-card/60 p-4 shadow-2xs">
-                    <NetworkStatus />
-                </div>
+                <ModelUsageOverview models={stats?.byModel ?? []} />
+                <NetworkStatus />
             </section>
 
             {/* Tabular Usage Breakdown */}
-            <div className="rounded-xl border border-border/80 bg-card/60 p-4 shadow-2xs">
-                <UsageByModelTable models={stats?.byModel ?? []} />
-            </div>
+            <UsageByModelTable models={stats?.byModel ?? []} />
         </div>
     );
 }
