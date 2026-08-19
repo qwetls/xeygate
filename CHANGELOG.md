@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.1-rc.1] - 2026-08-19
+
+### 🚀 Release Candidate Highlights
+
+#### 🎨 Dashboard & Layout Polish
+
+- **Unified Single-Panel Network & Metrics Cards**: Refactored Network Status and Model Usage Overview components, eliminating nested double-card wrappers and redundant padding.
+- **Removed Ops Cockpit Eyebrow**: Streamlined dashboard header layout for a cleaner editorial aesthetic.
+
+#### 🧭 Dynamic Provider Breadcrumbs
+
+- **Provider Display Name Resolution**: Topbar navigation now automatically resolves and displays full provider names (e.g. `OpenAI Codex / ChatGPT`) on `/providers/:providerId` instead of falling back to default headers or raw IDs.
+- **Interactive Parent Links**: Direct 1-click navigation from provider details back to the providers catalog.
+
+#### ⚡ Brand & Sidebar Redesign
+
+- **Machined Dark-Tech Emblem**: Replaced plain starter box with a multi-layered machined double-bezel brand mark, precision vector bolt glyph, and live emerald status beacon.
+- **Tactical Typographic Hierarchy**: Added `MESH` capsule tag and wide-tracking mono subtitle.
+
+#### 🛡️ Database & Test Isolation
+
+- **Automated Request Log Teardown**: Updated integration tests to clean up temporary test provider entries and request logs after completion, preventing test artifacts from leaking into production SQLite records.
+
+---
+
 ## [0.1.1] - 2026-08-18
 
 ### 🚀 Production Release Highlights

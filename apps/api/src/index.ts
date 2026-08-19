@@ -102,7 +102,7 @@ if (hasWebDist) {
         return c.json({
             name: "SRouter API",
             status: "ok",
-            version: "0.1.1",
+            version: "0.1.1-rc.1",
             documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
         });
     });
