@@ -29,6 +29,7 @@ export interface CodeBuddyModelDefinition {
 }
 
 export const CODEBUDDY_MODELS: CodeBuddyModelDefinition[] = [
+    { id: "deepseek-v3", name: "DeepSeek-V3" },
     { id: "glm-5.2", name: "GLM-5.2" },
     { id: "glm-5.1", name: "GLM-5.1" },
     { id: "glm-5.0", name: "GLM-5.0" },
