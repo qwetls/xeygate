@@ -14,6 +14,14 @@ export function getModelsEndpoint(baseUrl: string): string {
     return cleanUrl.endsWith("/v1") ? `${cleanUrl}/models` : `${cleanUrl}/v1/models`;
 }
 
+interface ModelItem {
+    id?: string;
+}
+
+interface ModelsApiResponse {
+    data?: Array<ModelItem | string>;
+}
+
 export async function checkServerHealth(
     baseUrl: string,
     apiKey?: string,
@@ -49,7 +57,7 @@ export async function checkServerHealth(
             };
         }
 
-        const data = (await res.json()) as any;
+        const data = (await res.json()) as ModelsApiResponse;
         const models = Array.isArray(data?.data) ? data.data : [];
 
         return {
@@ -57,11 +65,13 @@ export async function checkServerHealth(
             modelsCount: models.length,
             latencyMs: Date.now() - start
         };
-    } catch (err: any) {
+    } catch (err: unknown) {
+        const errorName = err instanceof Error ? err.name : "";
+        const errorMessage = err instanceof Error ? err.message : String(err);
         return {
             healthy: false,
             modelsCount: 0,
-            error: err.name === "AbortError" ? "Connection timeout" : err.message,
+            error: errorName === "AbortError" ? "Connection timeout" : errorMessage,
             latencyMs: Date.now() - start
         };
     }
@@ -78,11 +88,11 @@ export async function fetchAvailableModels(baseUrl: string, apiKey?: string): Pr
 
         const res = await fetch(endpoint, { headers });
         if (!res.ok) return [];
-        const data = (await res.json()) as any;
+        const data = (await res.json()) as ModelsApiResponse;
         if (!Array.isArray(data?.data)) return [];
         return data.data
-            .map((m: any) => (typeof m === "string" ? m : m?.id))
-            .filter((id: any): id is string => typeof id === "string" && id.length > 0);
+            .map((m) => (typeof m === "string" ? m : m?.id))
+            .filter((id): id is string => typeof id === "string" && id.length > 0);
     } catch {
         return [];
     }

@@ -67,8 +67,9 @@ export async function linkCommand(toolId: string, options: LinkCommandOptions): 
         if (result.backupPath) {
             console.log(`  ${pc.gray("Backup Saved:")}  ${pc.white(result.backupPath)}`);
         }
-    } catch (err: any) {
-        console.error(formatError(`Failed to link ${adapter.name}: ${err.message}`));
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(formatError(`Failed to link ${adapter.name}: ${msg}`));
         process.exitCode = 1;
     }
 }

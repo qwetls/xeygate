@@ -57,7 +57,7 @@ export async function runCommand(
         }
     });
 
-    child.on("error", (err: any) => {
+    child.on("error", (err: NodeJS.ErrnoException) => {
         if (err.code === "ENOENT") {
             console.error(
                 formatError(

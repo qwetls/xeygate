@@ -30,8 +30,9 @@ export async function unlinkCommand(toolId: string): Promise<void> {
                 )
             );
         }
-    } catch (err: any) {
-        console.error(formatError(`Failed to unlink ${adapter.name}: ${err.message}`));
+    } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(formatError(`Failed to unlink ${adapter.name}: ${msg}`));
         process.exitCode = 1;
     }
 }

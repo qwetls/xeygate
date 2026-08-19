@@ -8,6 +8,8 @@ import type {
     PlaygroundSession
 } from "@/components/playground/types";
 import { getGatewayBaseUrl } from "@/lib/api";
+import { safeJsonParse } from "@/lib/utils";
+import { generatePlaygroundCodeSnippet } from "@/utils/codeSnippetGenerator";
 
 type SseResult = "done" | "continue";
 
@@ -46,19 +48,9 @@ function getStreamError(payload: unknown): string | null {
     return "The gateway returned a streaming error.";
 }
 
-function shellQuote(value: string) {
-    return `'${value.replaceAll("'", `"'"'`)}'`;
-}
-
 function loadStoredSessions(): PlaygroundSession[] {
     if (typeof window === "undefined") return [];
-    try {
-        const raw = localStorage.getItem(STORAGE_SESSIONS_KEY);
-        if (!raw) return [];
-        return JSON.parse(raw) as PlaygroundSession[];
-    } catch {
-        return [];
-    }
+    return safeJsonParse<PlaygroundSession[]>(localStorage.getItem(STORAGE_SESSIONS_KEY), []);
 }
 
 function saveStoredSessions(sessions: PlaygroundSession[], activeId?: string) {
@@ -702,82 +694,12 @@ export function usePlayground(initialModel: string, models: PlaygroundModel[]) {
 
     const generateCode = useCallback(
         (lang: ExportLanguage) => {
-            const reqMessages = requestMessages();
-            const modelId = selectedModel?.id ?? "model-id";
-
-            switch (lang) {
-                case "curl": {
-                    const payload = {
-                        model: modelId,
-                        messages: reqMessages,
-                        stream: true
-                    };
-                    return `curl ${apiBase}/chat/completions \\\n  -H "Content-Type: application/json" \\\n  -H "Authorization: Bearer YOUR_API_KEY" \\\n  -H "X-Chat-ID: ${activeChatId}" \\\n  -d ${shellQuote(JSON.stringify(payload, null, 2))}`;
-                }
-                case "typescript": {
-                    return `import OpenAI from "openai";
-
-const openai = new OpenAI({
-  baseURL: "${apiBase}",
-  apiKey: process.env.SROUTER_API_KEY || "YOUR_API_KEY",
-  defaultHeaders: {
-    "X-Chat-ID": "${activeChatId}",
-  },
-});
-
-async function main() {
-  const completion = await openai.chat.completions.create({
-    model: "${modelId}",
-    messages: ${JSON.stringify(reqMessages, null, 4)},
-    stream: true,
-  });
-
-  for await (const chunk of completion) {
-    process.stdout.write(chunk.choices[0]?.delta?.content || "");
-  }
-}
-
-main().catch(console.error);`;
-                }
-                case "python": {
-                    return `from openai import OpenAI
-import os
-
-client = OpenAI(
-    base_url="${apiBase}",
-    api_key=os.environ.get("SROUTER_API_KEY", "YOUR_API_KEY"),
-    default_headers={"X-Chat-ID": "${activeChatId}"},
-)
-
-response = client.chat.completions.create(
-    model="${modelId}",
-    messages=${JSON.stringify(reqMessages, null, 4)},
-    stream=True,
-)
-
-for chunk in response:
-    content = chunk.choices[0].delta.content or ""
-    print(content, end="", flush=True)`;
-                }
-                case "fetch": {
-                    return `const response = await fetch("${apiBase}/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": "Bearer YOUR_API_KEY",
-    "X-Chat-ID": "${activeChatId}",
-  },
-  body: JSON.stringify({
-    model: "${modelId}",
-    messages: ${JSON.stringify(reqMessages, null, 4)},
-    stream: true,
-  }),
-});
-
-const data = await response.json();
-console.log(data);`;
-                }
-            }
+            return generatePlaygroundCodeSnippet(lang, {
+                apiBase,
+                modelId: selectedModel?.id ?? "model-id",
+                activeChatId,
+                messages: requestMessages()
+            });
         },
         [selectedModel, messages, apiBase, activeChatId]
     );

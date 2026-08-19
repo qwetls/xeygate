@@ -85,7 +85,11 @@ export class CircuitBreaker {
             cooldownDuration = Math.min(this.defaultCooldownMs * multiplier, MAX_COOLDOWN_MS);
         }
 
-        health.state = isRateLimitOrQuotaError(error) ? "cooldown" : "cooldown";
+        health.state = isRateLimitOrQuotaError(error)
+            ? "cooldown"
+            : health.consecutiveFailures >= 5
+              ? "exhausted"
+              : "cooldown";
         health.cooldownUntil = now + cooldownDuration;
     }
 
