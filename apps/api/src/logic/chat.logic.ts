@@ -34,7 +34,7 @@ function extractStatusCode(err: unknown): number | undefined {
         }
     }
     const msg = err instanceof Error ? err.message : String(err);
-    const match = msg.match(/\b(429|403|500|502|503|504|400|401)\b/);
+    const match = msg.match(/\b(429|403|500|502|503|504|400|401|402|422)\b/);
     if (match) return parseInt(match[1]!, 10);
     return undefined;
 }
@@ -46,7 +46,7 @@ function shouldTriggerFallback(rule: FallbackRule, err: unknown): boolean {
     if (status && rule.triggerOnStatus.includes(status)) return true;
     const msg = err instanceof Error ? err.message : String(err);
     if (
-        /rate\s*limit|too\s+many\s+requests|quota|exhausted|capacity|high\s+traffic|overloaded|no active provider connection|not found|unknown model|invalid model|no provider found/i.test(
+        /rate\s*limit|too\s+many\s+requests|quota|exhausted|capacity|high\s+traffic|overloaded|no active provider connection|not found|unknown model|invalid model|no provider found|insufficient tokens|insufficient_quota|billing_error/i.test(
             msg
         )
     ) {

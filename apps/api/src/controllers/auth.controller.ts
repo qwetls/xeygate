@@ -12,6 +12,7 @@ import {
     qoderAuthHandler,
     seekAIAuthHandler,
     tabiTokenAuthHandler,
+    tokenRouterAuthHandler,
     type AuthProviderHandler,
     type OAuthLoginParams,
     type TokenImportParams
@@ -300,6 +301,15 @@ export class AuthController {
         return importTokenFor(
             tabiTokenAuthHandler,
             (b) => AuthLogic.processTabiTokenTokenImport(b),
+            c
+        );
+    }
+
+    // TokenRouter Provider (API key)
+    public static async importTokenRouterToken(c: Context): Promise<Response> {
+        return importTokenFor(
+            tokenRouterAuthHandler,
+            (b) => AuthLogic.processTokenRouterTokenImport(b),
             c
         );
     }

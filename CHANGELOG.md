@@ -88,6 +88,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BluesMinds**: OpenAI-compatible gateway integration with instant token management (`https://api.bluesminds.com/v1`).
 - **SeekAI**: High-performance OpenAI-compatible proxy with dynamic model catalog discovery (`https://seekai.cc/v1`).
 - **TabiToken**: OpenAI-compatible proxy supporting Claude models, streaming, and custom referral link (`https://tabitoken.com/v1`).
+- **TokenRouter**: OpenAI-compatible AI gateway and model proxy (`https://api.tokenrouter.com/v1`).
 - **Qoder**: Complete Alibaba Cloud Qoder integration featuring OAuth PKCE device flow, WAF-bypass body encoding, and live token refresh.
 
 #### 🤖 Anthropic Messages API & Claude Code Compatibility

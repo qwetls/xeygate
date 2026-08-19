@@ -25,7 +25,7 @@ This file serves as the memory and operational rulebook for Antigravity and AI a
 
 - **`packages/types`**: Shared TypeScript domain types and Zod validation schemas (`openai.ts`, `anthropic.ts`, `schemas.ts`, `provider.ts`, `logs.ts`, `quota.ts`, `apiKeys.ts`).
 - **`packages/providers`**: Provider catalog definitions, registry abstractions, and contract interfaces.
-- **`packages/executors`**: Concrete execution engines for upstream LLMs (OpenAI, Anthropic, Codex, Antigravity, Kiro, Qoder, CommandCode, SeekAI, Bluesminds, GoRouter, Tabitoken, retry/search wrappers, SSE streaming).
+- **`packages/executors`**: Concrete execution engines for upstream LLMs (OpenAI, Anthropic, Codex, Antigravity, Kiro, Qoder, CommandCode, SeekAI, Bluesminds, GoRouter, Tabitoken, TokenRouter, retry/search wrappers, SSE streaming).
 - **`packages/translator`**: Bidirectional protocol translation (OpenAI ↔ Anthropic ↔ Gemini) and usage normalization.
 - **`packages/pricing`**: Model token cost estimation and calculation.
 - **`packages/db`**: Database layer using native `node:sqlite` in WAL mode. Manages repositories for providers, API keys, OAuth sessions, quotas, settings, and request logs.

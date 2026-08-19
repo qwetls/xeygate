@@ -22,6 +22,7 @@ import {
     qoderAuthHandler,
     seekAIAuthHandler,
     tabiTokenAuthHandler,
+    tokenRouterAuthHandler,
     type AuthProviderHandler,
     type OAuthLoginParams,
     type OAuthLoginResult,
@@ -274,6 +275,11 @@ export class AuthLogic {
     // TabiToken (API key)
     public static processTabiTokenTokenImport(params: TokenImportParams): ProviderConfig {
         return processTokenImportFor(tabiTokenAuthHandler, params);
+    }
+
+    // TokenRouter (API key)
+    public static processTokenRouterTokenImport(params: TokenImportParams): ProviderConfig {
+        return processTokenImportFor(tokenRouterAuthHandler, params);
     }
 
     // CodeBuddy (OAuth & token import)

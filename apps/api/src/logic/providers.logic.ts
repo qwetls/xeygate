@@ -292,6 +292,8 @@ export class ProvidersLogic {
                     ? `${baseUrl}/v1/models`
                     : "https://api.anthropic.com/v1/models";
                 const headers: Record<string, string> = {
+                    "User-Agent": "SRouter/1.0.0 (Node.js)",
+                    Accept: "application/json",
                     "anthropic-version": "2023-06-01"
                 };
                 if (apiKey) {
@@ -335,7 +337,11 @@ export class ProvidersLogic {
 
             // OpenAI / Custom OpenAI compatible
             const targetUrl = baseUrl ? `${baseUrl}/models` : "https://api.openai.com/v1/models";
-            const headers: Record<string, string> = {};
+            const headers: Record<string, string> = {
+                "User-Agent": "SRouter/1.0.0 (Node.js)",
+                "Accept-Encoding": "identity",
+                Accept: "application/json"
+            };
             if (apiKey) {
                 headers["Authorization"] = `Bearer ${apiKey}`;
             }

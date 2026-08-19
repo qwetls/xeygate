@@ -13,6 +13,7 @@ const ICON_MAPPING: Record<string, string> = {
     bluesminds: "/icons/providers/bluesminds.png",
     seekai: "/icons/providers/newapi.png",
     tabitoken: "/icons/providers/newapi.png",
+    tokenrouter: "/icons/providers/tokenrouter.png",
     groq: "/icons/providers/groq.png",
     openrouter: "/icons/providers/openrouter.png",
     copilot: "/icons/providers/copilot.png",

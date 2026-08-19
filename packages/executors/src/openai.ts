@@ -8,6 +8,7 @@ import type {
     ModelObject
 } from "@srouter/types";
 import { parseDataLine, streamLines } from "./base.js";
+import { fetchWithRetry } from "./retry.js";
 
 function stripProviderPrefix(model: string): string {
     const slash = model.indexOf("/");
@@ -44,9 +45,12 @@ export class OpenAIExecutor implements AIProvider {
         if (accessToken) this.accessToken = accessToken;
     }
 
-    private getHeaders(): Record<string, string> {
+    private getHeaders(accept?: string): Record<string, string> {
         const headers: Record<string, string> = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "User-Agent": "SRouter/1.0.0 (Node.js)",
+            "Accept-Encoding": "identity",
+            Accept: accept ?? "application/json"
         };
         const token = this.accessToken || this.apiKey;
         if (token) {
@@ -88,11 +92,11 @@ export class OpenAIExecutor implements AIProvider {
     async chatCompletion(req: ChatCompletionRequest): Promise<ChatCompletionResponse> {
         const targetModel = stripProviderPrefix(req.model);
 
-        const res = await fetch(`${this.baseUrl}/chat/completions`, {
-            method: "POST",
-            headers: this.getHeaders(),
-            body: JSON.stringify({ ...req, model: targetModel, stream: false })
-        });
+        const res = await fetchWithRetry(
+            `${this.baseUrl}/chat/completions`,
+            { ...req, model: targetModel, stream: false },
+            this.getHeaders()
+        );
 
         if (!res.ok) {
             const errorText = await res.text();
@@ -107,11 +111,11 @@ export class OpenAIExecutor implements AIProvider {
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const targetModel = stripProviderPrefix(req.model);
 
-        const res = await fetch(`${this.baseUrl}/chat/completions`, {
-            method: "POST",
-            headers: this.getHeaders(),
-            body: JSON.stringify({ ...req, model: targetModel, stream: true })
-        });
+        const res = await fetchWithRetry(
+            `${this.baseUrl}/chat/completions`,
+            { ...req, model: targetModel, stream: true },
+            this.getHeaders("text/event-stream, application/json, */*")
+        );
 
         if (!res.ok) {
             const errorText = await res.text();

@@ -5,6 +5,8 @@ const TRANSIENT_RETRY_MAX_MS = 15000;
 
 const TRANSIENT_ERROR_PATTERNS = [
     /high\s+traffic/i,
+    /overloaded/i,
+    /concurrency/i,
     /agent\s+(execution\s+)?terminated\s+due\s+to\s+error/i,
     /capacity/i,
     /temporarily\s+unavailable/i,

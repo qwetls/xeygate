@@ -10,7 +10,8 @@ import {
     COMMANDCODE_BASE_URL,
     GOROUTER_BASE_URL,
     SEEKAI_BASE_URL,
-    TABITOKEN_BASE_URL
+    TABITOKEN_BASE_URL,
+    TOKENROUTER_BASE_URL
 } from "@srouter/constants";
 import {
     AntigravityExecutor,
@@ -22,7 +23,8 @@ import {
     GoRouterExecutor,
     QoderExecutor,
     SeekAIExecutor,
-    TabiTokenExecutor
+    TabiTokenExecutor,
+    TokenRouterExecutor
 } from "@srouter/executors";
 import {
     AntigravityOAuth,
@@ -353,6 +355,24 @@ export const tabiTokenAuthHandler: AuthProviderHandler = {
         new TabiTokenExecutor({ id, name, baseUrl: baseUrl || TABITOKEN_BASE_URL, apiKey })
 };
 
+export const tokenRouterAuthHandler: AuthProviderHandler = {
+    providerId: "tokenrouter",
+    displayName: "TokenRouter",
+    category: "api_key",
+    protocol: "openai",
+    idPrefix: "tokenrouter",
+    baseUrl: () => TOKENROUTER_BASE_URL,
+    oauthSuccessMessage: "",
+    tokenImportMessage: "TokenRouter API Key registered and saved directly to SQLite database!",
+    mapImportTokens: (params) => ({
+        apiKey: params.accessToken,
+        refreshToken: params.refreshToken,
+        baseUrl: params.baseUrl
+    }),
+    buildExecutor: ({ id, name, baseUrl, apiKey }) =>
+        new TokenRouterExecutor({ id, name, baseUrl: baseUrl || TOKENROUTER_BASE_URL, apiKey })
+};
+
 export const codeBuddyAuthHandler: AuthProviderHandler = {
     providerId: "codebuddy",
     displayName: "CodeBuddy",
@@ -393,5 +413,6 @@ export const authProviderHandlers: Record<string, AuthProviderHandler> = {
     bluesminds: bluesMindsAuthHandler,
     seekai: seekAIAuthHandler,
     tabitoken: tabiTokenAuthHandler,
+    tokenrouter: tokenRouterAuthHandler,
     codebuddy: codeBuddyAuthHandler
 };

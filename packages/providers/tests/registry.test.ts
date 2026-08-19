@@ -55,6 +55,11 @@ test("TabiToken uses its own model prefix alias", () => {
     assert.equal(getProviderAlias("tabitoken_123"), "tabitoken");
 });
 
+test("TokenRouter uses its own model prefix alias", () => {
+    assert.equal(getProviderAlias("tokenrouter"), "tokenrouter");
+    assert.equal(getProviderAlias("tokenrouter_123"), "tokenrouter");
+});
+
 test("Qoder uses qd model prefix alias", () => {
     assert.equal(getProviderAlias("qoder"), "qd");
     assert.equal(getProviderAlias("qoder_456"), "qd");

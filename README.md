@@ -189,6 +189,7 @@ SRouter supports a wide range of official and community AI providers out of the 
 | **BluesMinds**             | Bearer API Key       | `bluesminds/*`   |       ✅        |            ✅             |      ✅      |
 | **SeekAI**                 | Bearer API Key       | `seekai/*`       |       ✅        |            ✅             |      ✅      |
 | **TabiToken**              | Bearer API Key       | `tabitoken/*`    |       ✅        |            ✅             |      ✅      |
+| **TokenRouter**            | Bearer API Key       | `tokenrouter/*`  |       ✅        |            ✅             |      ✅      |
 | **Command Code**           | Bearer API Key       | `commandcode/*`  |       ✅        |            ✅             |      ✅      |
 | **CodeBuddy**              | Access Token / OAuth | `codebuddy/*`    |       ✅        |            ✅             |      ✅      |
 | **Custom Endpoints**       | Custom Bearer / URL  | `custom/*`       |       ✅        |       Configurable        | Configurable |

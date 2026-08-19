@@ -31,6 +31,7 @@ export function useProvider(providerId: string) {
         onSuccess: (_data, variables) => {
             void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
             void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+            void queryClient.invalidateQueries({ queryKey: ["models"] });
             toast.success(`Connection "${variables.name}" saved successfully`);
         },
         onError: (err: Error) => {
@@ -44,6 +45,7 @@ export function useProvider(providerId: string) {
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
             void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+            void queryClient.invalidateQueries({ queryKey: ["models"] });
             toast.success("Connection deleted successfully");
         },
         onError: (err: Error) => {
