@@ -22,6 +22,7 @@ Route OpenAI, Anthropic, Gemini, Qoder, Kiro, and custom providers through one A
   <a href="#-providers">Providers</a> ·
   <a href="#-cli">CLI</a> ·
   <a href="#-integrate">Integrate</a> ·
+  <a href="#-performance">Performance</a> ·
   <a href="#-api">API</a>
 </p>
 
@@ -414,9 +415,36 @@ packages/
 
 ## 📊 Performance
 
-The project is designed around a lightweight runtime: Hono handles HTTP traffic while native SQLite WAL keeps the default deployment free from an external database dependency.
+SRouter is designed to keep the gateway lightweight without sacrificing the convenience of a full dashboard.
 
-The repository currently documents an idle API-only footprint of about **65.2 MiB** under the tested Node.js runtime. Treat benchmark numbers as environment-specific rather than universal.
+### Memory footprint at a glance
+
+| Runtime | RAM | Relative footprint |
+| --- | ---: | ---: |
+| ⚡ **SRouter API** | **65.2 MiB** ≈ **68 MB** | **1.00×** |
+| 🖥️ **SRouter API + Dashboard** | **206.1 MiB** ≈ **216 MB** | **3.16× API-only** |
+| 🔹 **9router API** | **104.5 MiB** ≈ **110 MB** | **1.60× SRouter API** |
+
+```text
+Idle RAM footprint (lower is better)
+
+SRouter API             65.2 MiB  ████████████████████████████████
+9router API            104.5 MiB  ██████████████████████████████████████████████████
+SRouter + Dashboard    206.1 MiB  ██████████████████████████████████████████████████████████████████████████████████████
+                        0 MB        50        100        150        200       216 MB
+```
+
+### The takeaway
+
+**SRouter API uses ~38% less RAM than 9router API** in the documented comparison, while the full API + Dashboard runtime remains a separate trade-off for teams that want the complete web UI.
+
+> **Benchmark note:** These are the repository's documented idle-runtime measurements under the tested Node.js environment. RAM usage is environment-dependent; this section is a footprint comparison, not a universal latency benchmark.
+
+### Why the footprint stays small
+
+- Hono keeps the HTTP layer lightweight.
+- Native `node:sqlite` + WAL avoids a separate database service.
+- API-only deployments can run without the web dashboard.
 
 ---
 
