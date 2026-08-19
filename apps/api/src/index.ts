@@ -72,6 +72,16 @@ app.get("/health", (c) => {
     return c.json({ status: "ok" });
 });
 
+// Base /v1 endpoint for baseURL discovery
+app.get("/v1", (c) => {
+    return c.json({
+        name: "SRouter API",
+        status: "ok",
+        version: "0.1.1-rc.1",
+        documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
+    });
+});
+
 // Mount OpenAI & Anthropic v1 API routes
 app.route("/v1", modelsRoute);
 app.route("/v1", adminRoute);
@@ -84,8 +94,13 @@ app.route("/v1", authRoute);
 app.route("/v1", quotaRoute);
 app.route("/v1", settingsRoute);
 
-// Also mount root-level /messages for Anthropic clients sending to base URL directly
+// Also mount root-level routes for OpenAI / Anthropic clients and AI SDKs sending to base URL directly
+app.route("/", chatRoute);
 app.route("/", messagesRoute);
+app.route("/", modelsRoute);
+app.route("/", providersRoute);
+app.route("/", settingsRoute);
+app.route("/", quotaRoute);
 
 // Serve Web Dashboard in production if built dist exists
 const webDistPath = resolveWebDistPath();
