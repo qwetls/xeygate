@@ -2,245 +2,176 @@
 
 # ⚡ SRouter
 
-**High-Performance Multi-Provider AI Gateway & Intelligent LLM Proxy Router**
+### Your local-first AI gateway for every model you use.
 
-_Unify OpenAI, Anthropic Claude, Google Antigravity, Qoder, Kiro, and custom AI providers under a single, ultra-fast, local-first API._
+Route OpenAI, Anthropic, Gemini, Qoder, Kiro, and custom providers through one API — with streaming, OAuth refresh, quotas, virtual keys, and a built-in dashboard.
 
-<br/>
+<p>
+  <a href="https://github.com/seaavey/SRouter/releases"><img src="https://img.shields.io/badge/version-v0.1.1--rc.1-6366f1?style=flat-square" alt="Version"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
+  <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4.13-e36002?style=flat-square" alt="Hono"></a>
+  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-v19-61dafb?style=flat-square&logo=react&logoColor=black" alt="React"></a>
+  <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-WAL-003b57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
+</p>
 
-[![Version](https://img.shields.io/badge/version-v0.1.1--rc.1-blue.svg?style=flat-square)](https://github.com/seaavey/SRouter/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](LICENSE)
-[![Node.js](https://img.shields.io/badge/Node.js-v22%20%7C%20v24-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Hono](https://img.shields.io/badge/Hono-v4.13-E36002?style=flat-square&logo=hono&logoColor=white)](https://hono.dev/)
-[![React](https://img.shields.io/badge/React-v19.1-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
-[![Turborepo](https://img.shields.io/badge/Turborepo-v2.10-EF4444?style=flat-square&logo=turborepo&logoColor=white)](https://turbo.build/)
-[![SQLite](https://img.shields.io/badge/SQLite-WAL%20Mode-003B57?style=flat-square&logo=sqlite&logoColor=white)](https://sqlite.org/)
-[![Docker](https://img.shields.io/badge/Docker-GHCR%20Ready-2496ED?style=flat-square&logo=docker&logoColor=white)](https://ghcr.io/seaavey/srouter)
-[![CI](https://img.shields.io/badge/CI-Passing-22C55E?style=flat-square&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-
-<br/>
-
-[Key Features](#-key-features) • [Why SRouter?](#-why-srouter) • [Architecture](#-architecture) • [Performance](#-performance--benchmarks) • [Supported Providers](#-supported-providers) • [Quick Start](#-quick-start) • [CLI Tool](#-cli-tool-sroutercli) • [Docker Deployment](#-docker-deployment) • [Client Integration](#-client-integration) • [API Reference](#-api-reference) • [Configuration](#-configuration) • [Contributing](#-contributing)
+<p>
+  <a href="#-why-srouter">Why SRouter?</a> ·
+  <a href="#-quick-start">Quick Start</a> ·
+  <a href="#-providers">Providers</a> ·
+  <a href="#-cli">CLI</a> ·
+  <a href="#-integrate">Integrate</a> ·
+  <a href="#-api">API</a>
+</p>
 
 </div>
 
 ---
 
-## 📖 Overview
+## The problem
 
-**SRouter** is an ultra-fast, lightweight, local-first LLM API Gateway and proxy router engineered with **TypeScript**, **[Hono](https://hono.dev/)**, and native embedded **SQLite WAL** (`node:sqlite`).
+Using multiple AI providers usually means juggling different APIs, authentication flows, rate limits, model names, and client configuration.
 
-Modern AI development often requires juggling multiple providers, varying API schemas, fragmented rate limits, and short-lived OAuth credentials. SRouter eliminates this complexity by unifying upstream AI providers—including **Google Antigravity**, **OpenAI Codex / ChatGPT**, **Anthropic Claude**, **Qoder**, **Amazon Q / Kiro**, **Neosantara**, and custom endpoints—under a **standardized, drop-in OpenAI (`/v1/chat/completions`) and Anthropic (`/v1/messages`) interface**.
+## The idea
 
-Equipped with an embedded OAuth token refresh daemon, real-time quota telemetry, virtual API key isolation, and a modern React 19 web dashboard, SRouter provides a complete, self-hosted AI gateway solution with zero external database dependencies.
-
----
-
-## 🎯 Why SRouter?
-
-| Challenge without SRouter                                                                                                               | Solution with SRouter                                                                                                                              |
-| :-------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Fragmented API Standards**: Switching between OpenAI, Anthropic, and Gemini schemas requires rewriting SDK client code.               | **Unified Standard APIs**: 100% compliant OpenAI `/v1/chat/completions` and Anthropic `/v1/messages` endpoints with bidirectional translation.     |
-| **OAuth Token Expiration**: Browser-based OAuth sessions (Google PKCE, Codex, Qoder) expire frequently and disrupt automated workflows. | **Autonomous Background Sweeper**: Built-in background daemon refreshes OAuth tokens automatically before expiration without interrupting traffic. |
-| **Hidden Rate Limits & Quotas**: Upstream rate limits fail silently or unpredictably during peak workloads.                             | **Live Quota Telemetry**: Real-time percentage meters, reset countdown timers, and visual status alerts (`ok`, `warning`, `exhausted`).            |
-| **Heavy Gateway Overhead**: Traditional proxies require Redis, PostgreSQL, Docker clusters, and consume gigabytes of memory.            | **Zero-Dependency Core**: Powered by Hono and native `node:sqlite` in WAL mode with instant boot time and near-zero memory footprint.              |
-| **Lack of Visibility**: Hard to trace model latency, token costs, or debug streaming issues across tools.                               | **Built-in Dashboard & Studio**: Modern React 19 dashboard with interactive Playground, thinking/reasoning visualization, and audit logs.          |
-
----
-
-## 🌟 Key Features
-
-### 🔀 Unified Protocol Routing & Streaming
-
-- **Drop-in OpenAI & Anthropic API**: Compatible with all OpenAI and Anthropic SDKs, Cursor, Windsurf, Claude Code, Cline, Roo Code, Aider, and custom pipelines.
-- **Bi-Directional Schema Translation**: Automatic conversion between OpenAI JSON schemas, Claude tool calls, and Gemini reasoning protocols.
-- **True SSE Streaming**: Native Server-Sent Events streaming with real-time chunk normalization and usage metrics.
-
-### 🛡️ Circuit Breakers & Smart Fallbacks
-
-- **Autonomous Circuit Breaker**: Real-time account health monitoring, error pattern detection (`429`, `403`, `502`, `503`, quota exhaustion), and automatic cooldown recovery.
-- **Tiered Multi-Account Failover**: Seamlessly shifts traffic across multiple accounts registered to the same provider when rate limits occur.
-- **Smart Cross-Provider Fallback Cascades**: Configurable rule-based fallbacks (exact, wildcard prefix, or global) that re-route downstream requests before the first SSE chunk is emitted.
-
-### 💰 Token Saver Engine (`/token-saver`)
-
-- **Compress Tool Output (`rtk`)**: Intelligent minification of `git diff`, `git status`/`log`, `ripgrep`, directory listings (`ls`, `tree`), and runtime logs before LLM dispatch (**60–90% fewer input tokens**).
-- **Lazy Senior Dev (`ponytail`)**: Prompt optimization biasing models toward minimal code: YAGNI principles, standard library reuse over external dependencies, and surgical deletion over addition.
-- **Compress LLM Output (`caveman`)**: Terse-style system prompt injection eliminating conversational filler, greetings, and boilerplate summaries (**~65% to 87% fewer output tokens**).
-- **Interactive Simulator & Granular Toggles**: Full control with master switch, individual module toggles, and live before/after test lab.
-
-### 🔄 Autonomous OAuth PKCE & Token Sweeper
-
-- **Automated Lifecycle Management**: Embedded background daemon continuously monitors and refreshes OAuth tokens (Google Antigravity, OpenAI Codex, Qoder) before they expire.
-- **Local PKCE Auth Flow**: Built-in callback server on port `1455` for friction-free authentication right from the dashboard.
-
-### 📊 Real-Time Upstream Quota & Telemetry (`/v1/quota`)
-
-- **Live Rate Limit Monitoring**: Track remaining capacity, token limits, and upstream reset schedules.
-- **Visual Status Signals**: Immediate feedback on quota health (`ok`, `warning`, `exhausted`) to prevent sudden workflow interruptions.
-
-### 🔑 Virtual API Keys & Granular Security (`/v1/keys`, `/v1/settings`)
-
-- **Scoped Virtual Keys**: Generate custom client keys (`sr-live-...`) with custom expiration, rate limits, and usage quotas.
-- **Flexible Security Modes**: Toggle between **Enforce API Key** (HTTP 401 on unauthenticated requests) for production and **Open Access** for local development.
-
-### 🧪 Interactive Web Playground & Model Studio (`/playground`)
-
-- **Real-Time Testing**: Test any connected provider model with streaming SSE, adjustable temperature/parameters, and session history.
-- **Reasoning / Thinking Inspector**: Dedicated UI panels to inspect thinking processes from models like Gemini 2.5 Flash/Pro Thinking, o1/o3-mini, and Claude 3.7 Sonnet.
-- **Code Export**: One-click code generation for Python, TypeScript, and cURL.
-
-### 🎨 Modern Minimalist Dashboard
-
-- **React 19 & TanStack Router**: Ultra-responsive SPA built with Vite, TanStack Router, and TanStack Table.
-- **Tailwind CSS v4 & Dark Mode**: Fluid layout with responsive Light/Dark themes and smooth View Transitions.
-- **Full Audit Logging**: Searchable request audit logs with latency breakdowns, token consumption, and cost calculations.
-
----
-
-## 🏛 Architecture
-
-```mermaid
-flowchart TD
-    subgraph Clients["Client Applications & Developer Tools"]
-        C1["Cursor / Windsurf / VSCode"]
-        C2["AI Agents / Claude Code / Aider"]
-        C3["Python / Node.js SDKs"]
-        C4["cURL / Custom HTTP Clients"]
-    end
-
-    subgraph Gateway["⚡ SRouter Gateway (Port 3000)"]
-        Hono["Hono Core HTTP Server"]
-        Auth["API Key Auth Middleware\n(Enforced or Open Access)"]
-        Translator["Protocol Translator\n(OpenAI ↔ Anthropic ↔ Gemini)"]
-        Registry["Provider Registry\n& Load Router"]
-        Sweeper["Background Token Sweeper\n(Automated Proactive Refresh)"]
-        SQLite[("Embedded SQLite DB\n(WAL Mode & Zero External DB)")]
-    end
-
-    subgraph Upstream["Upstream AI Providers"]
-        P_Anti["Google Antigravity\n(Gemini 2.5 Flash / Pro)"]
-        P_Codex["OpenAI Codex / ChatGPT\n(GPT-4o, o1, o3-mini)"]
-        P_Claude["Anthropic Claude\n(Claude 3.7 Sonnet, 3.5 Haiku)"]
-        P_Qoder["Qoder\n(SSE Agent Generation)"]
-        P_Kiro["Amazon Q / Kiro\n(SigV4 / Thinking Models)"]
-        P_Custom["Custom Providers\n(Neosantara, GoRouter, SeekAI, etc.)"]
-    end
-
-    C1 & C2 & C3 & C4 -->|POST /v1/chat/completions\nPOST /v1/messages| Hono
-    Hono --> Auth
-    Auth --> Translator
-    Translator --> Registry
-    Registry --> SQLite
-    Sweeper -.->|Refresh Tokens| SQLite
-
-    Registry -->|OAuth PKCE| P_Anti
-    Registry -->|OAuth PKCE| P_Codex
-    Registry -->|OAuth / API Key| P_Claude
-    Registry -->|JobToken / Device| P_Qoder
-    Registry -->|AWS SigV4 / Key| P_Kiro
-    Registry -->|Bearer Key| P_Custom
-```
-
----
-
-## ⚡ Performance & Benchmarks
-
-SRouter is engineered for peak efficiency with **Hono** and embedded **SQLite WAL**, maintaining an exceptionally small memory footprint and instant cold boot times compared to alternative AI gateways.
-
-### 📊 Memory Footprint Comparison (0 — 250 MB Scale)
+SRouter sits between your tools and your AI providers. Your application talks to one familiar API while SRouter handles provider-specific auth, translation, routing, fallback, quotas, and telemetry behind the scenes.
 
 ```text
-Memory Footprint (Idle Production Runtime)
-───────────────────────────────────────────────────────────────────────────────────────
-SRouter API (API-only)    [█████████░░░░░░░░░░░░░░░░░░░░░░░░░]  27%   65.2 MiB  (≈68 MB)  ⚡ Best
-9router (API-only)        [██████████████░░░░░░░░░░░░░░░░░░░░]  44%  104.5 MiB (≈110 MB)
-SRouter (API + Dashboard) [███████████████████████████░░░░░░░]  86%  206.1 MiB (≈216 MB)
-OmniRoute                 [──────────────────────────────────]   —    N/A (Build Incomplete)
-───────────────────────────────────────────────────────────────────────────────────────
+┌─────────────────────────────────────────────────────────────┐
+│ Your apps & tools                                          │
+│ Cursor · Claude Code · OpenCode · Aider · SDKs · cURL     │
+└──────────────────────────────┬──────────────────────────────┘
+                               │ OpenAI / Anthropic API
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│ ⚡ SRouter                                                   │
+│                                                             │
+│ Auth → Translation → Routing → Quotas → Logging            │
+│          ↳ SQLite WAL + OAuth token sweeper               │
+└──────────────┬──────────────┬──────────────┬────────────────┘
+               │              │              │
+               ▼              ▼              ▼
+          OpenAI / Codex   Anthropic     Gemini / Qoder / Kiro
+          and custom providers
 ```
 
-| Gateway Engine                   |   Memory Usage (RAM)    |     Scale (250 MB)     | Status Build & Runtime                  |
-| :------------------------------- | :---------------------: | :--------------------: | :-------------------------------------- |
-| ⚡ **SRouter API (API-only)**    |  **65.2 MiB** (~68 MB)  | `~27%` _(Highlighted)_ | ✅ Production build/start successful    |
-| 🏢 **9router (API-only)**        | **104.5 MiB** (~110 MB) |         `~44%`         | ✅ Production build/start successful    |
-| 🖥️ **SRouter (API + Dashboard)** | **206.1 MiB** (~216 MB) |         `~86%`         | ✅ API + Vite preview dashboard         |
-| ⚠️ **OmniRoute**                 |          **—**          |         _N/A_          | ❌ Production build/start not completed |
+## ✨ Why SRouter?
 
-> [!NOTE]
-> Measurements taken on production Node.js v22/v24 runtime under standard idle state. SRouter's standalone API mode consumes only **~65 MiB**, making it ideal for low-spec VPS, Raspberry Pi, and resource-constrained edge deployments.
+| Without a gateway | With SRouter |
+| --- | --- |
+| Different SDK/API shapes | One OpenAI + Anthropic compatible interface |
+| OAuth tokens expire unexpectedly | Background token refresh |
+| Provider quotas are hard to see | Live quota & reset telemetry |
+| Switching providers requires client changes | Centralized model routing |
+| Extra Redis/Postgres services | Embedded SQLite WAL |
+| Debugging AI requests is painful | Playground + audit logs |
+
+## 🚀 What you get
+
+### One API for many providers
+
+Use OpenAI-compatible `POST /v1/chat/completions` or Anthropic-compatible `POST /v1/messages` and keep your client code stable while switching upstream providers.
+
+### Smart routing and failover
+
+Route across multiple accounts and providers, recover from common upstream errors, and configure fallback rules before streaming begins.
+
+### OAuth that keeps itself alive
+
+SRouter includes background token sweeping and refresh flows for supported OAuth providers, so short-lived sessions do not have to interrupt your traffic.
+
+### Quota visibility
+
+See remaining capacity, token limits, reset timing, and provider health from the dashboard and `/v1/quota`.
+
+### Virtual API keys
+
+Create scoped `sr-live-*` keys for clients, with configurable expiration, rate limits, quotas, and API-key enforcement.
+
+### Token Saver
+
+The `/token-saver` tools can compress noisy developer input, encourage concise model output, and reduce unnecessary token usage across common coding workflows.
+
+### Built-in Playground
+
+Test models directly from the web UI with streaming, parameter controls, session history, reasoning inspection, and code export.
+
+### Local-first by design
+
+The core stack uses Hono + native SQLite WAL. No external database is required for the default deployment.
 
 ---
 
-## 🌐 Supported Providers
+## 🌐 Providers
 
-SRouter supports a wide range of official and community AI providers out of the box:
+SRouter currently supports these provider families and custom endpoints:
 
-| Provider                   | Auth Type            | Model Prefix     | Streaming (SSE) |   Reasoning / Thinking    |  Quota Sync  |
-| :------------------------- | :------------------- | :--------------- | :-------------: | :-----------------------: | :----------: |
-| **Google Antigravity**     | OAuth 2.0 PKCE       | `antigravity/*`  |       ✅        | ✅ (Flash / Pro Thinking) |      ✅      |
-| **OpenAI Codex / ChatGPT** | OAuth 2.0 PKCE       | `openai_codex/*` |       ✅        |     ✅ (o1, o3-mini)      |      ✅      |
-| **Anthropic Claude**       | API Key / OAuth      | `anthropic/*`    |       ✅        |      ✅ (3.7 Sonnet)      |      ✅      |
-| **Qoder**                  | Device Token / OAuth | `qoder/*`        |       ✅        |            ✅             |      ✅      |
-| **Amazon Q / Kiro**        | AWS SigV4 / API Key  | `kiro/*`         |       ✅        |   ✅ (Thinking Suffix)    |      ✅      |
-| **Neosantara**             | Bearer API Key       | `neosantara/*`   |       ✅        |            ✅             |      ✅      |
-| **GoRouter**               | Bearer API Key       | `gorouter/*`     |       ✅        |            ✅             |      ✅      |
-| **BluesMinds**             | Bearer API Key       | `bluesminds/*`   |       ✅        |            ✅             |      ✅      |
-| **SeekAI**                 | Bearer API Key       | `seekai/*`       |       ✅        |            ✅             |      ✅      |
-| **TabiToken**              | Bearer API Key       | `tabitoken/*`    |       ✅        |            ✅             |      ✅      |
-| **TokenRouter**            | Bearer API Key       | `tokenrouter/*`  |       ✅        |            ✅             |      ✅      |
-| **Command Code**           | Bearer API Key       | `commandcode/*`  |       ✅        |            ✅             |      ✅      |
-| **CodeBuddy**              | Access Token / OAuth | `codebuddy/*`    |       ✅        |            ✅             |      ✅      |
-| **Custom Endpoints**       | Custom Bearer / URL  | `custom/*`       |       ✅        |       Configurable        | Configurable |
+| Provider | Auth | Model prefix | SSE | Quota |
+| --- | --- | --- | :---: | :---: |
+| Google Antigravity | OAuth 2.0 PKCE | `antigravity/*` | ✅ | ✅ |
+| OpenAI Codex / ChatGPT | OAuth 2.0 PKCE | `openai_codex/*` | ✅ | ✅ |
+| Anthropic Claude | API Key / OAuth | `anthropic/*` | ✅ | ✅ |
+| Qoder | Device Token / OAuth | `qoder/*` | ✅ | ✅ |
+| Amazon Q / Kiro | AWS SigV4 / API Key | `kiro/*` | ✅ | ✅ |
+| Neosantara | Bearer API Key | `neosantara/*` | ✅ | ✅ |
+| GoRouter | Bearer API Key | `gorouter/*` | ✅ | ✅ |
+| BluesMinds | Bearer API Key | `bluesminds/*` | ✅ | ✅ |
+| SeekAI | Bearer API Key | `seekai/*` | ✅ | ✅ |
+| TabiToken | Bearer API Key | `tabitoken/*` | ✅ | ✅ |
+| TokenRouter | Bearer API Key | `tokenrouter/*` | ✅ | ✅ |
+| Command Code | Bearer API Key | `commandcode/*` | ✅ | ✅ |
+| CodeBuddy | Access Token / OAuth | `codebuddy/*` | ✅ | ✅ |
+| Custom Endpoints | Custom | `custom/*` | ✅ | Configurable |
+
+> Provider capabilities can vary by upstream implementation and account.
 
 ---
 
-## 🚀 Quick Start
+## ⚡ Quick Start
 
-### Prerequisites
+### Requirements
 
-- **Node.js**: `v22.0.0+` or `v24.0.0+`
-- **pnpm**: `v10.0.0+` (`corepack enable pnpm`)
+- Node.js `>=22.0.0`
+- pnpm `11.20.0`
 
-### 1. Clone & Install
+### 1. Clone
 
 ```bash
 git clone https://github.com/seaavey/SRouter.git
 cd SRouter
+```
+
+### 2. Install
+
+```bash
+corepack enable
 pnpm install
 ```
 
-### 2. Configure Environment
-
-Copy the example environment file (the defaults work out of the box):
+### 3. Configure
 
 ```bash
 cp .env.example .env
 ```
 
-### 3. Start Development Servers
+### 4. Run
 
 ```bash
 pnpm dev
 ```
 
-The stack boots with live hot-reloading:
+Then open:
 
-- **API Gateway**: `http://localhost:3000`
-- **Web Dashboard**: `http://localhost:5173`
-- **OAuth Callback Server**: `http://localhost:1455`
+- Dashboard: `http://localhost:5173`
+- API Gateway: `http://localhost:3000`
+- OAuth callback: `http://localhost:1455`
 
-### 4. Connect Your Providers
+### 5. Connect a provider
 
-1. Open `http://localhost:5173` in your browser.
-2. Navigate to **Providers** and authenticate your accounts (OAuth or API keys).
-3. Generate a Virtual API key in **API Keys** (optional if Open Access is enabled).
-4. Jump into the **Playground** to start chatting!
+Open the dashboard → **Providers** → authenticate a provider → optionally create a virtual API key → start testing in **Playground**.
 
-### 5. Connect AI Coding Tools via CLI (Optional)
-
-Configure your terminal coding tools (Claude Code, OpenCode) with one command:
+### 6. Connect coding tools
 
 ```bash
 pnpm srouter setup
@@ -248,99 +179,43 @@ pnpm srouter setup
 
 ---
 
-## 💻 CLI Tool (`@srouter/cli`)
+## 💻 CLI
 
-SRouter includes an official CLI tool to seamlessly link and configure AI coding tools (such as **Claude Code** and **OpenCode**) to proxy requests through your SRouter Gateway.
-
-### Quick Start
-
-Run the interactive setup wizard directly from the repository or via `pnpm`:
+The official `@srouter/cli` helps connect coding tools to your SRouter instance.
 
 ```bash
-# Launch the interactive wizard
+# Interactive setup
 pnpm srouter setup
 
-# Or via npx
+# Check gateway + tool configuration
+pnpm srouter status
+pnpm srouter doctor
+
+# Link a tool
+pnpm srouter link claude --model claude-3-7-sonnet
+pnpm srouter link opencode --model claude-3-7-sonnet
+
+# Run a tool with SRouter environment variables
+pnpm srouter run claude
+
+# Generate shell exports
+eval "$(pnpm srouter env claude)"
+
+# Restore previous tool configuration
+pnpm srouter unlink claude
+```
+
+You can also run the CLI package directly:
+
+```bash
 npx @srouter/cli setup
 ```
 
-### Key CLI Commands
+---
 
-#### 1. Interactive Setup Wizard (`srouter setup` / `config`)
+## 🐳 Docker
 
-Scans local SRouter health, lets you select which AI tools to connect, chooses the active model, and automatically updates configuration files:
-
-```bash
-pnpm srouter setup
-```
-
-#### 2. Link a Specific Tool (`srouter link`)
-
-Directly configure Claude Code or OpenCode with model overrides:
-
-```bash
-# Link Claude Code with a general model
-pnpm srouter link claude --model claude-3-7-sonnet
-
-# Link Claude Code with tier-specific models (Opus, Sonnet, Haiku)
-pnpm srouter link claude \
-  --opus-model claude-3-opus-20240229 \
-  --sonnet-model claude-3-7-sonnet-20250219 \
-  --haiku-model claude-3-5-haiku-20241022
-
-# Link OpenCode
-pnpm srouter link opencode --model claude-3-7-sonnet
-
-# Preview changes without modifying files (Dry-Run)
-pnpm srouter link claude --dry-run
-```
-
-#### 3. Status & Diagnostic Doctor (`srouter status` / `doctor`)
-
-Inspect your detected OS/shell, SRouter gateway connectivity, active models, and tool configuration states:
-
-```bash
-pnpm srouter status
-# or
-pnpm srouter doctor
-```
-
-#### 4. Shell Environment Variables (`srouter env`)
-
-Generate shell export commands to quickly route terminal sessions to SRouter:
-
-```bash
-# Export variables for Bash / Zsh
-eval "$(pnpm srouter env claude)"
-
-# Generate specific shell syntax (bash, zsh, fish, powershell, cmd)
-pnpm srouter env --shell powershell
-pnpm srouter env --shell fish
-```
-
-#### 5. Run Tools on the Fly (`srouter run`)
-
-Launch your AI coding tools with SRouter proxy environment variables injected at runtime:
-
-```bash
-pnpm srouter run claude
-pnpm srouter run opencode
-```
-
-#### 6. Rollback / Unlink (`srouter unlink`)
-
-Safely restore the original tool configuration from automatic backups:
-
-```bash
-pnpm srouter unlink claude
-pnpm srouter unlink opencode
-```
-
-## 🐳 Docker Deployment
-
-Run SRouter anywhere with Docker or Docker Compose in seconds using official images from GitHub Container Registry (`ghcr.io`).
-
-### Option A: One-Liner (Pre-built Image)
+Pull the pre-built image from GHCR:
 
 ```bash
 docker run -d \
@@ -352,9 +227,7 @@ docker run -d \
   ghcr.io/seaavey/srouter:latest
 ```
 
-### Option B: Docker Compose
-
-Clone the repository and spin up the unified container:
+Or use Compose:
 
 ```bash
 git clone https://github.com/seaavey/SRouter.git
@@ -362,100 +235,82 @@ cd SRouter
 docker compose up -d
 ```
 
-### Accessing SRouter:
+Persistent provider credentials, virtual keys, settings, and audit data live in the SQLite database inside `/app/data` when using the persistent volume.
 
-- **Web Dashboard & API Gateway**: `http://localhost:3000` (or `http://<your-server-ip>:3000`)
-- **OAuth Callback Listener**: `http://localhost:1455`
-- **Health Check**: `http://localhost:3000/health`
-
-### Managing the Container:
+Useful commands:
 
 ```bash
-# View live logs
-docker compose logs -f
-
-# Check container health status
 docker compose ps
-
-# Update to latest version
-git pull && docker compose up -d --build
-
-# Stop the container
+docker compose logs -f
 docker compose down
 ```
 
-> [!TIP]
-> All provider credentials, virtual API keys, settings, and request logs are stored in SQLite WAL mode inside the persistent Docker volume (`/app/data`).
-
 ---
 
-## 💻 Client Integration
+## 🔌 Integrate
 
-Point any OpenAI or Anthropic compatible tool, SDK, or editor to SRouter:
+SRouter is designed to work with clients that already speak OpenAI or Anthropic APIs.
 
-### 🐍 Python (`openai` SDK)
+### OpenAI SDK — Python
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:3000/v1",
-    api_key="sr-live-your_virtual_key"  # Or any placeholder if API key enforcement is disabled
+    api_key="sr-live-your_virtual_key",
 )
 
-# Stream response from Google Antigravity
 response = client.chat.completions.create(
     model="antigravity/gemini-2.5-flash",
     messages=[
-        {"role": "system", "content": "You are a concise expert engineer."},
         {"role": "user", "content": "Explain SQLite WAL mode in 2 sentences."}
     ],
-    stream=True
+    stream=True,
 )
 
 for chunk in response:
-    content = chunk.choices[0].delta.content or ""
-    print(content, end="", flush=True)
+    print(chunk.choices[0].delta.content or "", end="", flush=True)
 ```
 
-### 🟦 TypeScript / Node.js (`openai` SDK)
+### OpenAI SDK — TypeScript
 
 ```typescript
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-    baseURL: "http://localhost:3000/v1",
-    apiKey: process.env.SROUTER_API_KEY || "sr-live-dev-key"
+const client = new OpenAI({
+  baseURL: "http://localhost:3000/v1",
+  apiKey: process.env.SROUTER_API_KEY || "sr-live-dev-key",
 });
 
-const response = await openai.chat.completions.create({
-    model: "openai_codex/gpt-4o",
-    messages: [{ role: "user", content: "Write a high-performance LRU cache in TypeScript." }]
+const response = await client.chat.completions.create({
+  model: "openai_codex/gpt-4o",
+  messages: [{ role: "user", content: "Write a high-performance LRU cache in TypeScript." }],
 });
 
 console.log(response.choices[0].message.content);
 ```
 
-### 🟧 Anthropic Python SDK (`/v1/messages`)
+### Anthropic SDK — Python
 
 ```python
 from anthropic import Anthropic
 
 client = Anthropic(
     base_url="http://localhost:3000/v1",
-    api_key="sr-live-your_virtual_key"
+    api_key="sr-live-your_virtual_key",
 )
 
 message = client.messages.create(
     model="anthropic/claude-3-7-sonnet",
     max_tokens=1024,
-    messages=[{"role": "user", "content": "Hello Claude through SRouter!"}]
+    messages=[{"role": "user", "content": "Hello Claude through SRouter!"}],
 )
 
 print(message.content[0].text)
 ```
 
-### 🐚 cURL (Streaming SSE)
+### cURL — streaming
 
 ```bash
 curl -N http://localhost:3000/v1/chat/completions \
@@ -468,134 +323,153 @@ curl -N http://localhost:3000/v1/chat/completions \
   }'
 ```
 
-### 💻 Cursor, VSCode & Coding Agents Setup
+### Cursor / Windsurf / Cline / Roo Code / Continue
 
-In **Cursor**, **Windsurf**, **Cline**, **Roo Code**, or **Continue**:
+Use the same SRouter gateway values:
 
-1. **OpenAI Base URL**: `http://localhost:3000/v1`
-2. **API Key**: `sr-live-...` (or any dummy key if Open Access is enabled)
-3. **Model Name**: Use any discovered model identifier (e.g. `antigravity/gemini-2.5-flash`, `openai_codex/gpt-4o`, `anthropic/claude-3-7-sonnet`, `qoder/gpt-4o`).
+```text
+Base URL: http://localhost:3000/v1
+API Key:  sr-live-...
+Model:    <any discovered SRouter model>
+```
 
 ---
 
-## 🔌 API Reference
+## 📡 API
 
-### Gateway Core Endpoints
+### Core
 
-| Method | Endpoint               | Description                                                          |
-| :----- | :--------------------- | :------------------------------------------------------------------- |
-| `POST` | `/v1/chat/completions` | Create OpenAI-compliant chat completion (JSON payload or SSE stream) |
-| `POST` | `/v1/chat/completion`  | Alias endpoint for chat completion                                   |
-| `POST` | `/v1/messages`         | Create Anthropic-compliant message completion                        |
-| `GET`  | `/v1/models`           | List all available models across connected providers                 |
-| `GET`  | `/v1/models/:model`    | Retrieve model specifications and context parameters                 |
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/v1/chat/completions` | OpenAI-compatible chat completion + SSE |
+| `POST` | `/v1/chat/completion` | Alias for chat completion |
+| `POST` | `/v1/messages` | Anthropic-compatible messages |
+| `GET` | `/v1/models` | List available models |
+| `GET` | `/v1/models/:model` | Inspect model details |
 
-### Management & Telemetry Endpoints
+### Management & telemetry
 
-| Method   | Endpoint            | Description                                                        |
-| :------- | :------------------ | :----------------------------------------------------------------- |
-| `GET`    | `/health`           | Gateway health check and runtime state                             |
-| `GET`    | `/v1/quota`         | Live upstream quota meters, limits, and reset countdowns           |
-| `GET`    | `/v1/providers`     | List active provider connections and runtime statuses              |
-| `POST`   | `/v1/providers`     | Register or update provider credentials                            |
-| `DELETE` | `/v1/providers/:id` | Disconnect and unregister a provider                               |
-| `GET`    | `/v1/keys`          | List all active virtual client API keys                            |
-| `POST`   | `/v1/keys`          | Generate a new virtual client API key (`sr-live-...`)              |
-| `DELETE` | `/v1/keys/:id`      | Revoke a virtual client key                                        |
-| `GET`    | `/v1/settings`      | Read global gateway security and routing settings                  |
-| `POST`   | `/v1/settings`      | Update security configuration (`requireApiKey`, timeouts, retries) |
-| `GET`    | `/v1/logs`          | Query request audit logs with latency metrics                      |
-| `GET`    | `/v1/logs/stats`    | Aggregate token consumption metrics and cost estimates             |
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/health` | Gateway health |
+| `GET` | `/v1/quota` | Provider quota + reset timing |
+| `GET` | `/v1/providers` | List provider connections |
+| `POST` | `/v1/providers` | Add/update a provider |
+| `DELETE` | `/v1/providers/:id` | Remove a provider |
+| `GET` | `/v1/keys` | List virtual API keys |
+| `POST` | `/v1/keys` | Create a virtual API key |
+| `DELETE` | `/v1/keys/:id` | Revoke a key |
+| `GET` | `/v1/settings` | Read gateway settings |
+| `POST` | `/v1/settings` | Update gateway settings |
+| `GET` | `/v1/logs` | Request audit logs |
+| `GET` | `/v1/logs/stats` | Usage + cost aggregates |
 
 ---
 
 ## ⚙️ Configuration
 
-SRouter can be configured via environment variables or directly through the web UI settings page:
-
-| Variable        |   Type   |     Default     | Description                                                           |
-| :-------------- | :------: | :-------------: | :-------------------------------------------------------------------- |
-| `PORT`          | `number` |     `3000`      | Port for the Hono API server and unified dashboard.                   |
-| `OAUTH_PORT`    | `number` |     `1455`      | Local callback listener port for OAuth PKCE authentication flows.     |
-| `DATABASE_PATH` | `string` |  `srouter.db`   | Path to SQLite database file (e.g. `/app/data/srouter.db` in Docker). |
-| `NODE_ENV`      | `string` |  `development`  | Runtime environment mode (`development` \| `production`).             |
-| `WEB_DIST_PATH` | `string` | `apps/web/dist` | Path to compiled web dashboard static assets.                         |
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `3000` | API server + production dashboard port |
+| `OAUTH_PORT` | `1455` | OAuth PKCE callback listener |
+| `DATABASE_PATH` | `srouter.db` | SQLite database path |
+| `NODE_ENV` | `development` | `development` or `production` |
+| `WEB_DIST_PATH` | `apps/web/dist` | Dashboard static asset path |
 
 ---
 
-## 📂 Monorepo Structure
+## 🏗 Architecture
 
-SRouter is structured as a clean, modular monorepo managed with **pnpm** and **Turborepo**:
+```mermaid
+flowchart LR
+  Clients["Clients & Dev Tools\nCursor · Claude Code · SDKs · cURL"]
+  Gateway["⚡ SRouter Gateway\nAuth · Translation · Routing"]
+  State[("SQLite WAL\nKeys · Quotas · Logs")]
+  Providers["AI Providers\nOpenAI · Anthropic · Gemini\nQoder · Kiro · Custom"]
 
+  Clients -->|OpenAI / Anthropic API| Gateway
+  Gateway <--> State
+  Gateway --> Providers
 ```
-SRouter/
-├── apps/
-│   ├── api/                 # Hono REST API server, OAuth handler & Token Sweeper
-│   ├── cli/                 # Official CLI for auto-connecting AI coding tools (@srouter/cli)
-│   └── web/                 # Dashboard UI (Vite, React 19, TanStack Router/Table)
-├── packages/
-│   ├── constants/           # Shared provider definitions, seed data & constants
-│   ├── db/                  # Native SQLite WAL repository layer (node:sqlite)
-│   ├── executors/           # Upstream provider drivers (Antigravity, Codex, Qoder, Kiro)
-│   ├── pricing/             # Token pricing and cost estimation calculators
-│   ├── providers/           # Provider catalog, registry & OAuth state coordinator
-│   ├── translator/          # Bidirectional OpenAI ↔ Anthropic ↔ Gemini protocol bridge
-│   └── types/               # TypeScript domain models & Zod validation schemas
-├── .github/
-│   └── workflows/ci.yml     # Automated CI/CD validation pipeline
-├── docker-compose.yml       # Production Docker Compose orchestration
-├── Dockerfile               # Multi-stage optimized production container build
-├── CONTRIBUTING.md          # Developer onboarding & contribution guide
-├── SECURITY.md              # Security policy and reporting
-└── LICENSE                  # MIT License
+
+The repository is a pnpm + Turborepo monorepo with separate apps for the API, CLI, and web dashboard plus shared packages for providers, translation, pricing, database access, and domain types.
+
+```text
+apps/
+├── api/        # Hono API, OAuth, token sweeper
+├── cli/        # @srouter/cli
+└── web/        # React dashboard
+
+packages/
+├── db/         # SQLite WAL layer
+├── executors/  # Provider drivers
+├── providers/  # Provider registry + OAuth state
+├── translator/ # API/schema translation
+├── pricing/    # Token pricing + cost estimation
+├── constants/  # Shared definitions
+└── types/      # Domain models + Zod schemas
 ```
 
 ---
 
-## 🛠️ Development & Testing
+## 📊 Performance
+
+The project is designed around a lightweight runtime: Hono handles HTTP traffic while native SQLite WAL keeps the default deployment free from an external database dependency.
+
+The repository currently documents an idle API-only footprint of about **65.2 MiB** under the tested Node.js runtime. Treat benchmark numbers as environment-specific rather than universal.
+
+---
+
+## 🧪 Development
 
 ```bash
-# Verify code formatting
+# Check formatting
 pnpm format:check
 
-# Run static linter across monorepo
+# Lint
 pnpm lint
 
-# Run all test suites
+# Run tests
 pnpm test
 
-# Run targeted package test
-pnpm --filter @srouter/executors exec tsx --test tests/antigravity.test.ts
+# Build everything
+pnpm build
 ```
+
+For targeted package testing, see the individual package test scripts and `CONTRIBUTING.md`.
 
 ---
 
-## 🛣️ Roadmap
+## 🛣 Roadmap
 
-- [x] Multi-provider OAuth PKCE session handling & background token sweeper
-- [x] Real-time upstream quota & rate limit monitoring (`/v1/quota`)
-- [x] Configurable gateway security (`Require API Key` toggle in `/settings`)
-- [x] Modern React 19 dashboard with TanStack Table and interactive Playground
-- [x] Anthropic Messages API (`/v1/messages`) support
-- [x] Docker image publishing via GitHub Container Registry (`ghcr.io`)
-- [ ] Multi-region upstream load balancing & automatic fallback cascade chains
+- [x] Multi-provider OAuth PKCE + background token sweeper
+- [x] Real-time quota and rate-limit monitoring
+- [x] Configurable API-key enforcement
+- [x] React 19 dashboard + Playground
+- [x] Anthropic Messages API
+- [x] GHCR Docker publishing
+- [ ] Multi-region upstream load balancing
 - [ ] Semantic response caching with local SQLite vector search
-- [ ] One-click cloud deployment templates (Railway, Fly.io, Render)
+- [ ] One-click cloud deployment templates
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please check out [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code standards, development workflow, and pull request process.
+Issues, ideas, and pull requests are welcome.
 
----
+Start with [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and project conventions.
+
+## 🔐 Security
+
+Please read [SECURITY.md](SECURITY.md) for the security policy and responsible disclosure process.
 
 ## 📄 License
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for full details.
+SRouter is released under the **MIT License**. See [`LICENSE`](LICENSE).
 
 ---
 
 <div align="center">
-  <sub>Crafted with ⚡ and precision for the AI developer community.</sub>
+  <sub>Built for developers who use more than one AI provider.</sub>
 </div>
