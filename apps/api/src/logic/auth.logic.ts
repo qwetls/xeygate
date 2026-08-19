@@ -1,3 +1,4 @@
+import { CODEBUDDY_BASE_URL } from "@srouter/constants";
 import {
     cleanupExpiredOAuthSessionsDB,
     deleteOAuthSessionDB,
@@ -5,8 +6,8 @@ import {
     saveOAuthSessionDB,
     upsertProviderDB
 } from "@srouter/db";
-import { generatePKCE, QoderOAuth } from "@srouter/providers";
-import { QoderExecutor } from "@srouter/executors";
+import { CodeBuddyOAuth, generatePKCE, QoderOAuth } from "@srouter/providers";
+import { CodeBuddyExecutor, QoderExecutor } from "@srouter/executors";
 import type { ProviderConfig } from "@srouter/types";
 import { registry } from "@/services/registry.js";
 import {
@@ -275,7 +276,95 @@ export class AuthLogic {
         return processTokenImportFor(tabiTokenAuthHandler, params);
     }
 
-    // CodeBuddy (API key / token)
+    // CodeBuddy (OAuth & token import)
+    public static async initiateCodeBuddyOAuth(): Promise<{ authorizeUrl: string; state: string }> {
+        cleanupExpiredSessions();
+        const codeBuddyOAuth = new CodeBuddyOAuth();
+        const { state, authUrl } = await codeBuddyOAuth.requestAuthState();
+
+        saveOAuthSessionDB({
+            state,
+            codeVerifier: "",
+            clientId: "",
+            redirectUri: "",
+            createdAt: Date.now()
+        });
+
+        return {
+            authorizeUrl: authUrl,
+            state
+        };
+    }
+
+    public static async pollCodeBuddyDeviceToken(state: string): Promise<{
+        status: "pending" | "ok";
+        provider?: ProviderConfig;
+        error?: string;
+    }> {
+        if (!state) {
+            return { status: "pending", error: "Missing state parameter" };
+        }
+
+        const session = getOAuthSessionDB(state);
+        if (!session) {
+            return { status: "pending", error: "Session expired or not found" };
+        }
+
+        const codeBuddyOAuth = new CodeBuddyOAuth();
+        let poll: {
+            status: "pending" | "ok";
+            accessToken?: string;
+            refreshToken?: string;
+            expiresIn?: number;
+            error?: string;
+        };
+
+        try {
+            poll = await codeBuddyOAuth.pollToken(state);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            return { status: "pending", error: msg };
+        }
+
+        if (poll.status !== "ok" || !poll.accessToken) {
+            return { status: "pending", error: poll.error };
+        }
+
+        deleteOAuthSessionDB(state);
+
+        const timestamp = Date.now();
+        const accountId = `codebuddy_${timestamp}`;
+        const accountName = `CodeBuddy (Account #${timestamp.toString().slice(-4)})`;
+
+        const providerConfig = upsertProviderDB({
+            id: accountId,
+            providerId: "codebuddy",
+            name: accountName,
+            category: "oauth",
+            protocol: "openai",
+            baseUrl: CODEBUDDY_BASE_URL,
+            accessToken: poll.accessToken,
+            refreshToken: poll.refreshToken,
+            tokenExpiresAt: poll.expiresIn ? timestamp + poll.expiresIn * 1000 : undefined,
+            lastRefreshedAt: timestamp,
+            enabled: true,
+            createdAt: timestamp
+        });
+
+        const providerInstance = new CodeBuddyExecutor({
+            id: accountId,
+            name: accountName,
+            baseUrl: CODEBUDDY_BASE_URL,
+            accessToken: poll.accessToken
+        });
+        registry.registerProvider(providerInstance);
+
+        return {
+            status: "ok",
+            provider: providerConfig
+        };
+    }
+
     public static processCodeBuddyTokenImport(params: TokenImportParams): ProviderConfig {
         return processTokenImportFor(codeBuddyAuthHandler, params);
     }

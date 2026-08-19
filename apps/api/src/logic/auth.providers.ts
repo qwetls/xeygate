@@ -24,7 +24,13 @@ import {
     SeekAIExecutor,
     TabiTokenExecutor
 } from "@srouter/executors";
-import { AntigravityOAuth, ClaudeOAuth, OpenAICodexOAuth, QoderOAuth } from "@srouter/providers";
+import {
+    AntigravityOAuth,
+    ClaudeOAuth,
+    CodeBuddyOAuth,
+    OpenAICodexOAuth,
+    QoderOAuth
+} from "@srouter/providers";
 import type { AIProvider, ProviderCategory, ProviderProtocol } from "@srouter/types";
 
 export interface OAuthLoginParams {
@@ -350,20 +356,30 @@ export const tabiTokenAuthHandler: AuthProviderHandler = {
 export const codeBuddyAuthHandler: AuthProviderHandler = {
     providerId: "codebuddy",
     displayName: "CodeBuddy",
-    category: "api_key",
+    category: "oauth",
     protocol: "openai",
     idPrefix: "codebuddy",
     baseUrl: () => CODEBUDDY_BASE_URL,
-    oauthSuccessMessage: "",
-    tokenImportMessage:
-        "CodeBuddy API Key / Token registered and saved directly to SQLite database!",
+    oauthSuccessMessage: "Login CodeBuddy Berhasil!",
+    tokenImportMessage: "CodeBuddy Access Token registered and saved directly to SQLite database!",
+    oauthClass: CodeBuddyOAuth,
+    mapOAuthTokens: (tokens) => ({
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresIn: tokens.expiresIn
+    }),
     mapImportTokens: (params) => ({
-        apiKey: params.accessToken,
+        accessToken: params.accessToken,
         refreshToken: params.refreshToken,
         baseUrl: params.baseUrl
     }),
-    buildExecutor: ({ id, name, baseUrl, apiKey }) =>
-        new CodeBuddyExecutor({ id, name, baseUrl: baseUrl || CODEBUDDY_BASE_URL, apiKey })
+    buildExecutor: ({ id, name, baseUrl, accessToken, apiKey }) =>
+        new CodeBuddyExecutor({
+            id,
+            name,
+            baseUrl: baseUrl || CODEBUDDY_BASE_URL,
+            accessToken: accessToken || apiKey
+        })
 };
 
 export const authProviderHandlers: Record<string, AuthProviderHandler> = {

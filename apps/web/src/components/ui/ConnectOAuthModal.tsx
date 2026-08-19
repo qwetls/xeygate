@@ -32,6 +32,8 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
 
     const baseId = provider?.id.split("_")[0]?.split("-")[0] ?? provider?.id ?? "";
     const isQoder = baseId === "qoder";
+    const isCodeBuddy = baseId === "codebuddy";
+    const isPolling = isQoder || isCodeBuddy;
 
     // Fetch backend-registered PKCE OAuth session & open popup
     useEffect(() => {
@@ -55,7 +57,11 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                 ? "/v1/auth/antigravity/login?format=json"
                 : baseId === "qoder"
                   ? "/v1/auth/qoder/login?format=json"
-                  : "/v1/auth/openai/login?format=json";
+                  : baseId === "codebuddy"
+                    ? "/v1/auth/codebuddy/login?format=json"
+                    : baseId === "claude" || baseId === "anthropic"
+                      ? "/v1/auth/claude/login?format=json"
+                      : "/v1/auth/openai/login?format=json";
 
         api.get<OAuthLoginResponse>(providerEndpoint)
             .then((res) => {
@@ -105,15 +111,17 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
         return () => window.removeEventListener("message", handleMessage);
     }, [open, provider, queryClient, onOpenChange]);
 
-    // Active polling for Qoder Device Flow
+    // Active polling for Qoder and CodeBuddy Device/OAuth Flow
     useEffect(() => {
-        if (!open || !provider || !isQoder || !oauthState) return;
+        if (!open || !provider || !isPolling || !oauthState) return;
 
         const interval = setInterval(async () => {
             try {
-                const res = await api.get<{ status: string; provider?: ProviderConfig }>(
-                    `/v1/auth/qoder/poll?state=${encodeURIComponent(oauthState)}`
-                );
+                const pollUrl =
+                    baseId === "codebuddy"
+                        ? `/v1/auth/codebuddy/poll?state=${encodeURIComponent(oauthState)}`
+                        : `/v1/auth/qoder/poll?state=${encodeURIComponent(oauthState)}`;
+                const res = await api.get<{ status: string; provider?: ProviderConfig }>(pollUrl);
                 if (res && res.status === "ok") {
                     if (popupRef.current && !popupRef.current.closed) {
                         popupRef.current.close();
@@ -130,7 +138,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [open, provider, isQoder, oauthState, queryClient, onOpenChange]);
+    }, [open, provider, isPolling, baseId, oauthState, queryClient, onOpenChange]);
 
     const callbackMutation = useMutation({
         mutationFn: (payload: { callbackUrl: string }) => {
@@ -207,7 +215,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
 
         const token = patInput.trim();
         if (!token) {
-            setError("Please enter your Personal Access Token (PAT) or Access Token.");
+            setError("Please enter your token.");
             return;
         }
 
@@ -236,14 +244,14 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                     <button
                         type="button"
                         onClick={() => onOpenChange(false)}
-                        className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary transition-colors"
+                        className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-secondary transition-colors cursor-pointer"
                     >
                         <X className="size-4" />
                     </button>
                 </div>
 
-                {/* Optional Tab Switcher for Qoder or token-based providers */}
-                {isQoder && (
+                {/* Optional Tab Switcher for Qoder or CodeBuddy */}
+                {(isQoder || isCodeBuddy) && (
                     <div className="flex border-b border-border/60 text-xs font-mono">
                         <button
                             type="button"
@@ -267,7 +275,9 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                             }`}
                         >
                             <Key className="size-3.5" />
-                            <span>Personal Access Token (PAT)</span>
+                            <span>
+                                {isCodeBuddy ? "Access Token" : "Personal Access Token (PAT)"}
+                            </span>
                         </button>
                     </div>
                 )}
@@ -285,10 +295,12 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                             <Loader2 className="size-4 text-orange-500 animate-spin shrink-0" />
                             <span>
                                 {isLoadingUrl
-                                    ? "Generating PKCE session…"
+                                    ? "Generating authorization session…"
                                     : isQoder
                                       ? "Waiting for Qoder browser authorization…"
-                                      : "Waiting for popup authorization…"}
+                                      : isCodeBuddy
+                                        ? "Waiting for CodeBuddy browser authorization…"
+                                        : "Waiting for popup authorization…"}
                             </span>
                         </div>
 
@@ -321,7 +333,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                                 </div>
                             </div>
 
-                            {!isQoder && (
+                            {!isPolling && (
                                 <>
                                     {/* Step 2 for redirect-based OAuth */}
                                     <div className="space-y-1.5">
@@ -362,22 +374,30 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                     <form onSubmit={handlePatSubmit} className="space-y-4 text-xs font-mono">
                         <div className="space-y-1.5">
                             <label className="font-semibold text-foreground block font-sans text-xs">
-                                Personal Access Token (PAT)
+                                {isCodeBuddy
+                                    ? "CodeBuddy Access Token"
+                                    : "Personal Access Token (PAT)"}
                             </label>
                             <p className="text-[11px] text-muted-foreground font-sans">
-                                Generate your PAT (`pt-...`) from{" "}
-                                <a
-                                    href="https://qoder.com/account/integrations"
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="underline text-foreground"
-                                >
-                                    qoder.com/account/integrations
-                                </a>
+                                {isCodeBuddy ? (
+                                    "Masukkan Access Token / Bearer Token dari akun CodeBuddy Anda."
+                                ) : (
+                                    <>
+                                        Generate your PAT (`pt-...`) from{" "}
+                                        <a
+                                            href="https://qoder.com/account/integrations"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="underline text-foreground"
+                                        >
+                                            qoder.com/account/integrations
+                                        </a>
+                                    </>
+                                )}
                             </p>
                             <input
                                 type="password"
-                                placeholder="pt-..."
+                                placeholder={isCodeBuddy ? "eyJhbGciOi..." : "pt-..."}
                                 value={patInput}
                                 onChange={(e) => setPatInput(e.target.value)}
                                 className="w-full rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
@@ -397,7 +417,11 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                                 disabled={patMutation.isPending}
                                 className="rounded-lg bg-secondary hover:bg-foreground hover:text-background border border-border/60 text-foreground px-5 py-2 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
                             >
-                                {patMutation.isPending ? "Connecting…" : "Connect PAT"}
+                                {patMutation.isPending
+                                    ? "Connecting…"
+                                    : isCodeBuddy
+                                      ? "Connect CodeBuddy"
+                                      : "Connect PAT"}
                             </button>
                         </div>
                     </form>

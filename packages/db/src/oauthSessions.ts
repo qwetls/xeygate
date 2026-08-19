@@ -2,10 +2,10 @@ import { db } from "./db.js";
 
 export interface OAuthSession {
     state: string;
-    codeVerifier: string;
-    clientId: string;
-    redirectUri: string;
-    createdAt: number;
+    codeVerifier?: string;
+    clientId?: string;
+    redirectUri?: string;
+    createdAt?: number;
 }
 
 export function saveOAuthSessionDB(session: OAuthSession): OAuthSession {
@@ -19,10 +19,10 @@ export function saveOAuthSessionDB(session: OAuthSession): OAuthSession {
              created_at = excluded.created_at;`
     ).run(
         session.state,
-        session.codeVerifier,
-        session.clientId,
-        session.redirectUri,
-        session.createdAt
+        session.codeVerifier ?? "",
+        session.clientId ?? "",
+        session.redirectUri ?? "",
+        session.createdAt ?? Date.now()
     );
 
     return session;

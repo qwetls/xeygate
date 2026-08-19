@@ -22,9 +22,9 @@ test("saved CodeBuddy connections instantiate CodeBuddyExecutor and list models"
         id,
         providerId: "codebuddy",
         name: "CodeBuddy Test",
-        category: "api_key",
+        category: "oauth",
         protocol: "openai",
-        apiKey: fixtureKey,
+        accessToken: fixtureKey,
         enabled: true,
         createdAt: Date.now()
     };
@@ -52,13 +52,82 @@ test("processCodeBuddyTokenImport creates and registers CodeBuddy provider confi
 
     assert.match(config.id, /^codebuddy_\d+$/);
     assert.equal(config.name, "My CodeBuddy Account");
-    assert.equal(config.category, "api_key");
+    assert.equal(config.category, "oauth");
     assert.equal(config.protocol, "openai");
     assert.equal(config.baseUrl, "https://www.codebuddy.ai/v2/chat/completions");
-    assert.equal(config.apiKey, "test-codebuddy-key");
+    assert.equal(config.accessToken, "test-codebuddy-key");
     assert.equal(config.enabled, true);
     assert.equal(
         codeBuddyAuthHandler.tokenImportMessage,
-        "CodeBuddy API Key / Token registered and saved directly to SQLite database!"
+        "CodeBuddy Access Token registered and saved directly to SQLite database!"
     );
+});
+
+test("initiateCodeBuddyOAuth requests state and creates session", async () => {
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/v2/plugin/auth/state")) {
+            return new Response(
+                JSON.stringify({
+                    code: 0,
+                    msg: "ok",
+                    data: {
+                        state: "test-codebuddy-state-123",
+                        authUrl: "https://www.codebuddy.ai/login?state=test-codebuddy-state-123"
+                    }
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } }
+            );
+        }
+        return new Response("Not found", { status: 404 });
+    };
+
+    const result = await AuthLogic.initiateCodeBuddyOAuth();
+    assert.equal(result.state, "test-codebuddy-state-123");
+    assert.equal(
+        result.authorizeUrl,
+        "https://www.codebuddy.ai/login?state=test-codebuddy-state-123"
+    );
+});
+
+test("pollCodeBuddyDeviceToken polls upstream and creates provider when user authorizes", async () => {
+    globalThis.fetch = async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes("/v2/plugin/auth/token")) {
+            return new Response(
+                JSON.stringify({
+                    code: 0,
+                    msg: "ok",
+                    data: {
+                        accessToken: "cb-access-token-xyz",
+                        refreshToken: "cb-refresh-token-xyz",
+                        tokenType: "Bearer",
+                        expiresIn: 86400
+                    }
+                }),
+                { status: 200, headers: { "Content-Type": "application/json" } }
+            );
+        }
+        return new Response("Not found", { status: 404 });
+    };
+
+    const state = "cb-test-state-auth";
+    const { saveOAuthSessionDB } = await import("@srouter/db");
+    saveOAuthSessionDB({
+        state,
+        codeVerifier: "",
+        clientId: "",
+        redirectUri: "",
+        createdAt: Date.now()
+    });
+
+    const result = await AuthLogic.pollCodeBuddyDeviceToken(state);
+    assert.equal(result.status, "ok");
+    assert.ok(result.provider);
+    createdIds.push(result.provider.id);
+
+    assert.equal(result.provider.providerId, "codebuddy");
+    assert.equal(result.provider.category, "oauth");
+    assert.equal(result.provider.accessToken, "cb-access-token-xyz");
+    assert.equal(result.provider.refreshToken, "cb-refresh-token-xyz");
 });

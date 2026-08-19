@@ -49,7 +49,8 @@ export function seedDefaultProviders(): void {
 
     const now = Date.now();
     for (const seed of DEFAULT_PROVIDERS) {
-        if (!existingIds.has(seed.id)) {
+        const existingRow = existing.find((p) => p.id === seed.id);
+        if (!existingRow) {
             upsertProviderDB({
                 id: seed.id,
                 providerId: seed.id,
@@ -61,6 +62,21 @@ export function seedDefaultProviders(): void {
                 providerSpecificData: { [SEED_MARKER]: "true" },
                 createdAt: now
             });
+        } else if (isSeedProvider(existingRow)) {
+            if (
+                existingRow.category !== seed.category ||
+                existingRow.protocol !== seed.protocol ||
+                existingRow.name !== seed.name ||
+                existingRow.baseUrl !== seed.baseUrl
+            ) {
+                upsertProviderDB({
+                    ...existingRow,
+                    name: seed.name,
+                    category: seed.category,
+                    protocol: seed.protocol,
+                    baseUrl: seed.baseUrl
+                });
+            }
         }
     }
 }

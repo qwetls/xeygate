@@ -77,8 +77,15 @@ authRoute.post("/auth/seekai/import-token", adminAuth, AuthController.importSeek
 authRoute.post("/auth/tabitoken/token", adminAuth, AuthController.importTabiTokenToken);
 authRoute.post("/auth/tabitoken/import-token", adminAuth, AuthController.importTabiTokenToken);
 
-// --- CodeBuddy Provider (API key / token) ---
-// 1. POST /v1/auth/codebuddy/token & POST /v1/auth/codebuddy/import-token
+// --- CodeBuddy Provider (OAuth & Access Token) ---
+// 1. GET /v1/auth/codebuddy/login - Initiate CodeBuddy OAuth Flow
+authRoute.get("/auth/codebuddy/login", adminAuth, AuthController.loginCodeBuddy);
+
+// 2. GET & POST /v1/auth/codebuddy/poll - CodeBuddy OAuth Poll Receiver
+authRoute.get("/auth/codebuddy/poll", adminAuth, AuthController.pollCodeBuddy);
+authRoute.post("/auth/codebuddy/poll", adminAuth, AuthController.pollCodeBuddy);
+
+// 3. POST /v1/auth/codebuddy/token & POST /v1/auth/codebuddy/import-token
 authRoute.post("/auth/codebuddy/token", adminAuth, AuthController.importCodeBuddyToken);
 authRoute.post("/auth/codebuddy/import-token", adminAuth, AuthController.importCodeBuddyToken);
 

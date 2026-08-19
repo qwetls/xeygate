@@ -16,6 +16,12 @@ export const CODEX_MODELS_URL = "https://chatgpt.com/backend-api/codex/models";
 export const ANTIGRAVITY_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai";
 export const ANTIGRAVITY_IDE_BASE_URL = "https://daily-cloudcode-pa.googleapis.com";
 export const CODEBUDDY_BASE_URL = "https://www.codebuddy.ai/v2/chat/completions";
+export const CODEBUDDY_AUTH_BASE = "https://www.codebuddy.ai";
+export const CODEBUDDY_AUTH_STATE_URL = "https://www.codebuddy.ai/v2/plugin/auth/state";
+export const CODEBUDDY_AUTH_TOKEN_URL = "https://www.codebuddy.ai/v2/plugin/auth/token";
+export const CODEBUDDY_AUTH_REFRESH_URL = "https://www.codebuddy.ai/v2/plugin/auth/token/refresh";
+export const CODEBUDDY_AUTH_USER_AGENT = "IDE/2.63.2 CodeBuddy/2.63.2";
+export const CODEBUDDY_AUTH_PLATFORM = "ide";
 
 export interface CodeBuddyModelDefinition {
     id: string;
@@ -267,14 +273,15 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
     {
         id: "codebuddy",
         name: "CodeBuddy",
-        category: "api_key",
+        category: "oauth",
         protocol: "openai",
         alias: "codebuddy",
         baseUrl: CODEBUDDY_BASE_URL,
         websiteUrl: "https://www.codebuddy.ai",
-        requiresApiKey: true,
+        requiresApiKey: false,
+        requiresOAuth: true,
         supportsCustomUrl: true,
-        statusMessage: "CodeBuddy API key or token missing"
+        statusMessage: "CodeBuddy OAuth token missing"
     }
 ];
 

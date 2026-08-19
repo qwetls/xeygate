@@ -304,7 +304,43 @@ export class AuthController {
         );
     }
 
-    // CodeBuddy Provider (API key / token)
+    // CodeBuddy Provider (OAuth & Access Token)
+    public static async loginCodeBuddy(c: Context): Promise<Response> {
+        try {
+            const result = await AuthLogic.initiateCodeBuddyOAuth();
+            const format = c.req.query("format");
+            if (format === "json") {
+                return ok(c, {
+                    authorizeUrl: result.authorizeUrl,
+                    state: result.state
+                });
+            }
+            return c.redirect(result.authorizeUrl);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Internal Server Error";
+            return err(c, `Failed to initiate CodeBuddy login: ${message}`, 500, {
+                type: "api_error"
+            });
+        }
+    }
+
+    public static async pollCodeBuddy(c: Context): Promise<Response> {
+        let state = c.req.query("state");
+        if (!state) {
+            try {
+                const body = await c.req.json<{ state?: string }>();
+                state = body?.state;
+            } catch {}
+        }
+
+        if (!state) {
+            return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
+        }
+
+        const result = await AuthLogic.pollCodeBuddyDeviceToken(state);
+        return ok(c, result);
+    }
+
     public static async importCodeBuddyToken(c: Context): Promise<Response> {
         return importTokenFor(
             codeBuddyAuthHandler,
