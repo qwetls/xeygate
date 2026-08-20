@@ -5,6 +5,8 @@ import {
     buildAntigravityEnvelope,
     buildAntigravityTools,
     cleanJSONSchemaForAntigravity,
+    createGeminiStreamState,
+    geminiStreamToOpenAIChunks,
     getAntigravityModelFallbacks,
     parseAntigravityModelName,
     parseAntigravityTextualToolCall,
@@ -222,4 +224,106 @@ test("buildAntigravityEnvelope supports enabledCreditTypes", () => {
     });
     assert.equal(env.project, "test-proj");
     assert.deepEqual(env.enabledCreditTypes, ["GOOGLE_ONE_AI"]);
+});
+
+test("buildAntigravityContents injects skip_thought_signature_validator when missing", () => {
+    const req: ChatCompletionRequest = {
+        model: "antigravity/gemini-3.7-flash-high",
+        messages: [
+            { role: "user", content: "List files" },
+            {
+                role: "assistant",
+                content: null,
+                tool_calls: [
+                    {
+                        id: "call_bash_1",
+                        type: "function",
+                        function: {
+                            name: "default_api:bash",
+                            arguments: JSON.stringify({ command: "ls -la" })
+                        }
+                    }
+                ]
+            },
+            {
+                role: "tool",
+                tool_call_id: "call_bash_1",
+                content: "file1.txt\nfile2.txt"
+            }
+        ]
+    };
+
+    const contents = buildAntigravityContents(req);
+    assert.equal(contents.length, 3);
+    const modelPart = contents[1]?.parts[0];
+    assert.ok(modelPart?.functionCall);
+    assert.equal(modelPart.functionCall.name, "default_api:bash");
+    assert.equal(modelPart.thoughtSignature, "skip_thought_signature_validator");
+});
+
+test("buildAntigravityContents preserves existing thoughtSignature", () => {
+    const req: ChatCompletionRequest = {
+        model: "antigravity/gemini-3.7-flash-high",
+        messages: [
+            { role: "user", content: "Run bash" },
+            {
+                role: "assistant",
+                content: null,
+                tool_calls: [
+                    {
+                        id: "call_bash_2",
+                        type: "function",
+                        function: {
+                            name: "default_api:bash",
+                            arguments: JSON.stringify({ command: "pwd" })
+                        },
+                        thoughtSignature: "real_encrypted_signature_blob"
+                    } as unknown as ChatCompletionRequest["messages"][0]["tool_calls"][0]
+                ]
+            },
+            {
+                role: "tool",
+                tool_call_id: "call_bash_2",
+                content: "/workspace"
+            }
+        ]
+    };
+
+    const contents = buildAntigravityContents(req);
+    const modelPart = contents[1]?.parts[0];
+    assert.ok(modelPart?.functionCall);
+    assert.equal(modelPart.thoughtSignature, "real_encrypted_signature_blob");
+});
+
+test("geminiStreamToOpenAIChunks propagates thoughtSignature in tool calls", () => {
+    const state = createGeminiStreamState("gemini-3.7-flash-high");
+    const rawChunk = {
+        response: {
+            candidates: [
+                {
+                    content: {
+                        parts: [
+                            {
+                                functionCall: {
+                                    name: "default_api_bash",
+                                    args: { command: "uptime" }
+                                },
+                                thoughtSignature: "sig_12345"
+                            }
+                        ],
+                        role: "model"
+                    }
+                }
+            ]
+        }
+    };
+
+    const chunks = geminiStreamToOpenAIChunks(rawChunk, state);
+    assert.ok(chunks);
+    const tcChunk = chunks.find((c) => c.choices[0]?.delta.tool_calls);
+    assert.ok(tcChunk);
+    const tc = tcChunk.choices[0]?.delta.tool_calls?.[0] as unknown as Record<string, unknown>;
+    assert.ok(tc);
+    assert.equal(tc.thoughtSignature, "sig_12345");
+    assert.equal(tc.thought_signature, "sig_12345");
 });

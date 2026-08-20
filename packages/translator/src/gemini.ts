@@ -7,10 +7,11 @@ import crypto from "node:crypto";
 
 export interface GeminiContentPart {
     text?: string;
-    functionCall?: { name: string; args?: Record<string, unknown>; thoughtSignature?: string };
+    functionCall?: { name: string; args?: Record<string, unknown> };
     functionResponse?: { name: string; response?: Record<string, unknown> };
     thought?: boolean;
     thoughtSignature?: string;
+    thought_signature?: string;
     inlineData?: { mimeType?: string; data?: string };
 }
 
@@ -577,14 +578,21 @@ function buildGeminiChunk(
 }
 
 function emitGeminiFunctionCall(
-    functionCall: { name: string; args?: Record<string, unknown> },
-    state: GeminiStreamState
+    functionCall: {
+        name: string;
+        args?: Record<string, unknown>;
+        thoughtSignature?: string;
+        thought_signature?: string;
+    },
+    state: GeminiStreamState,
+    thoughtSignature?: string
 ): ChatCompletionChunk {
     const rawName = functionCall.name;
     const fcName = state.toolNameMap?.get(rawName) || rawName;
     const fcArgs = stripZeroWidth(functionCall.args || {});
     const toolCallIndex = state.functionIndex++;
     state.geminiToolCallCount++;
+    const sig = thoughtSignature || functionCall.thoughtSignature || functionCall.thought_signature;
     return buildGeminiChunk(
         state,
         {
@@ -593,7 +601,8 @@ function emitGeminiFunctionCall(
                     index: toolCallIndex,
                     id: `${fcName}-${Date.now()}-${toolCallIndex}`,
                     type: "function",
-                    function: { name: fcName, arguments: JSON.stringify(fcArgs) }
+                    function: { name: fcName, arguments: JSON.stringify(fcArgs) },
+                    ...(sig ? { thought_signature: sig, thoughtSignature: sig } : {})
                 }
             ]
         },
@@ -630,7 +639,12 @@ export function geminiStreamToOpenAIChunks(
     if (content?.parts) {
         for (const part of content.parts) {
             const partAny = part as unknown as Record<string, unknown>;
-            const hasThoughtSig = part.thoughtSignature || partAny.thought_signature;
+            const fcAny = part.functionCall as Record<string, unknown> | undefined;
+            const thoughtSig = (part.thoughtSignature ||
+                partAny.thought_signature ||
+                fcAny?.thoughtSignature ||
+                fcAny?.thought_signature) as string | undefined;
+            const hasThoughtSig = Boolean(thoughtSig);
             const isThought = part.thought === true;
 
             if (hasThoughtSig) {
@@ -646,7 +660,7 @@ export function geminiStreamToOpenAIChunks(
                     );
                 }
                 if (hasFunctionCall && part.functionCall) {
-                    results.push(emitGeminiFunctionCall(part.functionCall, state));
+                    results.push(emitGeminiFunctionCall(part.functionCall, state, thoughtSig));
                 }
                 continue;
             }
@@ -969,10 +983,55 @@ export function buildAntigravityContents(req: ChatCompletionRequest): GeminiCont
                     args = { raw: tc.function.arguments };
                 }
                 const name = sanitizeFunctionName(tc.function.name);
+                const rawTc = tc as unknown as Record<string, unknown>;
+                const rawMsg = m as unknown as Record<string, unknown>;
+                const thoughtSignature =
+                    (rawTc.thoughtSignature as string) ||
+                    (rawTc.thought_signature as string) ||
+                    (rawMsg.thoughtSignature as string) ||
+                    (rawMsg.thought_signature as string) ||
+                    "skip_thought_signature_validator";
+
                 parts.push({
-                    functionCall: { name, args }
+                    functionCall: { name, args },
+                    thoughtSignature
                 });
             }
+        } else if (
+            m.role === "assistant" &&
+            (m as unknown as Record<string, unknown>).function_call &&
+            (!Array.isArray(m.tool_calls) || m.tool_calls.length === 0)
+        ) {
+            const rawM = m as unknown as Record<string, unknown>;
+            const legacyFunctionCall = rawM.function_call as {
+                name?: string;
+                arguments?: string;
+                thoughtSignature?: string;
+                thought_signature?: string;
+            };
+            let text = typeof m.content === "string" ? m.content.trim() : "";
+            if (text) {
+                text = stripCompetitiveAgentPrompts(stripZeroWidth(text));
+                if (text) parts.push({ text });
+            }
+            let args: Record<string, unknown> = {};
+            try {
+                args = stripZeroWidth(JSON.parse(legacyFunctionCall.arguments || "{}"));
+            } catch {
+                args = { raw: legacyFunctionCall.arguments };
+            }
+            const name = sanitizeFunctionName(legacyFunctionCall.name || "");
+            const thoughtSignature =
+                legacyFunctionCall.thoughtSignature ||
+                legacyFunctionCall.thought_signature ||
+                (rawM.thoughtSignature as string) ||
+                (rawM.thought_signature as string) ||
+                "skip_thought_signature_validator";
+
+            parts.push({
+                functionCall: { name, args },
+                thoughtSignature
+            });
         } else if (m.role === "tool") {
             const rawName =
                 (m.tool_call_id ? toolCallNameMap.get(m.tool_call_id) : undefined) ||

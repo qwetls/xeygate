@@ -271,7 +271,10 @@ export async function setupCommand(options: SetupWizardOptions = {}): Promise<vo
                 }));
                 const browseChoice = await select({
                     message: `Select from ${availableModels.length} available models:`,
-                    options: [...modelOptions, { value: "__custom__", label: "Custom model name..." }]
+                    options: [
+                        ...modelOptions,
+                        { value: "__custom__", label: "Custom model name..." }
+                    ]
                 });
                 if (isCancel(browseChoice)) {
                     cancel("Setup cancelled.");

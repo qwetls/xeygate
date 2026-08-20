@@ -29,7 +29,9 @@ export async function syncCommand(
 
     const availableModels = await fetchAvailableModels(baseUrl, apiKey);
     if (availableModels.length === 0) {
-        console.warn(formatWarning(`SRouter Gateway responded at ${baseUrl}, but returned 0 models.`));
+        console.warn(
+            formatWarning(`SRouter Gateway responded at ${baseUrl}, but returned 0 models.`)
+        );
     }
 
     const adaptersToSync = toolId

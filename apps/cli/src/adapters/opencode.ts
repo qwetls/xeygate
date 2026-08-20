@@ -39,7 +39,7 @@ export function formatModelDisplayName(modelId: string): string {
         "gpt-4o-mini": "GPT-4o Mini",
         "gpt-4.5-preview": "GPT-4.5 Preview",
         "o3-mini": "o3-mini",
-        "o1": "o1",
+        o1: "o1",
         "o1-preview": "o1 Preview",
         "gemini-2.5-pro": "Gemini 2.5 Pro",
         "gemini-2.5-flash": "Gemini 2.5 Flash",
@@ -50,8 +50,8 @@ export function formatModelDisplayName(modelId: string): string {
         "qwen-2.5-coder-32b": "Qwen 2.5 Coder 32B",
         "qwen-2.5-72b-instruct": "Qwen 2.5 72B",
         "qwen3-max": "Qwen 3 Max",
-        "flagship": "Flagship Cascade",
-        "fast": "Fast Fallback"
+        flagship: "Flagship Cascade",
+        fast: "Fast Fallback"
     };
 
     if (knownNames[modelId]) {
@@ -87,13 +87,11 @@ function formatProviderLabel(provider: string): string {
         commandcode: "CommandCode",
         combo: "Combo"
     };
-    return providerMap[provider] || (provider.charAt(0).toUpperCase() + provider.slice(1));
+    return providerMap[provider] || provider.charAt(0).toUpperCase() + provider.slice(1);
 }
 
 function humanizeName(str: string): string {
-    return str
-        .replace(/[-_]/g, " ")
-        .replace(/\b[a-z]/g, (c) => c.toUpperCase());
+    return str.replace(/[-_]/g, " ").replace(/\b[a-z]/g, (c) => c.toUpperCase());
 }
 
 function parseJsonc(content: string): Record<string, any> {
@@ -259,7 +257,7 @@ export class OpenCodeAdapter extends AbstractToolAdapter {
 
         data.provider.srouter = {
             name: "SRouter",
-            npm: "@ai-sdk/openai",
+            npm: "@ai-sdk/openai-compatible",
             options: {
                 baseURL: context.baseUrl,
                 apiKey: context.apiKey || "sk-local-srouter"

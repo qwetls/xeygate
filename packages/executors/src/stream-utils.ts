@@ -18,7 +18,7 @@ export class FastBuffer {
      */
     append(value: Uint8Array): void {
         const required = this.offset + value.length;
-        
+
         // Grow only when necessary
         if (required > this.capacity) {
             this.grow(Math.max(required, this.capacity * 2));
@@ -74,7 +74,7 @@ export class FastBuffer {
     get isFull(): boolean {
         return this.offset >= this.capacity;
     }
-    
+
     /**
      * Get internal buffer reference for DataView access
      */
@@ -113,16 +113,16 @@ export async function streamFrames(
     onFrame: (frame: Uint8Array) => void
 ): Promise<void> {
     const reader = body.getReader();
-    
+
     // Pre-allocate single buffer that grows as needed
     const buffer = new FastBuffer(4 * 1024); // Start with 4KB
-    
+
     try {
         while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) break;
-            
+
             if (value?.length) {
                 buffer.append(value);
             }
@@ -136,23 +136,23 @@ export async function streamFrames(
                     buffer.internalBuffer.byteOffset + offset,
                     buffer.length - offset
                 );
-                
+
                 const totalLength = view.getUint32(0, false);
-                
+
                 if (totalLength < 16 || totalLength > 24 * 1024 * 1024) {
                     throw new Error("Invalid AWS EventStream frame bounds");
                 }
-                
+
                 if (buffer.length - offset < totalLength) {
                     break; // Wait for more data
                 }
-                
+
                 // Extract and process frame
                 const frame = buffer.consume(totalLength);
                 onFrame(frame);
             }
         }
-        
+
         // Check for truncated data
         if (buffer.length !== 0) {
             throw new Error("Stream ended with incomplete frame");
@@ -170,16 +170,16 @@ export async function* streamLines(
 ): AsyncGenerator<string, void, void> {
     const reader = body.getReader();
     const decoder = new TextDecoder("utf-8");
-    
+
     // Use StringBuilder instead of string concatenation
     const pendingText = new StringBuilder();
-    
+
     try {
         while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) break;
-            
+
             if (value?.length) {
                 // Convert to string once per chunk
                 const chunkStr = decoder.decode(value, { stream: true });
@@ -189,7 +189,7 @@ export async function* streamLines(
             // Split into lines using StringBuilder's internal representation
             const fullText = pendingText.toString();
             const lines = fullText.split("\n");
-            
+
             // Keep last incomplete line
             if (lines.length > 0) {
                 const lastLine = lines.pop() ?? "";
@@ -220,14 +220,14 @@ export async function* streamCommandCodeLines(
 ): AsyncGenerator<string, void, void> {
     const reader = body.getReader();
     const decoder = new TextDecoder("utf-8");
-    
+
     // Pre-allocate buffer for string building
     const lineBuffer = new StringBuilder();
-    
+
     try {
         while (true) {
             const { done, value } = await reader.read();
-            
+
             if (done) {
                 // Flush any remaining content
                 const finalText = lineBuffer.toString().trim();
@@ -236,7 +236,7 @@ export async function* streamCommandCodeLines(
                 }
                 break;
             }
-            
+
             if (value?.length) {
                 const decoded = decoder.decode(value, { stream: true });
                 lineBuffer.append(decoded);
@@ -245,19 +245,19 @@ export async function* streamCommandCodeLines(
             // Find all complete lines in one pass
             const text = lineBuffer.toString();
             const newlineIndex = text.indexOf("\n");
-            
+
             if (newlineIndex === -1) {
                 // No complete line yet
                 continue;
             }
-            
+
             // Extract complete line and keep remainder
             const completeLine = text.substring(0, newlineIndex);
             const remainder = text.substring(newlineIndex + 1);
-            
+
             lineBuffer.clear();
             lineBuffer.append(remainder);
-            
+
             const trimmed = completeLine.trim();
             if (trimmed) {
                 yield trimmed;

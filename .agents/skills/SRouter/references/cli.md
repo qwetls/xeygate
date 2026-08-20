@@ -156,7 +156,7 @@ interface BaseToolAdapter {
 
 **What it writes:**
 
-- Provider block: `provider.srouter` with `@ai-sdk/openai` SDK config
+- Provider block: `provider.srouter` with `@ai-sdk/openai-compatible` SDK config
 - Active model: `model: "srouter/<model-id>"`
 
 ---
