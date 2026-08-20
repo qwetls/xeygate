@@ -10,6 +10,8 @@ import {
     QODER_LOGIN_VERSION,
     QODER_MACHINE_OS,
     QODER_MACHINE_TYPE,
+    QODER_MODELS,
+    QODER_MODEL_ALIASES,
     QODER_RSA_PUBLIC_KEY,
     QODER_USERINFO_URL
 } from "@srouter/constants";
@@ -21,6 +23,22 @@ import type {
     ModelObject
 } from "@srouter/types";
 import { parseDataLine, streamLines } from "./base.js";
+
+/**
+ * ============================================================================
+ * SRouter Qoder Executor
+ *
+ * Inspired by & ported from OmniRoute (open-sse/executors/qoder & services/qoder*)
+ * Upstream Reference: https://github.com/diegosouzapw/OmniRoute
+ *
+ * Key Capabilities:
+ * - WAF-Bypass Body Encoding (Custom alphabet transposition)
+ * - COSY Request Signing (1024-bit RSA + AES-128-CBC handshake)
+ * - Dual Authentication (Device Code OAuth PKCE & Personal Access Token)
+ * - SSE Envelope Unwrapping ({ statusCodeValue, body })
+ * - Thinking/Reasoning tool_choice compatibility sanitizer
+ * ============================================================================
+ */
 
 export interface QoderProviderSpecificData {
     authMethod?: "pat" | "device" | string;
@@ -39,6 +57,35 @@ export interface QoderExecutorOptions {
     accessToken?: string;
     refreshToken?: string;
     providerSpecificData?: QoderProviderSpecificData;
+}
+
+/**
+ * Detects if Qwen / Qoder reasoning (thinking) is active on a request.
+ */
+export function isQwenThinkingActive(
+    req: ChatCompletionRequest,
+    modelConfig?: Record<string, unknown>
+): boolean {
+    const raw = req as unknown as Record<string, unknown>;
+    const thinking = raw.thinking;
+    if (thinking === true || raw.enable_thinking === true) return true;
+    if (typeof thinking === "object" && thinking !== null && !Array.isArray(thinking)) {
+        if ((thinking as Record<string, unknown>).type === "enabled") return true;
+    }
+    return Boolean(modelConfig?.is_reasoning);
+}
+
+/**
+ * Strips incompatible tool_choice parameter when thinking/reasoning is active on Qwen/Qoder
+ * to avoid upstream DashScope 400 Bad Request errors.
+ */
+export function sanitizeQwenThinkingToolChoice(
+    payload: Record<string, unknown>,
+    isThinking: boolean
+): void {
+    if (isThinking && "tool_choice" in payload) {
+        delete payload.tool_choice;
+    }
 }
 
 // ─── WAF-Bypass Body Encoding ───
@@ -437,52 +484,56 @@ export class QoderExecutor implements AIProvider {
 
     async listModels(): Promise<ModelObject[]> {
         const baseId = this.id.split("_")[0]?.split("-")[0] ?? this.id;
+        const modelMap = new Map<string, ModelObject>();
+
+        // 1. Add all standard known Qoder models as base catalog
+        for (const def of QODER_MODELS) {
+            modelMap.set(`${baseId}/${def.id}`, {
+                id: `${baseId}/${def.id}`,
+                object: "model",
+                owned_by: baseId
+            });
+        }
+
+        // 2. Fetch dynamic models from upstream if credentials are valid
         try {
             const creds = await this.resolveCredentials();
-            if (!creds.accessToken) {
-                return [];
+            if (creds.accessToken) {
+                const url = this.getModelListUrl(creds.isJobToken);
+                const headers = {
+                    Accept: "application/json",
+                    "Accept-Encoding": "identity",
+                    ...buildCosyHeaders(Buffer.alloc(0), url, {
+                        userId: creds.userId,
+                        authToken: creds.accessToken,
+                        name: creds.name,
+                        email: creds.email,
+                        machineId: creds.machineId
+                    })
+                };
+
+                const res = await fetch(url, { method: "GET", headers });
+                if (res.ok) {
+                    const data = (await res.json()) as { chat?: Array<Record<string, unknown>> };
+                    if (data.chat && Array.isArray(data.chat)) {
+                        for (const item of data.chat) {
+                            const key = item.key as string | undefined;
+                            if (!key) continue;
+                            this.rawConfigs.set(key, item);
+                            modelMap.set(`${baseId}/${key}`, {
+                                id: `${baseId}/${key}`,
+                                object: "model",
+                                owned_by: baseId
+                            });
+                        }
+                    }
+                }
             }
-
-            const url = this.getModelListUrl(creds.isJobToken);
-            const headers = {
-                Accept: "application/json",
-                "Accept-Encoding": "identity",
-                ...buildCosyHeaders(Buffer.alloc(0), url, {
-                    userId: creds.userId,
-                    authToken: creds.accessToken,
-                    name: creds.name,
-                    email: creds.email,
-                    machineId: creds.machineId
-                })
-            };
-
-            const res = await fetch(url, { method: "GET", headers });
-            if (!res.ok) {
-                return [];
-            }
-
-            const data = (await res.json()) as { chat?: Array<Record<string, unknown>> };
-            if (!data.chat || !Array.isArray(data.chat)) {
-                return [];
-            }
-
-            const models: ModelObject[] = [];
-            for (const item of data.chat) {
-                const key = item.key as string | undefined;
-                if (!key) continue;
-                this.rawConfigs.set(key, item);
-                if (item.enable === false) continue;
-                models.push({
-                    id: `${baseId}/${key}`,
-                    object: "model",
-                    owned_by: baseId
-                });
-            }
-
-            return models;
         } catch {
-            return [];
+            // fallback to static models
         }
+
+        return Array.from(modelMap.values());
     }
 
     private stripModelPrefix(model: string): string {
@@ -498,7 +549,9 @@ export class QoderExecutor implements AIProvider {
         payload: Record<string, unknown>;
         modelConfig: Record<string, unknown>;
     }> {
-        const qoderKey = this.stripModelPrefix(req.model);
+        const rawKey = this.stripModelPrefix(req.model);
+        const mappedKey = QODER_MODEL_ALIASES[rawKey.toLowerCase()] || rawKey;
+        const qoderKey = this.rawConfigs.has(rawKey) ? rawKey : mappedKey;
         let modelConfig = this.rawConfigs.get(qoderKey);
         if (!modelConfig) {
             modelConfig = {
@@ -551,6 +604,7 @@ export class QoderExecutor implements AIProvider {
             system: systemText,
             messages,
             tools: Array.isArray(req.tools) ? req.tools : [],
+            ...(req.tool_choice ? { tool_choice: req.tool_choice } : {}),
             parameters: { max_tokens: maxTokens },
             chat_context: {
                 chatPrompt: "",
@@ -574,6 +628,8 @@ export class QoderExecutor implements AIProvider {
                 begin_at: Date.now()
             }
         };
+
+        sanitizeQwenThinkingToolChoice(payload, isReasoning);
 
         return { qoderKey, payload, modelConfig };
     }

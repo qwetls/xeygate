@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { buildCosyHeaders, isQoderPat, qoderEncodeBody, QoderExecutor } from "../src/qoder.js";
+import {
+    buildCosyHeaders,
+    isQoderPat,
+    isQwenThinkingActive,
+    qoderEncodeBody,
+    QoderExecutor,
+    sanitizeQwenThinkingToolChoice
+} from "../src/qoder.js";
 
 const originalFetch = globalThis.fetch;
 const fixtureToken = "dt-fixture-token-not-a-secret";
@@ -58,8 +65,9 @@ test("QoderExecutor lists models with base id prefix", async () => {
 
     const models = await executor.listModels();
     assert.ok(models.length >= 2);
-    assert.equal(models[0]?.id, "qoder/ultimate");
-    assert.equal(models[1]?.id, "qoder/qmodel_latest");
+    assert.ok(models.some((m) => m.id === "qoder/ultimate"));
+    assert.ok(models.some((m) => m.id === "qoder/qmodel_latest"));
+    assert.ok(models.some((m) => m.id === "qoder/qwen3.8-max-preview"));
 });
 
 test("QoderExecutor streams SSE chat and unwraps statusCodeValue envelope", async () => {
@@ -189,4 +197,21 @@ test("QoderExecutor handles PAT exchange to job token and routes to api2", async
     assert.equal(userInfoCalled, true);
     assert.ok(chatUrl.includes("api2.qoder.sh"));
     assert.equal(chunks[0]?.choices?.[0]?.delta?.content, "PAT success");
+});
+
+test("isQwenThinkingActive and sanitizeQwenThinkingToolChoice sanitize conflicting tool_choice", () => {
+    const req1 = { model: "qoder/qmodel_preview", messages: [] };
+    assert.equal(isQwenThinkingActive(req1, { is_reasoning: true }), true);
+
+    const req2 = { model: "qoder/qwen", messages: [], thinking: true } as any;
+    assert.equal(isQwenThinkingActive(req2), true);
+
+    const payload: Record<string, unknown> = {
+        tool_choice: "auto",
+        tools: [{ type: "function", function: { name: "search" } }]
+    };
+
+    sanitizeQwenThinkingToolChoice(payload, true);
+    assert.equal("tool_choice" in payload, false);
+    assert.ok(Array.isArray(payload.tools));
 });
