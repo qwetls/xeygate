@@ -108,8 +108,13 @@ export function getClaudeConfigPath(): string {
 
     // Optional environment variable override
     if (process.env.CLAUDE_CONFIG_DIR) {
+        candidatePaths.push(path.join(process.env.CLAUDE_CONFIG_DIR, "settings.json"));
         candidatePaths.push(path.join(process.env.CLAUDE_CONFIG_DIR, "config.json"));
     }
+
+    // Claude Code v2 settings.json
+    candidatePaths.push(path.join(home, ".claude", "settings.json"));
+    candidatePaths.push(path.join(home, ".config", "claude", "settings.json"));
 
     // Standard ~/.claude.json across all platforms
     candidatePaths.push(path.join(home, ".claude.json"));
@@ -117,6 +122,7 @@ export function getClaudeConfigPath(): string {
     // Platform-specific secondary paths
     if (isWindows()) {
         const appData = process.env.APPDATA || path.join(home, "AppData", "Roaming");
+        candidatePaths.push(path.join(appData, "Claude", "settings.json"));
         candidatePaths.push(path.join(appData, "Claude", "config.json"));
     } else {
         candidatePaths.push(path.join(home, ".claude", "config.json"));
@@ -129,28 +135,51 @@ export function getClaudeConfigPath(): string {
         }
     }
 
+    if (fs.existsSync(path.join(home, ".claude"))) {
+        return path.join(home, ".claude", "settings.json");
+    }
+
     // Default standard config file
-    return path.join(home, ".claude.json");
+    return path.join(home, ".claude", "settings.json");
 }
 
 export function getOpenCodeConfigPath(): string {
     const home = os.homedir();
     const candidatePaths: string[] = [];
 
+    // Local directory config
+    candidatePaths.push(path.join(process.cwd(), "opencode.jsonc"));
+    candidatePaths.push(path.join(process.cwd(), "opencode.json"));
+
     if (isWindows()) {
         const appData = process.env.APPDATA || path.join(home, "AppData", "Roaming");
+        candidatePaths.push(path.join(appData, "opencode", "opencode.jsonc"));
+        candidatePaths.push(path.join(appData, "opencode", "opencode.json"));
         candidatePaths.push(path.join(appData, "opencode", "config.json"));
+        candidatePaths.push(path.join(home, ".config", "opencode", "opencode.jsonc"));
+        candidatePaths.push(path.join(home, ".config", "opencode", "opencode.json"));
         candidatePaths.push(path.join(home, ".config", "opencode", "config.json"));
     } else if (isMacOS()) {
         candidatePaths.push(
+            path.join(home, "Library", "Application Support", "opencode", "opencode.jsonc")
+        );
+        candidatePaths.push(
+            path.join(home, "Library", "Application Support", "opencode", "opencode.json")
+        );
+        candidatePaths.push(
             path.join(home, "Library", "Application Support", "opencode", "config.json")
         );
+        candidatePaths.push(path.join(home, ".config", "opencode", "opencode.jsonc"));
+        candidatePaths.push(path.join(home, ".config", "opencode", "opencode.json"));
         candidatePaths.push(path.join(home, ".config", "opencode", "config.json"));
     } else {
         const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
+        candidatePaths.push(path.join(xdgConfig, "opencode", "opencode.jsonc"));
+        candidatePaths.push(path.join(xdgConfig, "opencode", "opencode.json"));
         candidatePaths.push(path.join(xdgConfig, "opencode", "config.json"));
     }
 
+    candidatePaths.push(path.join(home, ".opencode.jsonc"));
     candidatePaths.push(path.join(home, ".opencode.json"));
 
     for (const p of candidatePaths) {
@@ -161,11 +190,11 @@ export function getOpenCodeConfigPath(): string {
 
     if (isWindows()) {
         const appData = process.env.APPDATA || path.join(home, "AppData", "Roaming");
-        return path.join(appData, "opencode", "config.json");
+        return path.join(appData, "opencode", "opencode.jsonc");
     }
 
     const xdgConfig = process.env.XDG_CONFIG_HOME || path.join(home, ".config");
-    return path.join(xdgConfig, "opencode", "config.json");
+    return path.join(xdgConfig, "opencode", "opencode.jsonc");
 }
 
 export function formatShellExport(key: string, value: string, shell: ShellType): string {

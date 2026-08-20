@@ -38,10 +38,10 @@ export async function setupCommand(options: SetupWizardOptions = {}): Promise<vo
         savedConfig.defaultBaseUrl ||
         "http://localhost:3000/v1";
     let apiKey = options.key || process.env.SROUTER_API_KEY || savedConfig.defaultApiKey;
-    let selectedModel = options.model || savedConfig.defaultModel;
-    let opusModel = options.opusModel || savedConfig.defaultOpusModel;
-    let sonnetModel = options.sonnetModel || savedConfig.defaultSonnetModel;
-    let haikuModel = options.haikuModel || savedConfig.defaultHaikuModel;
+    let selectedModel = options.model;
+    let opusModel = options.opusModel;
+    let sonnetModel = options.sonnetModel;
+    let haikuModel = options.haikuModel;
 
     // Step 1: Detect SRouter Server
     const s = spinner();
@@ -182,14 +182,30 @@ export async function setupCommand(options: SetupWizardOptions = {}): Promise<vo
 
     // Step 4: Model Selection
     if (!selectedModel) {
+        const currentDefault = savedConfig.defaultModel || "claude-3-7-sonnet";
+
         if (availableModels.length > 0) {
-            const modelOptions = availableModels.map((m) => ({
-                value: m,
-                label: m
-            }));
+            const defaultHint = `(${currentDefault}) - all ${availableModels.length} models are automatically registered in OpenCode`;
             const modelChoice = await select({
                 message: "Select default model for tools:",
-                options: [...modelOptions, { value: "__custom__", label: "Custom model name..." }]
+                options: [
+                    {
+                        value: "__skip__",
+                        label: `Use default / Skip ${pc.gray(defaultHint)}`
+                    },
+                    {
+                        value: "__popular__",
+                        label: "Choose from popular models (Claude 3.7, GPT-4o, Gemini 2.5, DeepSeek R1)..."
+                    },
+                    {
+                        value: "__custom__",
+                        label: "Enter model ID manually..."
+                    },
+                    {
+                        value: "__browse__",
+                        label: `Browse full model list (${availableModels.length} models)...`
+                    }
+                ]
             });
 
             if (isCancel(modelChoice)) {
@@ -198,10 +214,47 @@ export async function setupCommand(options: SetupWizardOptions = {}): Promise<vo
                 return;
             }
 
-            if (modelChoice === "__custom__") {
+            if (modelChoice === "__skip__") {
+                selectedModel = currentDefault;
+            } else if (modelChoice === "__popular__") {
+                const popularChoice = await select({
+                    message: "Choose a popular model:",
+                    options: [
+                        { value: "claude-3-7-sonnet", label: "Claude 3.7 Sonnet (Recommended)" },
+                        { value: "claude-3-5-sonnet", label: "Claude 3.5 Sonnet" },
+                        { value: "gpt-4o", label: "GPT-4o (OpenAI)" },
+                        { value: "gemini-2.5-pro", label: "Gemini 2.5 Pro (Google)" },
+                        { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Fast)" },
+                        { value: "deepseek-r1", label: "DeepSeek R1 (Reasoning)" },
+                        { value: "combo/flagship", label: "Combo: Flagship Cascade" },
+                        { value: "__custom__", label: "Other / Custom ID..." }
+                    ]
+                });
+                if (isCancel(popularChoice)) {
+                    cancel("Setup cancelled.");
+                    process.exitCode = 0;
+                    return;
+                }
+                if (popularChoice === "__custom__") {
+                    const customModelInput = await text({
+                        message: "Enter custom model ID:",
+                        placeholder: currentDefault
+                    });
+                    if (isCancel(customModelInput)) {
+                        cancel("Setup cancelled.");
+                        process.exitCode = 0;
+                        return;
+                    }
+                    const customModelStr =
+                        typeof customModelInput === "string" ? customModelInput.trim() : "";
+                    selectedModel = customModelStr || currentDefault;
+                } else {
+                    selectedModel = popularChoice as string;
+                }
+            } else if (modelChoice === "__custom__") {
                 const customModelInput = await text({
                     message: "Enter custom model ID:",
-                    placeholder: "claude-3-7-sonnet"
+                    placeholder: currentDefault
                 });
                 if (isCancel(customModelInput)) {
                     cancel("Setup cancelled.");
@@ -210,9 +263,37 @@ export async function setupCommand(options: SetupWizardOptions = {}): Promise<vo
                 }
                 const customModelStr =
                     typeof customModelInput === "string" ? customModelInput.trim() : "";
-                selectedModel = customModelStr || undefined;
-            } else {
-                selectedModel = modelChoice as string;
+                selectedModel = customModelStr || currentDefault;
+            } else if (modelChoice === "__browse__") {
+                const modelOptions = availableModels.map((m) => ({
+                    value: m,
+                    label: m
+                }));
+                const browseChoice = await select({
+                    message: `Select from ${availableModels.length} available models:`,
+                    options: [...modelOptions, { value: "__custom__", label: "Custom model name..." }]
+                });
+                if (isCancel(browseChoice)) {
+                    cancel("Setup cancelled.");
+                    process.exitCode = 0;
+                    return;
+                }
+                if (browseChoice === "__custom__") {
+                    const customModelInput = await text({
+                        message: "Enter custom model ID:",
+                        placeholder: currentDefault
+                    });
+                    if (isCancel(customModelInput)) {
+                        cancel("Setup cancelled.");
+                        process.exitCode = 0;
+                        return;
+                    }
+                    const customModelStr =
+                        typeof customModelInput === "string" ? customModelInput.trim() : "";
+                    selectedModel = customModelStr || currentDefault;
+                } else {
+                    selectedModel = browseChoice as string;
+                }
             }
         } else {
             const modelInput = await text({
@@ -338,7 +419,8 @@ export async function setupCommand(options: SetupWizardOptions = {}): Promise<vo
             model: selectedModel,
             opusModel: toolId === "claude" ? opusModel : undefined,
             sonnetModel: toolId === "claude" ? sonnetModel : undefined,
-            haikuModel: toolId === "claude" ? haikuModel : undefined
+            haikuModel: toolId === "claude" ? haikuModel : undefined,
+            availableModels
         });
 
         linkResults.push({

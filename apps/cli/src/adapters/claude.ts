@@ -1,9 +1,26 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import os from "node:os";
 import { AbstractToolAdapter } from "./base.js";
 import type { LinkResult, ToolConfigContext, ToolStatus } from "../types/index.js";
 import { ConfigStore, defaultStore } from "../lib/configStore.js";
 import { getClaudeConfigPath, isExecutableInPath } from "../lib/platform.js";
+
+function parseJsonSafe(content: string): Record<string, any> {
+    try {
+        const clean = content
+            .replace(/\/\*[\s\S]*?\*\//g, "")
+            .replace(/\/\/.*$/gm, "")
+            .replace(/,\s*([\]}])/g, "$1");
+        return JSON.parse(clean);
+    } catch {
+        try {
+            return JSON.parse(content);
+        } catch {
+            return {};
+        }
+    }
+}
 
 export class ClaudeAdapter extends AbstractToolAdapter {
     readonly id = "claude";
@@ -34,31 +51,35 @@ export class ClaudeAdapter extends AbstractToolAdapter {
 
         try {
             const raw = await fs.readFile(configPath, "utf-8");
-            const parsed = JSON.parse(raw);
+            const parsed = parseJsonSafe(raw);
             const baseUrl =
+                parsed.env?.ANTHROPIC_BASE_URL ||
                 parsed.ANTHROPIC_BASE_URL ||
                 parsed.baseUrl ||
-                parsed.env?.ANTHROPIC_BASE_URL ||
                 undefined;
             const model =
-                parsed.model || parsed.env?.ANTHROPIC_MODEL || parsed.ANTHROPIC_MODEL || undefined;
+                parsed.env?.ANTHROPIC_DEFAULT_MODEL ||
+                parsed.env?.ANTHROPIC_MODEL ||
+                parsed.model ||
+                parsed.ANTHROPIC_MODEL ||
+                undefined;
             const opusModel =
-                parsed.ANTHROPIC_DEFAULT_OPUS_MODEL ||
                 parsed.env?.ANTHROPIC_DEFAULT_OPUS_MODEL ||
-                parsed.ANTHROPIC_OPUS_MODEL ||
+                parsed.ANTHROPIC_DEFAULT_OPUS_MODEL ||
                 parsed.env?.ANTHROPIC_OPUS_MODEL ||
+                parsed.ANTHROPIC_OPUS_MODEL ||
                 undefined;
             const sonnetModel =
-                parsed.ANTHROPIC_DEFAULT_SONNET_MODEL ||
                 parsed.env?.ANTHROPIC_DEFAULT_SONNET_MODEL ||
-                parsed.ANTHROPIC_SONNET_MODEL ||
+                parsed.ANTHROPIC_DEFAULT_SONNET_MODEL ||
                 parsed.env?.ANTHROPIC_SONNET_MODEL ||
+                parsed.ANTHROPIC_SONNET_MODEL ||
                 undefined;
             const haikuModel =
-                parsed.ANTHROPIC_DEFAULT_HAIKU_MODEL ||
                 parsed.env?.ANTHROPIC_DEFAULT_HAIKU_MODEL ||
-                parsed.ANTHROPIC_HAIKU_MODEL ||
+                parsed.ANTHROPIC_DEFAULT_HAIKU_MODEL ||
                 parsed.env?.ANTHROPIC_HAIKU_MODEL ||
+                parsed.ANTHROPIC_HAIKU_MODEL ||
                 undefined;
             const linked = Boolean(
                 baseUrl &&
@@ -99,50 +120,65 @@ export class ClaudeAdapter extends AbstractToolAdapter {
         let data: Record<string, any> = {};
         try {
             const raw = await fs.readFile(configPath, "utf-8");
-            data = JSON.parse(raw);
+            data = parseJsonSafe(raw);
         } catch {
             data = {};
         }
 
-        data.ANTHROPIC_BASE_URL = context.baseUrl;
-        if (context.apiKey) {
-            data.ANTHROPIC_API_KEY = context.apiKey;
-        }
-        if (context.model) {
-            data.model = context.model;
-        }
-        if (context.opusModel) {
-            data.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel;
-        }
-        if (context.sonnetModel) {
-            data.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel;
-        }
-        if (context.haikuModel) {
-            data.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel;
+        const defaultModel = context.model || "claude-3-7-sonnet";
+        const apiKey = context.apiKey || "sk-local-srouter";
+        // Anthropic SDK automatically appends /v1/messages, so base url should be origin (e.g. http://localhost:3000)
+        const anthropicBaseUrl = context.baseUrl.replace(/\/v1\/?$/, "");
+
+        // Claude Code v2 settings.json uses "env" object
+        data.env = data.env || {};
+        data.env.ANTHROPIC_BASE_URL = anthropicBaseUrl;
+        data.env.ANTHROPIC_API_KEY = apiKey;
+        data.env.ANTHROPIC_AUTH_TOKEN = apiKey;
+        data.env.ANTHROPIC_DEFAULT_MODEL = defaultModel;
+        data.env.ANTHROPIC_MODEL = defaultModel;
+        data.env.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel || defaultModel;
+        data.env.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel || defaultModel;
+        data.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel || defaultModel;
+
+        // Clean out legacy SCODEX or old vendor keys if present
+        if (data.env.ANTHROPIC_DEFAULT_FABLE_MODEL) {
+            delete data.env.ANTHROPIC_DEFAULT_FABLE_MODEL;
         }
 
-        if (data.env && typeof data.env === "object") {
-            data.env.ANTHROPIC_BASE_URL = context.baseUrl;
-            if (context.apiKey) {
-                data.env.ANTHROPIC_API_KEY = context.apiKey;
-            }
-            if (context.model) {
-                data.env.ANTHROPIC_MODEL = context.model;
-            }
-            if (context.opusModel) {
-                data.env.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel;
-            }
-            if (context.sonnetModel) {
-                data.env.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel;
-            }
-            if (context.haikuModel) {
-                data.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel;
-            }
-        }
+        // Top-level fallbacks for older Claude Code versions
+        data.ANTHROPIC_BASE_URL = anthropicBaseUrl;
+        data.ANTHROPIC_API_KEY = apiKey;
+        data.model = defaultModel;
+        data.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel || defaultModel;
+        data.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel || defaultModel;
+        data.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel || defaultModel;
 
         if (!context.dryRun) {
             await fs.mkdir(path.dirname(configPath), { recursive: true });
-            await fs.writeFile(configPath, JSON.stringify(data, null, 4), "utf-8");
+            await fs.writeFile(configPath, JSON.stringify(data, null, 2), "utf-8");
+
+            // Also keep ~/.claude.json in sync if it exists or configPath is settings.json
+            const homeClaudeJson = path.join(os.homedir(), ".claude.json");
+            if (configPath !== homeClaudeJson) {
+                try {
+                    let rootData: Record<string, any> = {};
+                    try {
+                        rootData = parseJsonSafe(await fs.readFile(homeClaudeJson, "utf-8"));
+                    } catch {
+                        rootData = {};
+                    }
+                    rootData.ANTHROPIC_BASE_URL = context.baseUrl;
+                    rootData.ANTHROPIC_API_KEY = apiKey;
+                    rootData.model = defaultModel;
+                    rootData.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel || defaultModel;
+                    rootData.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel || defaultModel;
+                    rootData.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel || defaultModel;
+                    await fs.writeFile(homeClaudeJson, JSON.stringify(rootData, null, 2), "utf-8");
+                } catch {
+                    // Ignore secondary file sync error
+                }
+            }
         }
 
         return {
@@ -160,20 +196,25 @@ export class ClaudeAdapter extends AbstractToolAdapter {
         const configPath = this.getConfigPath();
         try {
             const raw = await fs.readFile(configPath, "utf-8");
-            const data = JSON.parse(raw);
+            const data = parseJsonSafe(raw);
             delete data.ANTHROPIC_BASE_URL;
             delete data.ANTHROPIC_API_KEY;
             delete data.ANTHROPIC_DEFAULT_OPUS_MODEL;
             delete data.ANTHROPIC_DEFAULT_SONNET_MODEL;
             delete data.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+            delete data.model;
             if (data.env && typeof data.env === "object") {
                 delete data.env.ANTHROPIC_BASE_URL;
                 delete data.env.ANTHROPIC_API_KEY;
+                delete data.env.ANTHROPIC_AUTH_TOKEN;
+                delete data.env.ANTHROPIC_DEFAULT_MODEL;
+                delete data.env.ANTHROPIC_MODEL;
                 delete data.env.ANTHROPIC_DEFAULT_OPUS_MODEL;
                 delete data.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
                 delete data.env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
+                delete data.env.ANTHROPIC_DEFAULT_FABLE_MODEL;
             }
-            await fs.writeFile(configPath, JSON.stringify(data, null, 4), "utf-8");
+            await fs.writeFile(configPath, JSON.stringify(data, null, 2), "utf-8");
             return true;
         } catch {
             return false;
@@ -181,24 +222,20 @@ export class ClaudeAdapter extends AbstractToolAdapter {
     }
 
     getEnv(context: ToolConfigContext): Record<string, string> {
+        const defaultModel = context.model || "claude-3-7-sonnet";
+        const apiKey = context.apiKey || "sk-local-srouter";
+        const anthropicBaseUrl = context.baseUrl.replace(/\/v1\/?$/, "");
+
         const env: Record<string, string> = {
-            ANTHROPIC_BASE_URL: context.baseUrl
+            ANTHROPIC_BASE_URL: anthropicBaseUrl,
+            ANTHROPIC_API_KEY: apiKey,
+            ANTHROPIC_AUTH_TOKEN: apiKey,
+            ANTHROPIC_DEFAULT_MODEL: defaultModel,
+            ANTHROPIC_MODEL: defaultModel,
+            ANTHROPIC_DEFAULT_OPUS_MODEL: context.opusModel || defaultModel,
+            ANTHROPIC_DEFAULT_SONNET_MODEL: context.sonnetModel || defaultModel,
+            ANTHROPIC_DEFAULT_HAIKU_MODEL: context.haikuModel || defaultModel
         };
-        if (context.apiKey) {
-            env.ANTHROPIC_API_KEY = context.apiKey;
-        }
-        if (context.model) {
-            env.ANTHROPIC_MODEL = context.model;
-        }
-        if (context.opusModel) {
-            env.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel;
-        }
-        if (context.sonnetModel) {
-            env.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel;
-        }
-        if (context.haikuModel) {
-            env.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel;
-        }
         return env;
     }
 }

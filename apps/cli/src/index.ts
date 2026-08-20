@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { setupCommand } from "./commands/setup.js";
 import { linkCommand } from "./commands/link.js";
 import { unlinkCommand } from "./commands/unlink.js";
+import { syncCommand } from "./commands/sync.js";
 import { statusCommand } from "./commands/status.js";
 import { envCommand } from "./commands/env.js";
 import { runCommand } from "./commands/run.js";
@@ -69,6 +70,17 @@ export function createCli(): Command {
         .description("Restore original configuration for a tool from backup")
         .action(async (tool) => {
             await unlinkCommand(tool);
+        });
+
+    program
+        .command("sync [tool]")
+        .description(
+            "Fetch latest models from SRouter Gateway and refresh tool configs (OpenCode, etc.)"
+        )
+        .option("-u, --url <url>", "SRouter Gateway Base URL (e.g. http://localhost:3000/v1)")
+        .option("-k, --key <key>", "SRouter API Key")
+        .action(async (tool, opts) => {
+            await syncCommand(tool, opts);
         });
 
     program

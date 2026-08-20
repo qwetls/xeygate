@@ -5,6 +5,7 @@ export interface ToolConfigContext {
     opusModel?: string;
     sonnetModel?: string;
     haikuModel?: string;
+    availableModels?: string[];
     dryRun?: boolean;
 }
 
