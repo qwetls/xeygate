@@ -206,7 +206,8 @@ function mapFinishReason(
  */
 export function openAIToAnthropicResponse(
     res: ChatCompletionResponse,
-    originalModel: string
+    originalModel: string,
+    options: { allowThinking?: boolean } = {}
 ): AnthropicMessageResponse {
     const choice = res.choices?.[0];
     const contentBlocks: AnthropicContentBlock[] = [];
@@ -215,8 +216,8 @@ export function openAIToAnthropicResponse(
         const msg = choice.message;
         const reasoning = (msg as { reasoning_content?: string }).reasoning_content;
 
-        // Reasoning/thinking content if present
-        if (reasoning) {
+        // Reasoning/thinking content if present and allowed
+        if (reasoning && options.allowThinking) {
             contentBlocks.push({
                 type: "thinking",
                 thinking: reasoning
@@ -281,7 +282,8 @@ export function openAIToAnthropicResponse(
  */
 export async function* openAIToAnthropicStream(
     stream: AsyncGenerator<ChatCompletionChunk>,
-    originalModel: string
+    originalModel: string,
+    options: { allowThinking?: boolean } = {}
 ): AsyncGenerator<AnthropicStreamEvent> {
     const messageId = `msg_${randomUUID().replace(/-/g, "").slice(0, 24)}`;
     let hasStarted = false;
@@ -326,8 +328,8 @@ export async function* openAIToAnthropicStream(
 
         const reasoning = (delta as { reasoning_content?: string }).reasoning_content;
 
-        // 1. Handle reasoning / thinking delta
-        if (reasoning) {
+        // 1. Handle reasoning / thinking delta only if allowed
+        if (reasoning && options.allowThinking) {
             if (currentBlockType !== "thinking") {
                 if (currentBlockType !== null) {
                     yield { type: "content_block_stop", index: currentBlockIndex };

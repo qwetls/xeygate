@@ -42,6 +42,10 @@ export class MessagesController {
 
         const openAIReq = anthropicToOpenAIRequest(body);
 
+        const isThinkingEnabled = Boolean(
+            body.thinking && (body.thinking as { type?: string }).type === "enabled"
+        );
+
         // 1. Streaming response (Anthropic SSE)
         if (body.stream) {
             c.header("Content-Type", "text/event-stream");
@@ -54,7 +58,9 @@ export class MessagesController {
                         openAIReq,
                         startTime
                     );
-                    const anthropicStream = openAIToAnthropicStream(chunkGenerator, body.model);
+                    const anthropicStream = openAIToAnthropicStream(chunkGenerator, body.model, {
+                        allowThinking: isThinkingEnabled
+                    });
 
                     for await (const event of anthropicStream) {
                         await stream.writeSSE({
@@ -81,7 +87,9 @@ export class MessagesController {
         // 2. Non-streaming response (JSON)
         try {
             const openAIRes = await ChatLogic.processNonStreamingCompletion(openAIReq, startTime);
-            const anthropicRes = openAIToAnthropicResponse(openAIRes, body.model);
+            const anthropicRes = openAIToAnthropicResponse(openAIRes, body.model, {
+                allowThinking: isThinkingEnabled
+            });
             return c.json(anthropicRes);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);

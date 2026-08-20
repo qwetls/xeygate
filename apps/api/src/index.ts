@@ -94,6 +94,11 @@ app.route("/v1", authRoute);
 app.route("/v1", quotaRoute);
 app.route("/v1", settingsRoute);
 
+// Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
+app.route("/v1/v1", messagesRoute);
+app.route("/v1/v1", chatRoute);
+app.route("/v1/v1", modelsRoute);
+
 // Also mount root-level routes for OpenAI / Anthropic clients and AI SDKs sending to base URL directly
 app.route("/", chatRoute);
 app.route("/", messagesRoute);
