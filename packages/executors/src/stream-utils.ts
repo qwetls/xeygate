@@ -1,5 +1,4 @@
-// Optimized streaming utilities with efficient buffer management
-// Replaces inefficient array concatenation patterns
+// Streaming utilities with efficient buffer management
 
 /**
  * FastBuffer: Efficient byte buffer that minimizes allocations
@@ -97,7 +96,7 @@ export class StringBuilder {
     }
 
     toString(): string {
-        return this.chunks.join('');
+        return this.chunks.join("");
     }
 
     clear(): void {
@@ -107,10 +106,9 @@ export class StringBuilder {
 }
 
 /**
- * Optimized stream reader with pre-allocated buffers
- * Fixes O(n²) memory growth pattern
+ * Stream reader with pre-allocated buffers
  */
-export async function* optimizedStreamFrames(
+export async function streamFrames(
     body: ReadableStream<Uint8Array>,
     onFrame: (frame: Uint8Array) => void
 ): Promise<void> {
@@ -165,10 +163,9 @@ export async function* optimizedStreamFrames(
 }
 
 /**
- * Optimized line stream processor with StringBuilder
- * Replaces O(n²) string concatenation
+ * Line stream processor with StringBuilder
  */
-export async function* optimizedStreamLines(
+export async function* streamLines(
     body: ReadableStream<Uint8Array>
 ): AsyncGenerator<string, void, void> {
     const reader = body.getReader();
@@ -216,10 +213,9 @@ export async function* optimizedStreamLines(
 }
 
 /**
- * Memory-efficient alternative to streamCommandCodeLines
- * Reduces CPU usage by ~40%
+ * Stream line processor for CommandCode NDJSON streams
  */
-export async function* streamCommandCodeLinesOptimized(
+export async function* streamCommandCodeLines(
     body: ReadableStream<Uint8Array>
 ): AsyncGenerator<string, void, void> {
     const reader = body.getReader();

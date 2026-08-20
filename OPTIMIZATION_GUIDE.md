@@ -18,13 +18,13 @@ This document provides step-by-step instructions to migrate from the original im
 
 ### Step 1: Add Optimized Streaming Utilities
 
-**File:** `packages/executors/src/optimized-stream.ts`
+**File:** `packages/executors/src/stream-utils.ts`
 
 ✅ **Already created** - This file contains:
 - `FastBuffer` class for efficient memory management
 - `StringBuilder` for string concatenation optimization
-- `optimizedStreamFrames()` for EventStream processing
-- `streamCommandCodeLinesOptimized()` for line streaming
+- `streamFrames()` for EventStream processing
+- `streamCommandCodeLines()` for line streaming
 
 No changes needed - this is ready to use.
 
@@ -143,11 +143,10 @@ No changes needed - this is ready to use.
 
 1. **Uses optimized line streaming**
    ```typescript
-   import { streamCommandCodeLinesOptimized } from "./optimized-stream.js";
+   import { streamCommandCodeLines } from "./stream-utils.js";
    
    async *chatCompletionStream(...) {
-       // Use optimized version
-       for await (const line of streamCommandCodeLinesOptimized(res.body)) {
+       for await (const line of streamCommandCodeLines(res.body)) {
            // ... process line
        }
    }

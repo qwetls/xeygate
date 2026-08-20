@@ -4,7 +4,7 @@
 
 ### 1. Created Core Optimization Utilities
 
-**File:** `packages/executors/src/optimized-stream.ts` (7.4 KB)
+**File:** `packages/executors/src/stream-utils.ts` (7.4 KB)
 
 #### Key Components:
 
@@ -17,11 +17,11 @@
   - Replaces inefficient string += pattern
   - Single allocation at end
 
-- **`optimizedStreamFrames()`** - Memory-efficient EventStream processing
+- **`streamFrames()`** - Memory-efficient EventStream processing
   - Fixes critical memory bottleneck in Kiro executor
   - Reduces GC pressure
 
-- **`streamCommandCodeLinesOptimized()`** - CPU-efficient line streaming
+- **`streamCommandCodeLines()`** - CPU-efficient line streaming
   - Fixes O(n²) string concatenation
   - 40% CPU reduction
 

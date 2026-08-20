@@ -5,7 +5,7 @@
  */
 
 import { performance, PerformanceObserver } from 'perf_hooks';
-import { FastBuffer, StringBuilder } from './packages/executors/src/optimized-stream.js';
+import { FastBuffer, StringBuilder } from '../packages/executors/src/stream-utils.js';
 
 // Memory tracking helper
 const getMemoryUsage = () => {

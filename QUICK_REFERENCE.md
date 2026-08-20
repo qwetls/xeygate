@@ -12,7 +12,7 @@
 
 | File | Size | Purpose |
 |------|------|---------|
-| `packages/executors/src/optimized-stream.ts` | 7.4 KB | Core optimization utilities |
+| `packages/executors/src/stream-utils.ts` | 7.4 KB | Core stream utilities |
 | `packages/executors/src/kiro-optimized.ts` | 23.6 KB | Optimized Kiro executor |
 | `packages/executors/src/commandcode-optimized.ts` | 5.6 KB | Optimized CommandCode executor |
 | `OPTIMIZATION_GUIDE.md` | 8.8 KB | Detailed migration guide |
@@ -28,7 +28,7 @@
 cd /home/seaavey/Projects/SRouter
 
 # Verify TypeScript compilation
-npx tsc packages/executors/src/optimized-stream.ts --noEmit
+npx tsc packages/executors/src/stream-utils.ts --noEmit
 
 # Run benchmarks (if @types/node installed)
 npm install --save-dev @types/node
@@ -174,8 +174,8 @@ node benchmarks/benchmark-performance.ts
 ### Issue: "Cannot find module"
 **Solution:** Update import paths
 ```typescript
-// From optimized-stream.ts
-import { FastBuffer } from "./optimized-stream.js";
+// From stream-utils.ts
+import { FastBuffer } from "./stream-utils.js";
 ```
 
 ### Issue: Type errors in CI/CD

@@ -10,14 +10,12 @@
 
 | File | Size | Status | Purpose |
 |------|------|--------|---------|
-| `packages/executors/src/optimized-stream.ts` | 7.4 KB | ✅ Created | Core optimization utilities |
-| `packages/executors/src/kiro-optimized.ts` | 23.1 KB | ✅ Created | Optimized Kiro executor |
-| `packages/executors/src/commandcode-optimized.ts` | 5.0 KB | ✅ Created | Optimized CommandCode executor |
+| `packages/executors/src/stream-utils.ts` | 7.4 KB | ✅ Created | Core stream utilities |
 | `OPTIMIZATION_GUIDE.md` | 8.6 KB | ✅ Created | Complete migration guide |
 | `OPTIMIZATION_SUMMARY.md` | 7.1 KB | ✅ Created | Technical details |
 | `QUICK_REFERENCE.md` | 5.9 KB | ✅ Created | Quick start reference |
 | `benchmarks/benchmark-performance.ts` | 9.4 KB | ✅ Created | Performance benchmarks |
-| `test-optimization.js` | 4.8 KB | ✅ Created | Verification test |
+| `test-stream.js` | 4.8 KB | ✅ Created | Verification test |
 
 ### **Verification Results** ✅
 
@@ -245,9 +243,7 @@ const ExecutorClass = EXECUTOR_MODE === 'optimized'
 3. **QUICK_REFERENCE.md** - Quick start commands and troubleshooting
 
 ### **Key Files:**
-- `packages/executors/src/optimized-stream.ts` - Core utilities
-- `packages/executors/src/kiro-optimized.ts` - Optimized Kiro
-- `packages/executors/src/commandcode-optimized.ts` - Optimized CommandCode
+- `packages/executors/src/stream-utils.ts` - Core streaming utilities
 - `benchmarks/benchmark-performance.ts` - Full benchmark suite
 
 ---
