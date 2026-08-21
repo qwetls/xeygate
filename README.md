@@ -362,13 +362,21 @@ Model:    <any discovered SRouter model>
 
 ## Configuration
 
-| Variable        | Default         | Description                            |
-| --------------- | --------------- | -------------------------------------- |
-| `PORT`          | `3000`          | API server + production dashboard port |
-| `OAUTH_PORT`    | `1455`          | OAuth PKCE callback listener           |
-| `DATABASE_PATH` | `srouter.db`    | SQLite database path                   |
-| `NODE_ENV`      | `development`   | `development` or `production`          |
-| `WEB_DIST_PATH` | `apps/web/dist` | Dashboard static asset path            |
+| Variable        | Default                    | Description                            |
+| --------------- | -------------------------- | -------------------------------------- |
+| `PORT`          | `3000`                     | API server + production dashboard port |
+| `OAUTH_PORT`    | `1455`                     | OAuth PKCE callback listener           |
+| `DATABASE_PATH` | `~/.srouter/srouter.db`    | SQLite database path (in home dir)     |
+| `NODE_ENV`      | `development`              | `development` or `production`          |
+| `WEB_DIST_PATH` | `apps/web/dist`            | Dashboard static asset path            |
+
+### Database Location
+
+By default, SRouter stores all data (providers, API keys, logs, quotas) in a dedicated folder `~/.srouter/srouter.db` in your user's home directory. This keeps the project root clean and makes backups simpler.
+
+You can override this with `DATABASE_PATH=/custom/path/srouter.db` for development or Docker deployments.
+
+**Legacy support:** If you have an existing database at `apps/api/srouter.db` or `srouter.db` in the project root, SRouter will automatically use that instead of the new location to avoid breaking existing installations.
 
 ---
 
