@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Brain, ChevronDown, ChevronUp, Eye, Layers, Plus, Trash2, X } from "lucide-react";
 import {
     ComboModelPickerModal,
@@ -13,6 +13,8 @@ interface ComboFormProps {
     open?: boolean;
     saving: boolean;
     existingFallbacks?: FallbackRule[];
+    initialComboName?: string;
+    initialModels?: string[];
     onCancel: () => void;
     onSubmitCombo?: (comboName: string, models: string[]) => Promise<unknown>;
     onSubmit?: (data: {
@@ -30,13 +32,37 @@ export function ComboForm({
     open = true,
     saving,
     existingFallbacks = [],
+    initialComboName = "",
+    initialModels = [],
     onCancel,
     onSubmitCombo,
     onSubmit
 }: ComboFormProps) {
-    const [comboName, setComboName] = useState("");
+    const isEditMode = Boolean(initialComboName);
+    const [comboName, setComboName] = useState(initialComboName);
     const [selectedModels, setSelectedModels] = useState<ComboModelItem[]>([]);
     const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            setComboName(initialComboName);
+            if (initialModels.length > 0) {
+                setSelectedModels(
+                    initialModels.map((id) => {
+                        const providerId = id.includes("/") ? id.split("/")[0]! : "custom";
+                        return {
+                            id,
+                            name: formatModelDisplayName(id),
+                            providerId,
+                            providerName: providerId.toUpperCase()
+                        };
+                    })
+                );
+            } else {
+                setSelectedModels([]);
+            }
+        }
+    }, [open, initialComboName, initialModels]);
 
     const existingComboNames = useMemo(() => {
         const set = new Set<string>();
@@ -137,7 +163,9 @@ export function ComboForm({
                                 <span className="size-3 rounded-full bg-[#ffbd2e] inline-block shadow-xs" />
                                 <span className="size-3 rounded-full bg-[#27c93f] inline-block shadow-xs" />
                             </div>
-                            <h2 className="text-sm font-bold text-zinc-100 ml-2">Create Combo</h2>
+                            <h2 className="text-sm font-bold text-zinc-100 ml-2">
+                                {isEditMode ? "Edit Combo" : "Create Combo"}
+                            </h2>
                         </div>
                         <button
                             type="button"
@@ -159,8 +187,9 @@ export function ComboForm({
                                 value={comboName}
                                 onChange={(e) => setComboName(e.target.value)}
                                 placeholder="my-combo"
-                                className="w-full h-9 rounded-lg border border-zinc-800 bg-[#1c1c1f] px-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all font-mono"
-                                autoFocus
+                                disabled={isEditMode}
+                                className="w-full h-9 rounded-lg border border-zinc-800 bg-[#1c1c1f] px-3 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-zinc-600 focus:ring-1 focus:ring-zinc-600 transition-all font-mono disabled:opacity-60 disabled:cursor-not-allowed"
+                                autoFocus={!isEditMode}
                             />
                             <p
                                 className={`text-[11px] ${
@@ -285,7 +314,7 @@ export function ComboForm({
                                 disabled={!canSubmit}
                                 className="px-5 py-2 rounded-lg text-xs font-semibold transition-all disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed bg-zinc-100 text-zinc-900 hover:bg-white cursor-pointer shadow-xs"
                             >
-                                {saving ? "Creating..." : "Create"}
+                                {saving ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create")}
                             </button>
                         </div>
                     </form>

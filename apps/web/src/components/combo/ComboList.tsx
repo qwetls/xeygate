@@ -9,6 +9,7 @@ import {
     Copy,
     Eye,
     Layers,
+    Pencil,
     Play,
     Plus,
     Search,
@@ -33,6 +34,7 @@ interface ComboListProps {
     onUpdate: (id: string, updates: Partial<FallbackRule>) => Promise<unknown>;
     onDelete: (id: string) => Promise<unknown>;
     onAddClick: () => void;
+    onEditClick?: (comboName: string, models: string[]) => void;
     onApplyTemplate?: (comboName: string, models: string[]) => Promise<unknown>;
 }
 
@@ -83,6 +85,7 @@ export function ComboList({
     onUpdate,
     onDelete,
     onAddClick,
+    onEditClick,
     onApplyTemplate
 }: ComboListProps) {
     const [search, setSearch] = useState("");
@@ -456,6 +459,24 @@ export function ComboList({
                                                 >
                                                     <Terminal className="size-3" />
                                                     <span>cURL</span>
+                                                </button>
+                                            )}
+
+                                            {/* Edit Combo button */}
+                                            {!isWildcard && onEditClick && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        onEditClick(
+                                                            group.sourceModel,
+                                                            group.rules.map((r) => r.targetModel)
+                                                        )
+                                                    }
+                                                    className="inline-flex items-center gap-1 rounded-md border border-border/70 bg-secondary/40 hover:bg-secondary px-2.5 py-1 text-[11px] font-semibold text-muted-foreground hover:text-foreground transition-all cursor-pointer shadow-2xs"
+                                                    title="Edit combo models"
+                                                >
+                                                    <Pencil className="size-3" />
+                                                    <span>Edit</span>
                                                 </button>
                                             )}
 
