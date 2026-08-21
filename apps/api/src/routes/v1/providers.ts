@@ -18,3 +18,11 @@ providersRoute.get("/providers/:providerId", apiKeyAuth, ProvidersController.get
 providersRoute.post("/providers/verify", adminAuth, ProvidersController.verifyProvider);
 providersRoute.post("/providers", adminAuth, ProvidersController.addProvider);
 providersRoute.delete("/providers/:id", adminAuth, ProvidersController.deleteProvider);
+
+// Custom (user-added) models per provider driver
+providersRoute.post("/providers/:providerId/models", adminAuth, ProvidersController.addCustomModel);
+providersRoute.delete(
+    "/providers/:providerId/models/:modelId{.+}",
+    adminAuth,
+    ProvidersController.deleteCustomModel
+);

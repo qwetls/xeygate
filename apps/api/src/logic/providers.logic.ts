@@ -1,11 +1,18 @@
-import { DEFAULT_PROVIDER_MAP, isProviderCategory, isSeedProvider } from "@srouter/constants";
+import { DEFAULT_PROVIDER_MAP, isProviderCategory, isSeedProvider, providerAlias } from "@srouter/constants";
 import type {
+    ModelObject,
     ProviderCategory,
     ProviderConfig,
     ProviderDefinition,
     ProviderProtocol
 } from "@srouter/types";
-import { getAllProvidersDB, upsertProviderDB } from "@srouter/db";
+import {
+    addCustomModelDB,
+    deleteCustomModelDB,
+    getAllProvidersDB,
+    getCustomModelsByProviderDB,
+    upsertProviderDB
+} from "@srouter/db";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 
 export interface GroupedCatalog {
@@ -210,6 +217,19 @@ export class ProvidersLogic {
             }
         }
 
+        // Merge user-added custom models (custom entries win over duplicates)
+        const customModels = ProvidersLogic.listCustomModels(providerId);
+        if (customModels.length > 0) {
+            const merged = new Map<string, ModelObject>();
+            for (const m of liveModels) {
+                merged.set(m.id.toLowerCase(), m);
+            }
+            for (const m of customModels) {
+                merged.set(m.id.toLowerCase(), m);
+            }
+            liveModels = Array.from(merged.values());
+        }
+
         return {
             ...provider,
             connections,
@@ -268,6 +288,44 @@ export class ProvidersLogic {
         loadSavedProvidersFromDB();
 
         return providerDefinitionFromConfig(config);
+    }
+
+    /**
+     * Add a user-defined model to a provider driver. Stored in SQLite and
+     * merged into the model listing; routing works via alias prefix matching.
+     */
+    public static addCustomModel(providerId: string, modelId: string): ModelObject {
+        const id = providerId.toLowerCase();
+        if (!DEFAULT_PROVIDER_MAP[id] && !getAllProvidersDB().some((p) => baseIdOf(p.providerId || p.id) === id)) {
+            throw new Error(`Provider '${providerId}' not found`);
+        }
+        const trimmed = modelId.trim();
+        if (!trimmed) throw new Error("Model ID is required");
+        if (trimmed.length > 200 || !/^[A-Za-z0-9._\-/: ]+$/.test(trimmed))
+            throw new Error(
+                "Model ID may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
+            );
+
+        addCustomModelDB(id, trimmed);
+        const fullId = `${providerAlias(id)}/${trimmed}`;
+        registry.clearModelsCache();
+        return { id: fullId, object: "model", owned_by: providerAlias(id) };
+    }
+
+    public static deleteCustomModel(providerId: string, modelId: string): void {
+        const deleted = deleteCustomModelDB(providerId.toLowerCase(), modelId);
+        if (!deleted) throw new Error(`Custom model '${modelId}' not found for '${providerId}'`);
+        registry.clearModelsCache();
+    }
+
+    public static listCustomModels(providerId: string): ModelObject[] {
+        const alias = providerAlias(providerId.toLowerCase());
+        return getCustomModelsByProviderDB(providerId.toLowerCase()).map((row) => ({
+            id: `${alias}/${row.modelId}`,
+            object: "model" as const,
+            owned_by: alias,
+            custom: true
+        }));
     }
 
     public static async verifyConnection(payload: {
