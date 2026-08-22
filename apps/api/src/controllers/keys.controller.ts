@@ -19,7 +19,7 @@ export class KeysController {
         }>();
 
         if (!body.name || typeof body.name !== "string") {
-            return err(c, "Key name is required", 400);
+            return err(c, "Key name is required", 400, { type: "invalid_request_error" });
         }
 
         try {
@@ -38,12 +38,12 @@ export class KeysController {
     public static deleteKey(c: Context): Response {
         const id = c.req.param("id");
         if (!id) {
-            return err(c, "Key ID is required", 400);
+            return err(c, "Key ID is required", 400, { type: "invalid_request_error" });
         }
 
         const deleted = deleteAPIKeyDB(id);
         if (!deleted) {
-            return err(c, `Key '${id}' not found`, 404);
+            return err(c, `Key '${id}' not found`, 404, { type: "invalid_request_error" });
         }
 
         return ok(c, { message: "API Key revoked and deleted successfully" });
