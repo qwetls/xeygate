@@ -110,6 +110,7 @@ app.route("/v1", tunnelRoute);
 app.use("/v1/tunnel/start", adminAuth);
 app.use("/v1/tunnel/stop", adminAuth);
 app.use("/v1/tunnel/config", adminAuth);
+app.use("/v1/tunnel/install", adminAuth);
 
 // Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
 app.route("/v1/v1", messagesRoute);

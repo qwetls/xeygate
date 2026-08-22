@@ -124,12 +124,13 @@ export function isLoopbackAddress(address: string | undefined): boolean {
  */
 export function ensureDefaultAdminAccount(store: AdminAuthStore, now: number = Date.now()): void {
     const envPassword = process.env.SROUTER_ADMIN_PASSWORD;
-    const password = envPassword && envPassword.length > 0 ? envPassword : DEFAULT_ADMIN_PASSWORD;
+    const hasEnv = envPassword !== undefined && envPassword.length > 0;
+    const password = hasEnv ? envPassword : DEFAULT_ADMIN_PASSWORD;
     const hash = hashAdminPassword(password);
 
     if (!store.hasAdminAccount()) {
         store.createAdminAccount(hash, now);
-    } else {
+    } else if (hasEnv) {
         store.updatePasswordHash(hash, now);
     }
 }
