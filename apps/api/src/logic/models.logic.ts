@@ -30,10 +30,7 @@ export class ModelsLogic {
         for (const row of rows) {
             const alias = providerAlias(providerBaseId(row.providerId));
             const id = `${alias}/${row.modelId}`;
-            if (
-                providerFilter &&
-                !alias.toLowerCase().startsWith(providerFilter.toLowerCase())
-            ) {
+            if (providerFilter && !alias.toLowerCase().startsWith(providerFilter.toLowerCase())) {
                 continue;
             }
             merged.set(id.toLowerCase(), { id, object: "model", owned_by: alias, custom: true });

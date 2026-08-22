@@ -362,13 +362,13 @@ Model:    <any discovered SRouter model>
 
 ## Configuration
 
-| Variable        | Default                    | Description                            |
-| --------------- | -------------------------- | -------------------------------------- |
-| `PORT`          | `3000`                     | API server + production dashboard port |
-| `OAUTH_PORT`    | `1455`                     | OAuth PKCE callback listener           |
-| `DATABASE_PATH` | `~/.srouter/srouter.db`    | SQLite database path (in home dir)     |
-| `NODE_ENV`      | `development`              | `development` or `production`          |
-| `WEB_DIST_PATH` | `apps/web/dist`            | Dashboard static asset path            |
+| Variable        | Default                 | Description                            |
+| --------------- | ----------------------- | -------------------------------------- |
+| `PORT`          | `3000`                  | API server + production dashboard port |
+| `OAUTH_PORT`    | `1455`                  | OAuth PKCE callback listener           |
+| `DATABASE_PATH` | `~/.srouter/srouter.db` | SQLite database path (in home dir)     |
+| `NODE_ENV`      | `development`           | `development` or `production`          |
+| `WEB_DIST_PATH` | `apps/web/dist`         | Dashboard static asset path            |
 
 ### Database Location
 

@@ -1,7 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import type { ModelObject, ProviderCategory, ProviderDefinition, ProviderProtocol } from "@srouter/types";
+import type {
+    ModelObject,
+    ProviderCategory,
+    ProviderDefinition,
+    ProviderProtocol
+} from "@srouter/types";
 
 export interface AddConnectionPayload {
     id?: string;

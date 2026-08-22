@@ -1,4 +1,9 @@
-import { DEFAULT_PROVIDER_MAP, isProviderCategory, isSeedProvider, providerAlias } from "@srouter/constants";
+import {
+    DEFAULT_PROVIDER_MAP,
+    isProviderCategory,
+    isSeedProvider,
+    providerAlias
+} from "@srouter/constants";
 import type {
     ModelObject,
     ProviderCategory,
@@ -296,7 +301,10 @@ export class ProvidersLogic {
      */
     public static addCustomModel(providerId: string, modelId: string): ModelObject {
         const id = providerId.toLowerCase();
-        if (!DEFAULT_PROVIDER_MAP[id] && !getAllProvidersDB().some((p) => baseIdOf(p.providerId || p.id) === id)) {
+        if (
+            !DEFAULT_PROVIDER_MAP[id] &&
+            !getAllProvidersDB().some((p) => baseIdOf(p.providerId || p.id) === id)
+        ) {
             throw new Error(`Provider '${providerId}' not found`);
         }
         const trimmed = modelId.trim();

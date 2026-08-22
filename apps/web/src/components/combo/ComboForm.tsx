@@ -314,7 +314,13 @@ export function ComboForm({
                                 disabled={!canSubmit}
                                 className="px-5 py-2 rounded-lg text-xs font-semibold transition-all disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed bg-zinc-100 text-zinc-900 hover:bg-white cursor-pointer shadow-xs"
                             >
-                                {saving ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create")}
+                                {saving
+                                    ? isEditMode
+                                        ? "Saving..."
+                                        : "Creating..."
+                                    : isEditMode
+                                      ? "Save Changes"
+                                      : "Create"}
                             </button>
                         </div>
                     </form>

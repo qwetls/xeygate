@@ -12,11 +12,13 @@ Starting from this version, SRouter now stores the SQLite database in your home 
 ## Default Locations
 
 ### New Default (Current Version)
+
 ```
 ~/srouter/srouter.db
 ```
 
 ### Legacy Locations (Still Supported)
+
 ```
 apps/api/srouter.db  # Within project root
 srouter.db           # Project root
@@ -35,12 +37,14 @@ srouter.db           # Project root
 If you want to move your existing database to the new location:
 
 ### Step 1: Stop SRouter
+
 ```bash
 # Kill running SRouter processes
 pkill -f "node.*srouter"
 ```
 
 ### Step 2: Copy Database File
+
 ```bash
 # From legacy location
 cp apps/api/srouter.db ~/.srouter/
@@ -50,6 +54,7 @@ cp srouter.db ~/.srouter/
 ```
 
 ### Step 3: Create Directory & Set Permissions
+
 ```bash
 mkdir -p ~/.srouter
 chmod 700 ~/.srouter
@@ -57,12 +62,15 @@ chmod 600 ~/.srouter/srouter.db
 ```
 
 ### Step 4: Update Environment
+
 Create `.env` file in project root:
+
 ```bash
 echo 'DATABASE_PATH=~/.srouter/srouter.db' >> .env
 ```
 
 ### Step 5: Verify Migration
+
 ```bash
 # Check database is accessible
 node -e '\
@@ -73,6 +81,7 @@ console.log("Tables:", db.prepare("SELECT name FROM sqlite_master WHERE type=\"t
 ```
 
 ### Step 6: Restart SRouter
+
 ```bash
 pnpm dev
 ```
@@ -84,15 +93,15 @@ For Docker deployments, explicitly set the DATABASE_PATH:
 ```yaml
 # docker-compose.yml
 services:
-  srouter:
-    image: ghcr.io/seaavey/srouter:latest
-    environment:
-      - DATABASE_PATH=/app/data/srouter.db
-    volumes:
-      - srouter_data:/app/data
+    srouter:
+        image: ghcr.io/seaavey/srouter:latest
+        environment:
+            - DATABASE_PATH=/app/data/srouter.db
+        volumes:
+            - srouter_data:/app/data
 
 volumes:
-  srouter_data:
+    srouter_data:
 ```
 
 ## Backup Recommendations
@@ -117,20 +126,22 @@ find $BACKUP_DIR -name "*.db" -mtime +7 -exec gzip {} \;
 If you get errors about missing database:
 
 1. Check if directory exists:
-   ```bash
-   ls -la ~/.srouter/
-   ```
+
+    ```bash
+    ls -la ~/.srouter/
+    ```
 
 2. Create directory if needed:
-   ```bash
-   mkdir -p ~/.srouter
-   chmod 700 ~/.srouter
-   ```
+
+    ```bash
+    mkdir -p ~/.srouter
+    chmod 700 ~/.srouter
+    ```
 
 3. Verify environment variable:
-   ```bash
-   echo $DATABASE_PATH
-   ```
+    ```bash
+    echo $DATABASE_PATH
+    ```
 
 ### Permission Issues
 
@@ -146,11 +157,13 @@ chown $USER:$USER ~/.srouter/srouter.db
 ### Want to Use Different Location?
 
 Just set `DATABASE_PATH` in your `.env`:
+
 ```bash
 DATABASE_PATH=/custom/path/to/srouter.db
 ```
 
 Or for Docker:
+
 ```bash
 docker run -e DATABASE_PATH=/mnt/data/srouter.db ...
 ```

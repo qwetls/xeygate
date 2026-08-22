@@ -35,17 +35,29 @@ export const ChatMessageSchema = z.object({
     tool_call_id: z.string().optional()
 });
 
-export const ToolParameterPropertySchema = z.object({
-    type: z.string(),
-    description: z.string().optional(),
-    enum: z.array(z.string()).optional()
-});
+// Tool parameter properties are arbitrary JSON Schema (unions via oneOf/anyOf,
+// nested objects, items, ...). Accept as-is; provider translators sanitize
+// per-provider (e.g. cleanJSONSchemaForAntigravity).
+export const JSONSchemaValue: z.ZodType<unknown> = z.lazy(() =>
+    z.union([
+        z.string(),
+        z.number(),
+        z.boolean(),
+        z.null(),
+        z.array(JSONSchemaValue),
+        z.record(JSONSchemaValue)
+    ])
+);
 
-export const ToolParametersSchema = z.object({
-    type: z.literal("object"),
-    properties: z.record(ToolParameterPropertySchema).optional(),
-    required: z.array(z.string()).optional()
-});
+export const ToolParameterPropertySchema = z.record(JSONSchemaValue);
+
+export const ToolParametersSchema = z
+    .object({
+        type: z.literal("object"),
+        properties: z.record(ToolParameterPropertySchema).optional(),
+        required: z.array(z.string()).optional()
+    })
+    .passthrough();
 
 export const ToolDefinitionSchema = z.object({
     type: z.literal("function"),
