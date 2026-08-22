@@ -24,10 +24,19 @@ import { adminAuth } from "@/middleware/adminAuth.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry } from "@/services/registry.js";
+import { ensureDefaultAdminAccount } from "@/services/adminAuth.js";
+import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
+import { adminAuthStore } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
 
 const app = new Hono();
+
+// Ensure an admin account exists on first run (default password: 12345678).
+ensureDefaultAdminAccount(adminAuthStore);
+
+// Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
+autostartTunnelIfEnabled();
 
 // Global Error Handler
 app.onError((err, c) => {

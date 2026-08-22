@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { Check, Cloud, Code2, Copy, Network, Play, Square } from "lucide-react";
+import { Check, Cloud, Code2, Copy, Network } from "lucide-react";
 import { toast } from "sonner";
 import { getGatewayBaseUrl } from "@/lib/api";
 import { useTunnelStatus, useTunnelActions } from "@/hooks/useTunnel";
+import { TunnelModal } from "@/components/dashboard/TunnelModal";
 
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
     const [copied, setCopied] = useState(false);
@@ -38,32 +39,8 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
 export function NetworkStatus() {
     const apiBase = getGatewayBaseUrl();
     const { status: tunnel, fetchStatus } = useTunnelStatus();
-    const { startTunnel, stopTunnel } = useTunnelActions();
-    const [tunnelBusy, setTunnelBusy] = useState(false);
-    const [showTokenInput, setShowTokenInput] = useState(false);
-    const [tokenInput, setTokenInput] = useState("");
-    const [domainInput, setDomainInput] = useState("");
-
-    const handleToggleTunnel = async () => {
-        setTunnelBusy(true);
-        try {
-            if (tunnel?.running) {
-                await stopTunnel();
-            } else {
-                const payload: { token?: string; domain?: string } = {};
-                if (tokenInput.trim()) payload.token = tokenInput.trim();
-                if (domainInput.trim()) payload.domain = domainInput.trim();
-                const okStart = await startTunnel(payload);
-                if (okStart) {
-                    setShowTokenInput(false);
-                    setTokenInput("");
-                }
-            }
-            await fetchStatus();
-        } finally {
-            setTunnelBusy(false);
-        }
-    };
+    const { startTunnel, stopTunnel, installCloudflared } = useTunnelActions();
+    const [modalOpen, setModalOpen] = useState(false);
 
     return (
         <section
@@ -141,91 +118,15 @@ export function NetworkStatus() {
                             </div>
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
-                            <span
-                                className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[8.5px] ${
-                                    tunnel?.running
-                                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500"
-                                        : "border-border/50 bg-secondary/25 text-muted-foreground"
-                                }`}
-                            >
-                                <span
-                                    className={`size-1 rounded-full ${
-                                        tunnel?.running
-                                            ? "bg-emerald-500"
-                                            : "bg-muted-foreground/50"
-                                    }`}
-                                    aria-hidden="true"
-                                />
-                                {tunnel?.running ? "Connected" : "Offline"}
-                            </span>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    if (tunnel?.running) {
-                                        void handleToggleTunnel();
-                                    } else if (tunnel?.tokenConfigured) {
-                                        void handleToggleTunnel();
-                                    } else {
-                                        setShowTokenInput((v) => !v);
-                                    }
-                                }}
-                                disabled={
-                                    tunnelBusy || (tunnel !== null && !tunnel.cloudflaredAvailable)
-                                }
-                                title={
-                                    tunnel && !tunnel.cloudflaredAvailable
-                                        ? "cloudflared binary not found on server"
-                                        : undefined
-                                }
-                                className={`inline-flex h-6 items-center gap-1 rounded-md border border-border/60 px-2 font-mono text-[9px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                                    tunnel?.running
-                                        ? "text-red-500 hover:bg-red-500/10"
-                                        : "text-emerald-600 hover:bg-emerald-500/10"
-                                }`}
+                                onClick={() => setModalOpen(true)}
+                                className="inline-flex h-6 items-center rounded-md border border-border/60 px-2 font-mono text-[9px] font-semibold text-sky-500 transition-colors hover:bg-sky-500/10"
                             >
-                                {tunnel?.running ? (
-                                    <>
-                                        <Square className="size-2.5" /> Stop
-                                    </>
-                                ) : (
-                                    <>
-                                        <Play className="size-2.5" /> Start
-                                    </>
-                                )}
+                                {tunnel?.running ? "Open" : "Configure"}
                             </button>
                         </div>
                     </div>
-
-                    {showTokenInput && (
-                        <div className="space-y-2 py-2.5">
-                            <input
-                                type="password"
-                                value={tokenInput}
-                                onChange={(e) => setTokenInput(e.target.value)}
-                                placeholder="Cloudflare Tunnel Token (eyJ...)"
-                                className="w-full rounded-md border border-border/50 bg-secondary/30 px-2.5 py-1.5 font-mono text-[10.5px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-                            />
-                            <input
-                                type="text"
-                                value={domainInput}
-                                onChange={(e) => setDomainInput(e.target.value)}
-                                placeholder="Custom domain (e.g. router.example.com) — optional"
-                                className="w-full rounded-md border border-border/50 bg-secondary/30 px-2.5 py-1.5 font-mono text-[10.5px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-                            />
-                            <p className="font-mono text-[9px] leading-relaxed text-muted-foreground/70">
-                                Create a tunnel in Cloudflare Zero Trust, copy its token, then map
-                                your hostname to http://localhost:PORT.
-                            </p>
-                            <button
-                                type="button"
-                                onClick={() => void handleToggleTunnel()}
-                                disabled={!tokenInput.trim() || tunnelBusy}
-                                className="inline-flex h-6 items-center rounded-md bg-emerald-600 px-3 font-mono text-[9px] font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
-                            >
-                                Connect Tunnel
-                            </button>
-                        </div>
-                    )}
 
                     <div className="group flex items-center justify-between gap-3 py-2.5 transition-colors">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -251,6 +152,16 @@ export function NetworkStatus() {
                     </div>
                 </div>
             </div>
+
+            <TunnelModal
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                status={tunnel}
+                onStart={startTunnel}
+                onStop={stopTunnel}
+                onInstall={installCloudflared}
+                onRefresh={fetchStatus}
+            />
         </section>
     );
 }

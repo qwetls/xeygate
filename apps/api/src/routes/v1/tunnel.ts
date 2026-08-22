@@ -1,9 +1,12 @@
 import { Hono } from "hono";
 import { err, ok } from "@/utils/response.js";
 import {
+    getInstallStatus,
     getTunnelDomain,
-    getTunnelToken,
     getTunnelStatus,
+    getTunnelToken,
+    installCloudflared,
+    onTunnelUpdate,
     setTunnelDomain,
     setTunnelToken,
     startTunnel,
@@ -16,6 +19,53 @@ export const tunnelRoute = new Hono();
 tunnelRoute.get("/tunnel/status", (c) => {
     const status = getTunnelStatus();
     return ok(c, { ...status, tokenConfigured: Boolean(getTunnelToken()) });
+});
+
+// GET /v1/tunnel/events - Server-Sent Events stream of live tunnel/install state.
+tunnelRoute.get("/tunnel/events", (c) => {
+    const encoder = new TextEncoder();
+    let unsubscribe: (() => void) | null = null;
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
+
+    const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+            const send = (data: unknown) => {
+                try {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                } catch {
+                    // Controller already closed.
+                }
+            };
+            // Initial snapshot so clients render instantly.
+            send({ ...getTunnelStatus(), tokenConfigured: Boolean(getTunnelToken()) });
+
+            unsubscribe = onTunnelUpdate((status) => {
+                send({ ...status, tokenConfigured: Boolean(getTunnelToken()) });
+            });
+
+            // Keep the connection alive so proxies don't drop it.
+            heartbeat = setInterval(() => {
+                try {
+                    controller.enqueue(encoder.encode(`: ping\n\n`));
+                } catch {
+                    // ignore
+                }
+            }, 25_000);
+        },
+        cancel() {
+            if (heartbeat) clearInterval(heartbeat);
+            if (unsubscribe) unsubscribe();
+            unsubscribe = null;
+            heartbeat = null;
+        }
+    });
+
+    return c.body(stream, 200, {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no"
+    });
 });
 
 // POST /v1/tunnel/start - start the tunnel with the stored token
@@ -54,4 +104,15 @@ tunnelRoute.put("/tunnel/config", async (c) => {
         message: "Tunnel configuration updated",
         domain: getTunnelDomain() || undefined
     });
+});
+
+// POST /v1/tunnel/install - download & install the cloudflared binary for this machine
+tunnelRoute.post("/tunnel/install", (c) => {
+    const result = installCloudflared();
+    return result.success ? ok(c, result) : err(c, result.message, 400);
+});
+
+// GET /v1/tunnel/install - installation progress/state
+tunnelRoute.get("/tunnel/install", (c) => {
+    return ok(c, getInstallStatus());
 });
