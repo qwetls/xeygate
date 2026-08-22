@@ -89,7 +89,7 @@ export function useSettings() {
 
     const exportSettings = useCallback(() => {
         const payload = {
-            version: "0.1.1-rc.1",
+            version: "0.1.1-rc.2",
             exportedAt: new Date().toISOString(),
             settings
         };

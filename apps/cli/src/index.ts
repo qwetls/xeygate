@@ -15,7 +15,7 @@ export function createCli(): Command {
         .description(
             "CLI tool to connect, configure, and proxy AI coding tools with SRouter Gateway"
         )
-        .version("0.1.1-rc.1");
+        .version("0.1.1-rc.2");
 
     program
         .command("setup")

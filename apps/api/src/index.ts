@@ -77,7 +77,7 @@ app.get("/v1", (c) => {
     return c.json({
         name: "SRouter API",
         status: "ok",
-        version: "0.1.1-rc.1",
+        version: "0.1.1-rc.2",
         documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
     });
 });
@@ -122,7 +122,7 @@ if (hasWebDist) {
         return c.json({
             name: "SRouter API",
             status: "ok",
-            version: "0.1.1-rc.1",
+            version: "0.1.1-rc.2",
             documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
         });
     });
