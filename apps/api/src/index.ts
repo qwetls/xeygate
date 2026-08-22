@@ -19,6 +19,8 @@ import { modelsRoute } from "@/routes/v1/models.js";
 import { providersRoute } from "@/routes/v1/providers.js";
 import { quotaRoute } from "@/routes/v1/quota.js";
 import { settingsRoute } from "@/routes/v1/settings.js";
+import { tunnelRoute } from "@/routes/v1/tunnel.js";
+import { adminAuth } from "@/middleware/adminAuth.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry } from "@/services/registry.js";
@@ -93,6 +95,12 @@ app.route("/v1", logsRoute);
 app.route("/v1", authRoute);
 app.route("/v1", quotaRoute);
 app.route("/v1", settingsRoute);
+
+// Cloudflare Tunnel management (admin-only; status readable via API key too)
+app.route("/v1", tunnelRoute);
+app.use("/v1/tunnel/start", adminAuth);
+app.use("/v1/tunnel/stop", adminAuth);
+app.use("/v1/tunnel/config", adminAuth);
 
 // Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
 app.route("/v1/v1", messagesRoute);
