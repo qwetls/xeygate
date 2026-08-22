@@ -38,9 +38,31 @@ if (!fs.existsSync(dbDir)) {
 
 export const db = new DatabaseSync(dbPath);
 
-// Enable WAL mode for high performance concurrency
-db.exec("PRAGMA journal_mode = WAL;");
-db.exec("PRAGMA foreign_keys = ON;");
+// Wait up to 5s instead of failing immediately when another connection
+// (e.g. a parallel test process or the CLI) holds the write lock.
+db.exec("PRAGMA busy_timeout = 5000;");
+
+// Enable WAL mode for high performance concurrency.
+// Retry briefly — concurrent processes initializing on the same DB file
+// (CI runs app test suites in parallel) can transiently hold the lock.
+function execWithRetry(sql: string, attempts = 5): void {
+    for (let i = 0; i < attempts; i++) {
+        try {
+            db.exec(sql);
+            return;
+        } catch (error) {
+            const code = (error as { code?: string }).code;
+            if (code === "SQLITE_BUSY" && i < attempts - 1) {
+                Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200 * (i + 1));
+                continue;
+            }
+            throw error;
+        }
+    }
+}
+
+execWithRetry("PRAGMA journal_mode = WAL;");
+execWithRetry("PRAGMA foreign_keys = ON;");
 
 /**
  * Adds columns to a table if they do not already exist.
