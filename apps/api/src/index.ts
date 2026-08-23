@@ -3,6 +3,7 @@ import path from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import {
     authRoute,
     handleAntigravityOAuthCallback,
@@ -31,6 +32,41 @@ import { adminAuthStore } from "@srouter/db";
 import { HTTPException } from "hono/http-exception";
 
 const app = new Hono();
+
+const SROUTER_VERSION = "0.1.1-rc.2";
+
+// Security Headers & Version Middleware
+app.use("/*", async (c, next) => {
+    await next();
+    c.header("X-Powered-By", "Seaavey");
+    c.header("X-Version", SROUTER_VERSION);
+    c.header("X-Content-Type-Options", "nosniff");
+    c.header("X-Frame-Options", "DENY");
+    c.header("X-XSS-Protection", "1; mode=block");
+    c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+});
+
+// Enable CORS with sensible defaults
+app.use(
+    "/*",
+    cors({
+        origin: (origin) => {
+            // Allow requests with no origin (mobile apps, curl, server-to-server)
+            if (!origin) return "*";
+            // Allow localhost/loopback development origins
+            if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin)) {
+                return origin;
+            }
+            // For public origins, return origin without wildcard when credentials are needed,
+            // or return origin if explicitly running as API gateway
+            return origin;
+        },
+        allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allowHeaders: ["Content-Type", "Authorization", "x-api-key", "anthropic-version"],
+        exposeHeaders: ["Content-Length", "X-Request-Id", "X-Version"],
+        credentials: true
+    })
+);
 
 // Ensure an admin account exists on first run (default password: 12345678).
 ensureDefaultAdminAccount(adminAuthStore);
@@ -218,16 +254,18 @@ oauthApp.route("/v1", chatRoute);
 oauthApp.route("/v1", modelsRoute);
 
 const oauthPort = Number(process.env.OAUTH_PORT) || 1455;
+const oauthHost = process.env.OAUTH_HOST || "127.0.0.1";
 
 try {
     serve(
         {
             fetch: oauthApp.fetch,
-            port: oauthPort
+            port: oauthPort,
+            hostname: oauthHost
         },
         (info) => {
             console.log(
-                `🔑 OAuth Callback Server running at http://localhost:${info.port}/auth/callback & /auth/antigravity/callback & /auth/claude/callback`
+                `🔑 OAuth Callback Server running at http://${info.address}:${info.port}/auth/callback & /auth/antigravity/callback & /auth/claude/callback`
             );
         }
     );
