@@ -154,17 +154,22 @@ jobs:
                   TAGS: ${{ steps.meta.outputs.tags }}
                   LABELS: ${{ steps.meta.outputs.labels }}
               run: |
-                # metadata-action emits newline-delimited "image:tag" entries;
-                # buildx imagetools create wants one "-t <ref>" flag per line.
-                TAG_REFS=$(echo "$TAGS" | sed 's/^/-t /')
-                # Append OCI labels as imagetools annotations.
-                ANNOTATIONS=$(echo "$LABELS" | sed 's/^/--annotation index:/')
-                # Every digest-* file holds one arch image digest.
-                SOURCES=$(for digest_file in digest-*; do
-                  echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@$(cat "$digest_file")"
-                done)
-                # shellcheck disable=SC2086 # word splitting is intentional here
-                docker buildx imagetools create $TAG_REFS $ANNOTATIONS $SOURCES
+                # metadata-action emits newline-delimited entries for both tags
+                # and labels. Build bash arrays so label values containing
+                # spaces (e.g. the repo description) stay quoted as a single
+                # argument — unquoted word splitting made buildx parse
+                # "High-performance" from the description as an image source.
+                ARGS=()
+                while IFS= read -r tag; do
+                  ARGS+=( -t "$tag" )
+                done <<< "$TAGS"
+                while IFS= read -r label; do
+                  ARGS+=( --annotation "index:${label}" )
+                done <<< "$LABELS"
+                for digest_file in digest-*; do
+                  ARGS+=( "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@$(cat "$digest_file")" )
+                done
+                docker buildx imagetools create "${ARGS[@]}"
 
             - name: Inspect final manifest
               run: |
