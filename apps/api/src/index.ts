@@ -20,9 +20,14 @@ import { modelsRoute } from "@/routes/v1/models.js";
 import { providersRoute } from "@/routes/v1/providers.js";
 import { quotaRoute } from "@/routes/v1/quota.js";
 import { settingsRoute } from "@/routes/v1/settings.js";
+import { tunnelRoute } from "@/routes/v1/tunnel.js";
+import { adminAuth } from "@/middleware/adminAuth.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry } from "@/services/registry.js";
+import { ensureDefaultAdminAccount } from "@/services/adminAuth.js";
+import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
+import { adminAuthStore } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
 
@@ -62,6 +67,12 @@ app.use(
         credentials: true
     })
 );
+
+// Ensure an admin account exists on first run (default password: 12345678).
+ensureDefaultAdminAccount(adminAuthStore);
+
+// Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
+autostartTunnelIfEnabled();
 
 // Global Error Handler
 app.onError((err, c) => {
@@ -129,6 +140,13 @@ app.route("/v1", logsRoute);
 app.route("/v1", authRoute);
 app.route("/v1", quotaRoute);
 app.route("/v1", settingsRoute);
+
+// Cloudflare Tunnel management (admin-only; status readable via API key too)
+app.route("/v1", tunnelRoute);
+app.use("/v1/tunnel/start", adminAuth);
+app.use("/v1/tunnel/stop", adminAuth);
+app.use("/v1/tunnel/config", adminAuth);
+app.use("/v1/tunnel/install", adminAuth);
 
 // Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
 app.route("/v1/v1", messagesRoute);

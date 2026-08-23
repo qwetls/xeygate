@@ -4,6 +4,12 @@ import { adminAuthStore, type AdminAuthStore } from "@srouter/db";
 export const ADMIN_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export const ADMIN_SESSION_COOKIE = "srouter_admin_session";
 
+/**
+ * Default admin password used on first run when no account has been set up yet.
+ * Override at any time with the SROUTER_ADMIN_PASSWORD environment variable.
+ */
+export const DEFAULT_ADMIN_PASSWORD = "12345678";
+
 const PASSWORD_HASH_ALGORITHM = "scrypt";
 const PASSWORD_HASH_LENGTH = 64;
 const PASSWORD_SALT_LENGTH = 16;
@@ -107,4 +113,24 @@ export function isLoopbackAddress(address: string | undefined): boolean {
     if (!address) return false;
     const normalized = address.toLowerCase().replace(/^::ffff:/, "");
     return normalized === "127.0.0.1" || normalized === "::1";
+}
+
+/**
+ * Ensure the admin account uses the mandatory default password on every boot.
+ * - The password is reset to `DEFAULT_ADMIN_PASSWORD` (12345678) unless
+ *   `SROUTER_ADMIN_PASSWORD` is set, in which case that value is used instead.
+ * - This guarantees the dashboard is always reachable with the known default and
+ *   also recovers from a forgotten password.
+ */
+export function ensureDefaultAdminAccount(store: AdminAuthStore, now: number = Date.now()): void {
+    const envPassword = process.env.SROUTER_ADMIN_PASSWORD;
+    const hasEnv = envPassword !== undefined && envPassword.length > 0;
+    const password = hasEnv ? envPassword : DEFAULT_ADMIN_PASSWORD;
+    const hash = hashAdminPassword(password);
+
+    if (!store.hasAdminAccount()) {
+        store.createAdminAccount(hash, now);
+    } else if (hasEnv) {
+        store.updatePasswordHash(hash, now);
+    }
 }

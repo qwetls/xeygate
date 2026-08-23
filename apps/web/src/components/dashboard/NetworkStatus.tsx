@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Check, Cloud, Code2, Copy, Network } from "lucide-react";
 import { toast } from "sonner";
 import { getGatewayBaseUrl } from "@/lib/api";
+import { useTunnelStatus, useTunnelActions } from "@/hooks/useTunnel";
+import { TunnelModal } from "@/components/dashboard/TunnelModal";
 
 function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
     const [copied, setCopied] = useState(false);
@@ -36,6 +38,9 @@ function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) 
 
 export function NetworkStatus() {
     const apiBase = getGatewayBaseUrl();
+    const { status: tunnel, fetchStatus } = useTunnelStatus();
+    const { startTunnel, stopTunnel, installCloudflared } = useTunnelActions();
+    const [modalOpen, setModalOpen] = useState(false);
 
     return (
         <section
@@ -106,17 +111,21 @@ export function NetworkStatus() {
                                     Cloudflare Tunnel
                                 </p>
                                 <p className="mt-0.5 truncate text-[10px] text-muted-foreground">
-                                    Expose gateway without opening ports
+                                    {tunnel?.running
+                                        ? `Running${tunnel.domain ? ` · ${tunnel.domain}` : ""}`
+                                        : "Expose gateway without opening ports"}
                                 </p>
                             </div>
                         </div>
-                        <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-border/50 bg-secondary/25 px-2 py-0.5 font-mono text-[8.5px] text-muted-foreground">
-                            <span
-                                className="size-1 rounded-full bg-muted-foreground/50"
-                                aria-hidden="true"
-                            />
-                            Coming soon
-                        </span>
+                        <div className="flex shrink-0 items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setModalOpen(true)}
+                                className="inline-flex h-6 items-center rounded-md border border-border/60 px-2 font-mono text-[9px] font-semibold text-sky-500 transition-colors hover:bg-sky-500/10"
+                            >
+                                {tunnel?.running ? "Open" : "Configure"}
+                            </button>
+                        </div>
                     </div>
 
                     <div className="group flex items-center justify-between gap-3 py-2.5 transition-colors">
@@ -143,6 +152,16 @@ export function NetworkStatus() {
                     </div>
                 </div>
             </div>
+
+            <TunnelModal
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                status={tunnel}
+                onStart={startTunnel}
+                onStop={stopTunnel}
+                onInstall={installCloudflared}
+                onRefresh={fetchStatus}
+            />
         </section>
     );
 }
