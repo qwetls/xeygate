@@ -76,7 +76,15 @@ function ensureColumns(table: string, columns: Array<{ name: string; definition:
     );
     for (const col of columns) {
         if (existing.has(col.name)) continue;
-        db.exec(`ALTER TABLE ${table} ADD COLUMN ${col.definition};`);
+        try {
+            db.exec(`ALTER TABLE ${table} ADD COLUMN ${col.definition};`);
+            existing.add(col.name);
+        } catch (error) {
+            const message = (error as Error).message || "";
+            if (!message.includes("duplicate column name")) {
+                throw error;
+            }
+        }
     }
 }
 
