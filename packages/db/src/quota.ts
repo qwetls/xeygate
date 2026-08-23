@@ -1,4 +1,4 @@
-import { isProviderBaseId } from "@srouter/constants";
+import { CODEBUDDY_CN_DOMAIN, CODEBUDDY_CN_USER_AGENT, isProviderBaseId } from "@srouter/constants";
 import type {
     LiveModelQuotaItem,
     ProviderQuotaAccount,
@@ -14,7 +14,11 @@ function formatResetIn(resetTimeStr?: string): string {
     const now = Date.now();
     const diffMs = resetTime - now;
     if (diffMs <= 0) return "0m";
+    const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    if (days > 0) {
+        return `${days}d ${hours - days * 24}h`;
+    }
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     if (hours > 0) {
         return `${hours}h ${minutes}m`;
@@ -99,6 +103,156 @@ export async function fetchAntigravityLiveQuota(
     };
 }
 
+interface CodeBuddyCNAccount {
+    PackageName?: string;
+    SubProductName?: string;
+    CycleStartTime?: string;
+    CycleEndTime?: string;
+    DeductionEndTime?: number;
+    CycleCapacityUsed?: number;
+    CycleCapacityUsedPrecise?: string;
+    CycleCapacitySize?: number;
+    CycleCapacitySizePrecise?: string;
+    CapacityUsed?: number;
+    CapacityUsedPrecise?: string;
+    CapacitySize?: number;
+    CapacitySizePrecise?: string;
+}
+
+// Refill packs roll into a new cycle before the resource expires; bonus packs
+// end exactly at expiry. >2d gap between cycle end and validity end = refill.
+const CN_REFILL_GAP_MS = 2 * 24 * 60 * 60 * 1000;
+
+export async function fetchCodeBuddyCNLiveQuota(
+    providerId: string,
+    accountName: string,
+    accessToken: string,
+    enabled = true
+): Promise<ProviderQuotaAccount> {
+    if (!accessToken) {
+        throw new Error("CodeBuddy CN quota requires an access token");
+    }
+
+    const res = await fetch("https://copilot.tencent.com/v2/billing/meter/get-user-resource", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "User-Agent": CODEBUDDY_CN_USER_AGENT,
+            "X-Product": "SaaS",
+            "X-IDE-Type": "CLI",
+            "X-IDE-Name": "CLI",
+            "X-Domain": CODEBUDDY_CN_DOMAIN,
+            "x-requested-with": "XMLHttpRequest",
+            "x-codebuddy-request": "1"
+        },
+        body: "{}"
+    });
+
+    if (!res.ok) {
+        throw new Error(`CodeBuddy CN quota fetch failed: HTTP ${res.status}`);
+    }
+
+    const json = (await res.json()) as {
+        code?: number;
+        msg?: string;
+        data?: { Response?: { Data?: { Accounts?: CodeBuddyCNAccount[] } } };
+    };
+    if (json.code !== 0) {
+        throw new Error(`CodeBuddy CN quota error: ${json.msg || "unknown"}`);
+    }
+
+    const accounts = json.data?.Response?.Data?.Accounts ?? [];
+    if (accounts.length === 0) {
+        throw new Error("CodeBuddy CN quota fetch returned no credit packages");
+    }
+
+    const cycleEndMs = (acc: CodeBuddyCNAccount): number => {
+        const t = acc.CycleEndTime ? new Date(acc.CycleEndTime).getTime() : NaN;
+        return Number.isFinite(t) ? t : Number.POSITIVE_INFINITY;
+    };
+    const isRefill = (acc: CodeBuddyCNAccount): boolean => {
+        const ce = cycleEndMs(acc);
+        const de = Number(acc.DeductionEndTime);
+        return Number.isFinite(ce) && Number.isFinite(de) && de - ce > CN_REFILL_GAP_MS;
+    };
+    const byExpiry = (a: CodeBuddyCNAccount, b: CodeBuddyCNAccount) => cycleEndMs(a) - cycleEndMs(b);
+
+    const refills = accounts.filter(isRefill).sort(byExpiry);
+    const bonuses = accounts.filter((a) => !isRefill(a)).sort(byExpiry);
+
+    const toItem = (
+        name: string,
+        used: number,
+        total: number,
+        resetTime?: string
+    ): LiveModelQuotaItem => {
+        const remainingFraction = total > 0 ? (total - used) / total : 1;
+        return {
+            name,
+            used: Math.round(used * 100) / 100,
+            limit: Math.round(total * 100) / 100,
+            percentage: total > 0 ? `${Math.round((used / total) * 100)}%` : "0%",
+            percentageValue: total > 0 ? Math.round((used / total) * 100) : 0,
+            resetIn: formatResetIn(resetTime),
+            resetTime,
+            status: remainingFraction <= 0.05 ? "exhausted" : remainingFraction <= 0.2 ? "warning" : "ok"
+        };
+    };
+
+    const num = (precise?: string, plain?: number): number => {
+        const n = Number(precise ?? plain);
+        return Number.isFinite(n) ? n : 0;
+    };
+
+    const quotas: LiveModelQuotaItem[] = [];
+    const seenCadence: Record<string, number> = {};
+    for (const acc of refills) {
+        const cycleStartMs = acc.CycleStartTime ? new Date(acc.CycleStartTime).getTime() : NaN;
+        const cycleDays = (cycleEndMs(acc) - cycleStartMs) / 86400000;
+        const base =
+            Number.isFinite(cycleDays) && cycleDays <= 1.5
+                ? "Daily"
+                : Number.isFinite(cycleDays) && cycleDays <= 10
+                  ? "Weekly"
+                  : "Monthly";
+        seenCadence[base] = (seenCadence[base] ?? 0) + 1;
+        const name = seenCadence[base]! > 1 ? `${base} ${seenCadence[base]}` : base;
+        quotas.push(
+            toItem(
+                name,
+                num(acc.CycleCapacityUsedPrecise, acc.CycleCapacityUsed),
+                num(acc.CycleCapacitySizePrecise, acc.CycleCapacitySize),
+                acc.CycleEndTime
+            )
+        );
+    }
+    bonuses.forEach((acc, i) => {
+        quotas.push(
+            toItem(
+                `Bonus Pack ${i + 1}`,
+                num(acc.CapacityUsedPrecise, acc.CapacityUsed),
+                num(acc.CapacitySizePrecise, acc.CapacitySize),
+                acc.CycleEndTime
+            )
+        );
+    });
+
+    const basePkg = refills[0] ?? accounts[0] ?? {};
+    const plan = basePkg.PackageName || basePkg.SubProductName;
+
+    return {
+        id: providerId,
+        provider: plan ? `CodeBuddy CN (${plan})` : "CodeBuddy CN",
+        account: accountName,
+        enabled,
+        quotaType: "live_provider_quota",
+        totalQuotas: quotas.length,
+        quotas
+    };
+}
+
 export async function getProviderQuotaAccount(p: {
     id: string;
     providerId: string;
@@ -114,8 +268,23 @@ export async function getProviderQuotaAccount(p: {
     const isOpenAI = isProviderBaseId(p.providerId, "openai") || isProviderBaseId(p.id, "openai");
     const isAnthropic =
         isProviderBaseId(p.providerId, "anthropic") || isProviderBaseId(p.id, "anthropic");
+    const isCodeBuddyCN =
+        isProviderBaseId(p.providerId, "codebuddy-cn") || isProviderBaseId(p.id, "codebuddy-cn");
+    // codebuddy.ai (international) has no known live quota endpoint; showing SRouter's
+    // own usage logs under a "CodeBuddy" card is misleading, so skip it entirely.
+    const isCodeBuddy =
+        !isCodeBuddyCN &&
+        (isProviderBaseId(p.providerId, "codebuddy") || isProviderBaseId(p.id, "codebuddy"));
 
     const token = p.accessToken || p.apiKey || "";
+
+    if (isCodeBuddy) {
+        throw new Error("CodeBuddy (international) does not expose a live quota endpoint");
+    }
+
+    if (isCodeBuddyCN) {
+        return await fetchCodeBuddyCNLiveQuota(p.id, p.name || "CodeBuddy CN Account", token, p.enabled);
+    }
 
     if (isAntigravity) {
         return await fetchAntigravityLiveQuota(

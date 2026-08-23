@@ -1,4 +1,9 @@
-import { CODEBUDDY_BASE_URL } from "@srouter/constants";
+import {
+    CODEBUDDY_BASE_URL,
+    CODEBUDDY_CN_BASE_URL,
+    CODEBUDDY_CN_DOMAIN,
+    CODEBUDDY_CN_USER_AGENT
+} from "@srouter/constants";
 import {
     cleanupExpiredOAuthSessionsDB,
     deleteOAuthSessionDB,
@@ -6,7 +11,7 @@ import {
     saveOAuthSessionDB,
     upsertProviderDB
 } from "@srouter/db";
-import { CodeBuddyOAuth, generatePKCE, QoderOAuth } from "@srouter/providers";
+import { CodeBuddyCNOAuth, CodeBuddyOAuth, generatePKCE, QoderOAuth } from "@srouter/providers";
 import { CodeBuddyExecutor, QoderExecutor } from "@srouter/executors";
 import type { ProviderConfig } from "@srouter/types";
 import { registry } from "@/services/registry.js";
@@ -16,6 +21,7 @@ import {
     bluesMindsAuthHandler,
     claudeAuthHandler,
     codeBuddyAuthHandler,
+    codeBuddyCNAuthHandler,
     commandCodeAuthHandler,
     goRouterAuthHandler,
     openaiCodexAuthHandler,
@@ -204,8 +210,17 @@ function processTokenImportFor(
 // --- Device-flow providers (CodeBuddy, Qoder): bespoke flows kept explicit ---
 
 export async function initiateCodeBuddyOAuth(): Promise<{ authorizeUrl: string; state: string }> {
+    return initiateCodeBuddyOAuthFor(new CodeBuddyOAuth());
+}
+
+export async function initiateCodeBuddyCNOAuth(): Promise<{ authorizeUrl: string; state: string }> {
+    return initiateCodeBuddyOAuthFor(new CodeBuddyCNOAuth());
+}
+
+async function initiateCodeBuddyOAuthFor(
+    codeBuddyOAuth: CodeBuddyOAuth
+): Promise<{ authorizeUrl: string; state: string }> {
     cleanupExpiredSessions();
-    const codeBuddyOAuth = new CodeBuddyOAuth();
     const { state, authUrl } = await codeBuddyOAuth.requestAuthState();
 
     saveOAuthSessionDB({
@@ -227,6 +242,36 @@ export async function pollCodeBuddyDeviceToken(state: string): Promise<{
     provider?: ProviderConfig;
     error?: string;
 }> {
+    return pollCodeBuddyDeviceTokenFor(state, {
+        oauth: new CodeBuddyOAuth(),
+        providerId: "codebuddy",
+        displayName: "CodeBuddy",
+        baseUrl: CODEBUDDY_BASE_URL
+    });
+}
+
+export async function pollCodeBuddyCNDeviceToken(state: string): Promise<{
+    status: "pending" | "ok";
+    provider?: ProviderConfig;
+    error?: string;
+}> {
+    return pollCodeBuddyDeviceTokenFor(state, {
+        oauth: new CodeBuddyCNOAuth(),
+        providerId: "codebuddy-cn",
+        displayName: "CodeBuddy CN",
+        baseUrl: CODEBUDDY_CN_BASE_URL
+    });
+}
+
+async function pollCodeBuddyDeviceTokenFor(
+    state: string,
+    options: {
+        oauth: CodeBuddyOAuth;
+        providerId: "codebuddy" | "codebuddy-cn";
+        displayName: string;
+        baseUrl: string;
+    }
+): Promise<{ status: "pending" | "ok"; provider?: ProviderConfig; error?: string }> {
     if (!state) {
         return { status: "pending", error: "Missing state parameter" };
     }
@@ -236,7 +281,6 @@ export async function pollCodeBuddyDeviceToken(state: string): Promise<{
         return { status: "pending", error: "Session expired or not found" };
     }
 
-    const codeBuddyOAuth = new CodeBuddyOAuth();
     let poll: {
         status: "pending" | "ok";
         accessToken?: string;
@@ -246,7 +290,7 @@ export async function pollCodeBuddyDeviceToken(state: string): Promise<{
     };
 
     try {
-        poll = await codeBuddyOAuth.pollToken(state);
+        poll = await options.oauth.pollToken(state);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         return { status: "pending", error: msg };
@@ -259,16 +303,16 @@ export async function pollCodeBuddyDeviceToken(state: string): Promise<{
     deleteOAuthSessionDB(state);
 
     const timestamp = Date.now();
-    const accountId = `codebuddy_${timestamp}`;
-    const accountName = `CodeBuddy (Account #${timestamp.toString().slice(-4)})`;
+    const accountId = `${options.providerId}_${timestamp}`;
+    const accountName = `${options.displayName} (Account #${timestamp.toString().slice(-4)})`;
 
     const providerConfig = upsertProviderDB({
         id: accountId,
-        providerId: "codebuddy",
+        providerId: options.providerId,
         name: accountName,
         category: "oauth",
         protocol: "openai",
-        baseUrl: CODEBUDDY_BASE_URL,
+        baseUrl: options.baseUrl,
         accessToken: poll.accessToken,
         refreshToken: poll.refreshToken,
         tokenExpiresAt: poll.expiresIn ? timestamp + poll.expiresIn * 1000 : undefined,
@@ -280,8 +324,16 @@ export async function pollCodeBuddyDeviceToken(state: string): Promise<{
     const providerInstance = new CodeBuddyExecutor({
         id: accountId,
         name: accountName,
-        baseUrl: CODEBUDDY_BASE_URL,
-        accessToken: poll.accessToken
+        baseUrl: options.baseUrl,
+        accessToken: poll.accessToken,
+        modelPrefix: options.providerId,
+        ...(options.providerId === "codebuddy-cn"
+            ? {
+                  domain: CODEBUDDY_CN_DOMAIN,
+                  userAgent: CODEBUDDY_CN_USER_AGENT,
+                  flavor: "cli" as const
+              }
+            : {})
     });
     registry.registerProvider(providerInstance);
 
@@ -419,6 +471,9 @@ registerEntry("qoder", {
 registerEntry("codebuddy", {
     importToken: (params) => processTokenImportFor(codeBuddyAuthHandler, params)
 });
+registerEntry("codebuddy-cn", {
+    importToken: (params) => processTokenImportFor(codeBuddyCNAuthHandler, params)
+});
 for (const [key, handler] of [
     ["commandcode", commandCodeAuthHandler],
     ["anthropic", anthropicAuthHandler],
@@ -468,7 +523,9 @@ export const AuthLogic = {
     },
 
     initiateCodeBuddyOAuth,
+    initiateCodeBuddyCNOAuth,
     pollCodeBuddyDeviceToken,
+    pollCodeBuddyCNDeviceToken,
     pollQoderDeviceToken
 };
 

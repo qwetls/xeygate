@@ -5,6 +5,9 @@ import {
     ANTHROPIC_BASE_URL,
     BLUESMINDS_BASE_URL,
     CODEBUDDY_BASE_URL,
+    CODEBUDDY_CN_BASE_URL,
+    CODEBUDDY_CN_DOMAIN,
+    CODEBUDDY_CN_USER_AGENT,
     CODEX_OAUTH_CLIENT_ID,
     CODEX_OAUTH_REDIRECT_URI,
     COMMANDCODE_BASE_URL,
@@ -29,6 +32,7 @@ import {
 import {
     AntigravityOAuth,
     ClaudeOAuth,
+    CodeBuddyCNOAuth,
     CodeBuddyOAuth,
     OpenAICodexOAuth,
     QoderOAuth
@@ -402,6 +406,32 @@ export const codeBuddyAuthHandler: AuthProviderHandler = {
         })
 };
 
+export const codeBuddyCNAuthHandler: AuthProviderHandler = {
+    providerId: "codebuddy-cn",
+    displayName: "CodeBuddy CN",
+    category: "oauth",
+    protocol: "openai",
+    idPrefix: "codebuddy-cn",
+    baseUrl: () => CODEBUDDY_CN_BASE_URL,
+    oauthSuccessMessage: "Login CodeBuddy CN Berhasil!",
+    tokenImportMessage:
+        "CodeBuddy CN Access Token registered and saved directly to SQLite database!",
+    oauthClass: CodeBuddyCNOAuth,
+    mapOAuthTokens: codeBuddyAuthHandler.mapOAuthTokens,
+    mapImportTokens: codeBuddyAuthHandler.mapImportTokens,
+    buildExecutor: ({ id, name, baseUrl, accessToken, apiKey }) =>
+        new CodeBuddyExecutor({
+            id,
+            name,
+            baseUrl: baseUrl || CODEBUDDY_CN_BASE_URL,
+            accessToken: accessToken || apiKey,
+            modelPrefix: "codebuddy-cn",
+            domain: CODEBUDDY_CN_DOMAIN,
+            userAgent: CODEBUDDY_CN_USER_AGENT,
+            flavor: "cli"
+        })
+};
+
 export const authProviderHandlers: Record<string, AuthProviderHandler> = {
     openai_codex: openaiCodexAuthHandler,
     antigravity: antigravityAuthHandler,
@@ -414,5 +444,6 @@ export const authProviderHandlers: Record<string, AuthProviderHandler> = {
     seekai: seekAIAuthHandler,
     tabitoken: tabiTokenAuthHandler,
     tokenrouter: tokenRouterAuthHandler,
-    codebuddy: codeBuddyAuthHandler
+    codebuddy: codeBuddyAuthHandler,
+    "codebuddy-cn": codeBuddyCNAuthHandler
 };

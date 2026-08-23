@@ -21,6 +21,15 @@ export const CODEBUDDY_AUTH_BASE = "https://www.codebuddy.ai";
 export const CODEBUDDY_AUTH_STATE_URL = "https://www.codebuddy.ai/v2/plugin/auth/state";
 export const CODEBUDDY_AUTH_TOKEN_URL = "https://www.codebuddy.ai/v2/plugin/auth/token";
 export const CODEBUDDY_AUTH_REFRESH_URL = "https://www.codebuddy.ai/v2/plugin/auth/token/refresh";
+export const CODEBUDDY_CN_BASE_URL = "https://copilot.tencent.com/v2/chat/completions";
+export const CODEBUDDY_CN_AUTH_BASE = "https://copilot.tencent.com";
+export const CODEBUDDY_CN_AUTH_STATE_URL = "https://copilot.tencent.com/v2/plugin/auth/state";
+export const CODEBUDDY_CN_AUTH_TOKEN_URL = "https://copilot.tencent.com/v2/plugin/auth/token";
+export const CODEBUDDY_CN_AUTH_REFRESH_URL =
+    "https://copilot.tencent.com/v2/plugin/auth/token/refresh";
+export const CODEBUDDY_CN_ORIGIN = "https://www.codebuddy.cn";
+export const CODEBUDDY_CN_DOMAIN = "www.codebuddy.cn";
+export const CODEBUDDY_CN_USER_AGENT = "CLI/2.96.0 CodeBuddy/2.96.0";
 export const CODEBUDDY_AUTH_USER_AGENT = "IDE/2.63.2 CodeBuddy/2.63.2";
 export const CODEBUDDY_AUTH_PLATFORM = "ide";
 
@@ -65,6 +74,7 @@ export const CODEBUDDY_MODELS: CodeBuddyModelDefinition[] = [
     { id: "deepseek-v3-2-volc", name: "DeepSeek-V3.2" },
     { id: "deepseek-v4-pro", name: "DeepSeek-V4-Pro" },
     { id: "deepseek-v4-flash", name: "DeepSeek-V4-Flash" },
+    { id: "glm-5.3", name: "GLM-5.3" },
     { id: "glm-5.2", name: "GLM-5.2" },
     { id: "glm-5.1", name: "GLM-5.1" },
     { id: "glm-5.0", name: "GLM-5.0" },
@@ -73,6 +83,7 @@ export const CODEBUDDY_MODELS: CodeBuddyModelDefinition[] = [
     { id: "glm-4.7", name: "GLM-4.7" },
     { id: "minimax-m3", name: "MiniMax-M3" },
     { id: "minimax-m2.7", name: "MiniMax-M2.7" },
+    { id: "kimi-k3", name: "Kimi-K3" },
     { id: "kimi-k2.7", name: "Kimi-K2.7-Code" },
     { id: "kimi-k2.6", name: "Kimi-K2.6" },
     { id: "kimi-k2.5", name: "Kimi-K2.5" },
@@ -387,6 +398,19 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
         statusMessage: "CodeBuddy OAuth token missing"
     },
     {
+        id: "codebuddy-cn",
+        name: "CodeBuddy CN",
+        category: "oauth",
+        protocol: "openai",
+        alias: "codebuddy-cn",
+        baseUrl: CODEBUDDY_CN_BASE_URL,
+        websiteUrl: "https://www.codebuddy.cn",
+        requiresApiKey: false,
+        requiresOAuth: true,
+        supportsCustomUrl: true,
+        statusMessage: "CodeBuddy CN OAuth token missing"
+    },
+    {
         id: "opencode_zen",
         name: "OpenCode Zen",
         category: "free_tier",
@@ -404,6 +428,9 @@ export const KNOWN_PROVIDERS: KnownProvider[] = [
 export const KNOWN_PROVIDER_MAP: Record<string, KnownProvider> = Object.fromEntries(
     KNOWN_PROVIDERS.map((provider) => [provider.id, provider])
 );
+const KNOWN_PROVIDER_IDS_BY_LENGTH = Object.keys(KNOWN_PROVIDER_MAP).sort(
+    (left, right) => right.length - left.length
+);
 
 export function providerById(id: string): KnownProvider | undefined {
     return KNOWN_PROVIDER_MAP[id];
@@ -418,6 +445,11 @@ export function isKnownProvider(id: string): boolean {
  * openai_codex_1700000000 → openai, kiro-2 → kiro).
  */
 export function providerBaseId(id: string): string {
+    const knownId = KNOWN_PROVIDER_IDS_BY_LENGTH.find(
+        (candidate) =>
+            id === candidate || id.startsWith(`${candidate}_`) || id.startsWith(`${candidate}-`)
+    );
+    if (knownId) return knownId;
     return id.split("_")[0]?.split("-")[0] ?? id;
 }
 

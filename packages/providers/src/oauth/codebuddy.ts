@@ -3,7 +3,13 @@ import {
     CODEBUDDY_AUTH_REFRESH_URL,
     CODEBUDDY_AUTH_STATE_URL,
     CODEBUDDY_AUTH_TOKEN_URL,
-    CODEBUDDY_AUTH_USER_AGENT
+    CODEBUDDY_AUTH_USER_AGENT,
+    CODEBUDDY_CN_AUTH_REFRESH_URL,
+    CODEBUDDY_CN_AUTH_STATE_URL,
+    CODEBUDDY_CN_AUTH_TOKEN_URL,
+    CODEBUDDY_CN_DOMAIN,
+    CODEBUDDY_CN_ORIGIN,
+    CODEBUDDY_CN_USER_AGENT
 } from "@srouter/constants";
 import type { OAuthTokenResponse } from "./base.js";
 
@@ -13,6 +19,10 @@ export interface CodeBuddyOAuthOptions {
     refreshUrl?: string;
     platform?: string;
     userAgent?: string;
+    origin?: string;
+    domain?: string;
+    ioa?: boolean;
+    refreshBearer?: boolean;
 }
 
 export class CodeBuddyOAuth {
@@ -21,6 +31,10 @@ export class CodeBuddyOAuth {
     private refreshUrl: string;
     private platform: string;
     private userAgent: string;
+    private origin: string;
+    private domain: string;
+    private ioa: boolean;
+    private refreshBearer: boolean;
 
     constructor(options: CodeBuddyOAuthOptions = {}) {
         this.stateUrl = options.stateUrl ?? CODEBUDDY_AUTH_STATE_URL;
@@ -28,18 +42,26 @@ export class CodeBuddyOAuth {
         this.refreshUrl = options.refreshUrl ?? CODEBUDDY_AUTH_REFRESH_URL;
         this.platform = options.platform ?? CODEBUDDY_AUTH_PLATFORM;
         this.userAgent = options.userAgent ?? CODEBUDDY_AUTH_USER_AGENT;
+        this.origin = options.origin ?? "https://www.codebuddy.ai";
+        this.domain = options.domain ?? new URL(this.origin).host;
+        this.ioa = options.ioa ?? false;
+        this.refreshBearer = options.refreshBearer ?? false;
     }
 
     async requestAuthState(): Promise<{ state: string; authUrl: string }> {
-        const url = `${this.stateUrl}?platform=${encodeURIComponent(this.platform)}`;
+        const params = new URLSearchParams({ platform: this.platform });
+        if (this.ioa) params.set("ioa", "1");
+        const url = `${this.stateUrl}?${params}`;
         const response = await fetch(url, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 Accept: "application/json",
                 "User-Agent": this.userAgent,
+                Origin: this.origin,
+                Referer: `${this.origin}/`,
                 "X-Requested-With": "XMLHttpRequest",
-                "X-Domain": "www.codebuddy.ai",
+                "X-Domain": this.domain,
                 "X-No-Authorization": "true",
                 "X-No-User-Id": "true",
                 "X-Product": "SaaS"
@@ -81,8 +103,10 @@ export class CodeBuddyOAuth {
             headers: {
                 Accept: "application/json",
                 "User-Agent": this.userAgent,
+                Origin: this.origin,
+                Referer: `${this.origin}/`,
                 "X-Requested-With": "XMLHttpRequest",
-                "X-Domain": "www.codebuddy.ai",
+                "X-Domain": this.domain,
                 "X-No-Authorization": "true",
                 "X-No-User-Id": "true",
                 "X-No-Enterprise-Id": "true",
@@ -148,11 +172,14 @@ export class CodeBuddyOAuth {
                     "Content-Type": "application/json",
                     Accept: "application/json",
                     "User-Agent": this.userAgent,
+                    Origin: this.origin,
+                    Referer: `${this.origin}/`,
                     "X-Requested-With": "XMLHttpRequest",
-                    "X-Domain": "www.codebuddy.ai",
-                    "X-Product": "SaaS"
+                    "X-Domain": this.domain,
+                    "X-Product": "SaaS",
+                    ...(this.refreshBearer ? { Authorization: `Bearer ${refreshToken}` } : {})
                 },
-                body: JSON.stringify({ refreshToken })
+                body: this.refreshBearer ? undefined : JSON.stringify({ refreshToken })
             });
 
             if (response.ok) {
@@ -169,7 +196,11 @@ export class CodeBuddyOAuth {
                     };
                 }
             }
-        } catch {
+            if (this.refreshBearer) throw new Error("CodeBuddy token refresh failed");
+        } catch (error) {
+            if (this.refreshBearer) {
+                throw error instanceof Error ? error : new Error("CodeBuddy token refresh failed");
+            }
             // fallback to preserving refreshToken
         }
 
@@ -178,5 +209,22 @@ export class CodeBuddyOAuth {
             refreshToken,
             tokenType: "Bearer"
         };
+    }
+}
+
+export class CodeBuddyCNOAuth extends CodeBuddyOAuth {
+    constructor(options: CodeBuddyOAuthOptions = {}) {
+        super({
+            stateUrl: CODEBUDDY_CN_AUTH_STATE_URL,
+            tokenUrl: CODEBUDDY_CN_AUTH_TOKEN_URL,
+            refreshUrl: CODEBUDDY_CN_AUTH_REFRESH_URL,
+            origin: CODEBUDDY_CN_ORIGIN,
+            domain: CODEBUDDY_CN_DOMAIN,
+            userAgent: CODEBUDDY_CN_USER_AGENT,
+            platform: "CLI",
+            ioa: true,
+            refreshBearer: true,
+            ...options
+        });
     }
 }

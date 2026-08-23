@@ -94,6 +94,13 @@ authRoute.post("/auth/codebuddy/poll", adminAuth, AuthController.pollCodeBuddy);
 authRoute.post("/auth/codebuddy/token", adminAuth, AuthController.importCodeBuddyToken);
 authRoute.post("/auth/codebuddy/import-token", adminAuth, AuthController.importCodeBuddyToken);
 
+// --- CodeBuddy CN Provider (OAuth & Access Token) ---
+authRoute.get("/auth/codebuddy-cn/login", adminAuth, AuthController.loginCodeBuddyCN);
+authRoute.get("/auth/codebuddy-cn/poll", adminAuth, AuthController.pollCodeBuddyCN);
+authRoute.post("/auth/codebuddy-cn/poll", adminAuth, AuthController.pollCodeBuddyCN);
+authRoute.post("/auth/codebuddy-cn/token", adminAuth, AuthController.importCodeBuddyCNToken);
+authRoute.post("/auth/codebuddy-cn/import-token", adminAuth, AuthController.importCodeBuddyCNToken);
+
 // --- Qoder Provider (OAuth & PAT) ---
 // 1. GET /v1/auth/qoder/login - Initiate Qoder OAuth PKCE Login Flow
 authRoute.get("/auth/qoder/login", adminAuth, AuthController.loginQoder);
