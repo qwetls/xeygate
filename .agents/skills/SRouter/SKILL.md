@@ -207,7 +207,15 @@ Multi-stage prompt compression before LLM execution:
 
 ---
 
-## Common Development Tasks
+### Version Management
+
+All version strings in source code are centralized in `@srouter/constants` (`packages/constants/src/version.ts`). When bumping versions:
+1. Update `GLOBAL_VERSION` in `packages/constants/src/version.ts`.
+2. Update the `version` field in the 11 `package.json` files.
+3. Commit with `chore(release): bump version to X.Y.Z`.
+4. CI will automatically skip GHCR docker builds for `-rc` versions and only publish on stable release tags/versions.
+
+### Common Development Tasks
 
 ### Adding a New Provider
 

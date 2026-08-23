@@ -19,8 +19,17 @@ packages/constants/src/
 ├── providers.ts    # Provider catalog, base URLs, model catalogs, helper functions
 ├── oauth.ts        # OAuth Client IDs, secrets, redirect URIs, endpoints
 ├── seed.ts         # Database seed definitions & SEED_MARKER
+├── version.ts      # Single source of truth for versions (GLOBAL_VERSION, APP_VERSION, API_VERSION, CLI_VERSION)
 └── index.ts        # Barrel exports
 ```
+
+### Version Constants (`version.ts`)
+
+- `GLOBAL_VERSION`: Main monorepo release version string (e.g. `"0.1.1-rc.3"`)
+- `APP_VERSION`: Version used across the React dashboard (web app)
+- `API_VERSION`: Version exposed in API headers (`X-Version`) and info endpoints
+- `CLI_VERSION`: Version reported by the CLI (`srouter --version`)
+- `SROUTER_VERSION` & `SROUTER_VERSION_TAG`: Aliases for backwards compatibility
 
 ### Provider Base URLs (`providers.ts`)
 
