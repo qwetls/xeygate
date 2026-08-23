@@ -152,13 +152,7 @@ app.route("/v1/v1", messagesRoute);
 app.route("/v1/v1", chatRoute);
 app.route("/v1/v1", modelsRoute);
 
-// Also mount root-level routes for OpenAI / Anthropic clients and AI SDKs sending to base URL directly
-app.route("/", chatRoute);
-app.route("/", messagesRoute);
-app.route("/", modelsRoute);
-app.route("/", providersRoute);
-app.route("/", settingsRoute);
-app.route("/", quotaRoute);
+// All endpoints must start with /v1 (OpenAI/Anthropic compatible baseURLs)
 
 // Serve Web Dashboard in production if built dist exists
 const webDistPath = resolveWebDistPath();
@@ -248,7 +242,6 @@ oauthApp.post("/auth/claude/callback", (c) => handleClaudeOAuthCallback(c));
 oauthApp.get("/auth/qoder/callback", (c) => handleQoderOAuthCallback(c));
 oauthApp.post("/auth/qoder/callback", (c) => handleQoderOAuthCallback(c));
 oauthApp.route("/v1", messagesRoute);
-oauthApp.route("/", messagesRoute);
 oauthApp.route("/v1", chatRoute);
 oauthApp.route("/v1", modelsRoute);
 
