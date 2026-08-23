@@ -24,11 +24,11 @@ jobs:
               run: |
                 VERSION=$(node -p "require('./package.json').version")
                 echo "Current package version: $VERSION"
-                if [[ "$VERSION" =~ -rc[0-9]*$ ]] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+                if [[ "$VERSION" =~ -rc ]] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
                   echo "Detected release candidate version ($VERSION). Skipping GHCR build on main push."
-                  echo "should_build=false" >> $GITHUB_OUTPUT
+                  echo "should_build=false" >> "$GITHUB_OUTPUT"
                 else
-                  echo "should_build=true" >> $GITHUB_OUTPUT
+                  echo "should_build=true" >> "$GITHUB_OUTPUT"
                 fi
 
     build-and-push:
