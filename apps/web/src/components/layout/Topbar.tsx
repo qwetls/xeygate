@@ -1,10 +1,8 @@
 import { Link, useMatches } from "@tanstack/react-router";
-import { LogOut, Moon, Sun, Terminal } from "lucide-react";
-import { useState } from "react";
+import { Moon, Sun, Terminal } from "lucide-react";
 import { useTheme } from "@/context/Theme";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { api } from "@/lib/api";
 import { KNOWN_PROVIDER_MAP, providerBaseId } from "@srouter/constants";
 import { useProvider } from "@/hooks/useProvider";
 
@@ -44,19 +42,6 @@ function useBreadcrumb(): BreadcrumbInfo {
 export function Topbar() {
     const crumb = useBreadcrumb();
     const { theme, toggleTheme } = useTheme();
-    const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-    async function handleLogout() {
-        setIsLoggingOut(true);
-        try {
-            await api.post<void>("/v1/admin/logout");
-            window.location.reload();
-        } catch {
-            window.location.reload();
-        } finally {
-            setIsLoggingOut(false);
-        }
-    }
 
     return (
         <header className="sticky top-0 z-30 flex h-12 min-h-12 shrink-0 items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-3 sm:px-5 backdrop-blur-md font-mono">
@@ -90,9 +75,8 @@ export function Topbar() {
                 </div>
             </div>
 
-            {/* Right: Live Telemetry Status + Actions */}
+            {/* Right: Actions */}
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-                {/* Controls */}
                 <div className="flex items-center gap-1">
                     <Button
                         type="button"
@@ -110,19 +94,6 @@ export function Topbar() {
                         ) : (
                             <Moon className="size-3.5" strokeWidth={1.75} />
                         )}
-                    </Button>
-
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => void handleLogout()}
-                        disabled={isLoggingOut}
-                        aria-label="Sign out"
-                        className="size-8 rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer"
-                        title="Sign out of control plane"
-                    >
-                        <LogOut className="size-3.5" strokeWidth={1.75} />
                     </Button>
                 </div>
             </div>
