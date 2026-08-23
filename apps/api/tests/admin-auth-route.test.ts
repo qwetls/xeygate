@@ -176,17 +176,17 @@ test("change-password validates current password and updates admin account", asy
     });
     assert.equal(wrongCurrent.status, 401);
 
-    // Short password
-    const shortPass = await app.request("/v1/admin/change-password", {
+    // Over-length password (> 128)
+    const tooLong = await app.request("/v1/admin/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
             currentPassword: "correct horse battery staple",
-            newPassword: "short",
-            confirmation: "short"
+            newPassword: "a".repeat(129),
+            confirmation: "a".repeat(129)
         })
     });
-    assert.equal(shortPass.status, 400);
+    assert.equal(tooLong.status, 400);
 
     // Mismatched confirmation
     const mismatch = await app.request("/v1/admin/change-password", {

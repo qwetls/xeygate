@@ -68,7 +68,7 @@ function AdminAuthForm({ setupRequired, onAuthenticated }: AdminAuthFormProps) {
                                 value={password}
                                 onChange={(event) => setPassword(event.target.value)}
                                 placeholder={
-                                    setupRequired ? "At least 12 characters" : "Admin password"
+                                    setupRequired ? "Choose a password" : "Admin password"
                                 }
                                 required
                             />

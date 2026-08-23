@@ -16,9 +16,6 @@ export function validateAdminPassword(value: unknown): string | null {
     if (typeof value !== "string" || value.length === 0) {
         return "Password is required";
     }
-    if (value.length < 12) {
-        return "Password must be at least 12 characters";
-    }
     if (value.length > 128) {
         return "Password must be at most 128 characters";
     }
