@@ -25,7 +25,7 @@ import { adminAuth } from "@/middleware/adminAuth.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry } from "@/services/registry.js";
-import { ensureDefaultAdminAccount } from "@/services/adminAuth.js";
+import { bootstrapAdminAccountFromEnv } from "@/services/adminAuth.js";
 import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
 import { adminAuthStore } from "@srouter/db";
 
@@ -67,8 +67,9 @@ app.use(
     })
 );
 
-// Ensure an admin account exists on first run (default password: 12345678).
-ensureDefaultAdminAccount(adminAuthStore);
+// Bootstrap the admin account only when SROUTER_ADMIN_PASSWORD is set.
+// Otherwise first-run setup happens through the dashboard.
+bootstrapAdminAccountFromEnv(adminAuthStore);
 
 // Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
 autostartTunnelIfEnabled();

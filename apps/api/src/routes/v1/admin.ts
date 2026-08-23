@@ -28,7 +28,6 @@ interface AdminRequestBody {
 export interface AdminRouteOptions {
     store?: AdminAuthStore;
     getClientAddress?: (c: Context) => string | undefined;
-    getSetupToken?: () => string | undefined;
     now?: () => number;
     secureCookies?: boolean;
 }
@@ -68,7 +67,6 @@ function clearAdminSessionCookie(c: Context, secure: boolean): void {
 export function createAdminRoute(options: AdminRouteOptions = {}): Hono {
     const store = options.store ?? adminAuthStore;
     const getClientAddress = options.getClientAddress ?? getDirectClientAddress;
-    const getSetupToken = options.getSetupToken ?? (() => process.env.SROUTER_SETUP_TOKEN);
     const now = options.now ?? (() => Date.now());
     const secureCookies = options.secureCookies ?? process.env.SROUTER_SECURE_COOKIES === "true";
     const failedLogins = new Map<string, { count: number; blockedUntil: number }>();
@@ -76,13 +74,9 @@ export function createAdminRoute(options: AdminRouteOptions = {}): Hono {
 
     route.get("/admin/status", (c) => {
         const authenticated = verifyAdminSession(store, getCookie(c, ADMIN_SESSION_COOKIE), now());
-        const address = getClientAddress(c);
-        const configuredSetupToken = getSetupToken();
         return ok(c, {
             setupRequired: !store.hasAdminAccount(),
-            authenticated,
-            setupTokenConfigured: Boolean(configuredSetupToken),
-            clientIsLoopback: isLoopbackAddress(address)
+            authenticated
         });
     });
 
@@ -110,21 +104,10 @@ export function createAdminRoute(options: AdminRouteOptions = {}): Hono {
             });
         }
 
-        const address = getClientAddress(c);
-        const configuredSetupToken = getSetupToken();
-        const hasValidSetupToken =
-            Boolean(configuredSetupToken) && body?.setupToken === configuredSetupToken;
-        if (!isLoopbackAddress(address) && !hasValidSetupToken) {
-            return err(
-                c,
-                "Initial admin setup is only available from localhost or with a setup token",
-                403,
-                {
-                    type: "authentication_error",
-                    code: "setup_not_allowed"
-                }
-            );
-        }
+        // First-come-wins: anyone who reaches the instance before setup completes
+        // can claim it. The window closes permanently once an account exists
+        // (the hasAdminAccount check above). Deployers should finish setup
+        // immediately after first boot.
 
         const created = store.createAdminAccount(hashAdminPassword(body.password as string), now());
         if (!created) {
