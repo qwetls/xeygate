@@ -28,10 +28,13 @@ import { HTTPException } from "hono/http-exception";
 
 const app = new Hono();
 
-// Security Headers Middleware
+const SROUTER_VERSION = "0.1.1-rc.2";
+
+// Security Headers & Version Middleware
 app.use("/*", async (c, next) => {
     await next();
     c.header("X-Powered-By", "Seaavey");
+    c.header("X-Version", SROUTER_VERSION);
     c.header("X-Content-Type-Options", "nosniff");
     c.header("X-Frame-Options", "DENY");
     c.header("X-XSS-Protection", "1; mode=block");
@@ -55,7 +58,7 @@ app.use(
         },
         allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "Authorization", "x-api-key", "anthropic-version"],
-        exposeHeaders: ["Content-Length", "X-Request-Id"],
+        exposeHeaders: ["Content-Length", "X-Request-Id", "X-Version"],
         credentials: true
     })
 );
