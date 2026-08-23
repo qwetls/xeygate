@@ -172,6 +172,11 @@ jobs:
                 docker buildx imagetools create "${ARGS[@]}"
 
             - name: Inspect final manifest
+              env:
+                  TAGS: ${{ steps.meta.outputs.tags }}
               run: |
-                docker buildx imagetools inspect \
-                  "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+                # Inspect the first tag metadata-action actually created.
+                # github.ref_name is not a valid image tag on branch refs
+                # (contains "/") and does not match semver tags on releases.
+                FIRST_TAG=$(echo "$TAGS" | head -n 1)
+                docker buildx imagetools inspect "$FIRST_TAG"
