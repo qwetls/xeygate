@@ -88,11 +88,18 @@ jobs:
                   cache-from: type=gha,scope=${{ matrix.arch }}
                   cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
 
+            - name: Export image digest
+              env:
+                  DIGEST: ${{ steps.build.outputs.digest }}
+              # build-push-action outputs the digest as a string ("sha256:...");
+              # write it to a file first — upload-artifact takes paths, not values.
+              run: echo "$DIGEST" > "digest-${{ matrix.arch }}"
+
             - name: Upload image digest
               uses: actions/upload-artifact@v4
               with:
                   name: digest-${{ matrix.arch }}
-                  path: ${{ steps.build.outputs.digest }}
+                  path: digest-${{ matrix.arch }}
                   if-no-files-found: error
                   retention-days: 1
 
