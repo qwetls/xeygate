@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { toast } from "sonner";
-import { SROUTER_VERSION } from "@srouter/constants";
+import { APP_VERSION } from "@srouter/constants";
 
 export interface AppSettings {
     // Appearance
@@ -90,7 +90,7 @@ export function useSettings() {
 
     const exportSettings = useCallback(() => {
         const payload = {
-            version: SROUTER_VERSION,
+            version: APP_VERSION,
             exportedAt: new Date().toISOString(),
             settings
         };

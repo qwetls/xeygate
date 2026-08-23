@@ -30,7 +30,7 @@ import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
 import { adminAuthStore } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
-import { SROUTER_VERSION } from "@srouter/constants";
+import { API_VERSION } from "@srouter/constants";
 
 const app = new Hono();
 
@@ -38,7 +38,7 @@ const app = new Hono();
 app.use("/*", async (c, next) => {
     await next();
     c.header("X-Powered-By", "Seaavey");
-    c.header("X-Version", SROUTER_VERSION);
+    c.header("X-Version", API_VERSION);
     c.header("X-Content-Type-Options", "nosniff");
     c.header("X-Frame-Options", "DENY");
     c.header("X-XSS-Protection", "1; mode=block");
@@ -123,7 +123,7 @@ app.get("/v1", (c) => {
     return c.json({
         name: "SRouter API",
         status: "ok",
-        version: SROUTER_VERSION,
+        version: API_VERSION,
         documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
     });
 });
@@ -175,7 +175,7 @@ if (hasWebDist) {
         return c.json({
             name: "SRouter API",
             status: "ok",
-            version: SROUTER_VERSION,
+            version: API_VERSION,
             documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
         });
     });
