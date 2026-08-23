@@ -42,7 +42,17 @@ app.use("/*", async (c, next) => {
 app.use(
     "/*",
     cors({
-        origin: (origin) => origin || "*",
+        origin: (origin) => {
+            // Allow requests with no origin (mobile apps, curl, server-to-server)
+            if (!origin) return "*";
+            // Allow localhost/loopback development origins
+            if (/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin)) {
+                return origin;
+            }
+            // For public origins, return origin without wildcard when credentials are needed,
+            // or return origin if explicitly running as API gateway
+            return origin;
+        },
         allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allowHeaders: ["Content-Type", "Authorization", "x-api-key", "anthropic-version"],
         exposeHeaders: ["Content-Length", "X-Request-Id"],

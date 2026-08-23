@@ -22,28 +22,20 @@ export interface ApiKeyAuthOptions {
 
 function getDirectClientAddress(c: Context): string | undefined {
     try {
-        const info = getConnInfo(c);
-        if (info.remote?.address) return info.remote.address;
+        const addr = getConnInfo(c).remote.address;
+        if (addr) return addr;
     } catch {
-        // Fallback for tests or environments without node-server conninfo
+        // Fallback when request is invoked via Hono in-memory app.request()
     }
 
+    // If running in test / in-memory environment where conninfo is not available,
+    // infer from URL hostname
     try {
         const url = new URL(c.req.url);
         if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
             return "127.0.0.1";
         }
     } catch {}
-
-    const host = c.req.header("host") || "";
-    if (
-        !host ||
-        host.startsWith("localhost") ||
-        host.startsWith("127.0.0.1") ||
-        host.startsWith("[::1]")
-    ) {
-        return "127.0.0.1";
-    }
 
     return undefined;
 }

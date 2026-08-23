@@ -7,7 +7,7 @@ import {
     getRequireApiKeyDB,
     setRequireApiKeyDB
 } from "@srouter/db";
-import { apiKeyAuth } from "../src/middleware/apiKeyAuth.js";
+import { apiKeyAuth, createApiKeyAuth } from "../src/middleware/apiKeyAuth.js";
 
 const createdKeyIds: string[] = [];
 
@@ -74,11 +74,51 @@ test("apiKeyAuth middleware allows unauthenticated requests when require_api_key
     setRequireApiKeyDB(false);
 
     const testApp = new Hono();
-    testApp.use("/*", apiKeyAuth);
+    testApp.use("/*", createApiKeyAuth({ getClientAddress: () => "127.0.0.1" }));
     testApp.post("/chat/completions", (c) => c.json({ ok: true }));
 
     const res = await testApp.request("/chat/completions", {
         method: "POST"
+    });
+
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as { ok: boolean };
+    assert.equal(body.ok, true);
+});
+
+test("apiKeyAuth middleware rejects non-loopback requests when require_api_key is false and no key provided", async () => {
+    setRequireApiKeyDB(false);
+
+    const testApp = new Hono();
+    testApp.use("/*", createApiKeyAuth({ getClientAddress: () => "192.168.1.50" }));
+    testApp.post("/chat/completions", (c) => c.json({ ok: true }));
+
+    const res = await testApp.request("/chat/completions", {
+        method: "POST"
+    });
+
+    assert.equal(res.status, 401);
+    const body = (await res.json()) as { error: { message: string; code: string } };
+    assert.equal(body.error.code, "missing_api_key");
+});
+
+test("apiKeyAuth middleware accepts non-loopback requests with valid API key", async () => {
+    setRequireApiKeyDB(false);
+
+    const created = createAPIKeyDB({
+        name: "Remote Auth Key"
+    });
+    createdKeyIds.push(created.id);
+
+    const testApp = new Hono();
+    testApp.use("/*", createApiKeyAuth({ getClientAddress: () => "192.168.1.50" }));
+    testApp.post("/chat/completions", (c) => c.json({ ok: true }));
+
+    const res = await testApp.request("/chat/completions", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${created.key}`
+        }
     });
 
     assert.equal(res.status, 200);

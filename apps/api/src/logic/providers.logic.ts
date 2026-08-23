@@ -358,11 +358,16 @@ export class ProvidersLogic {
                 const isInternalHost =
                     hostname === "169.254.169.254" ||
                     hostname === "metadata.google.internal" ||
-                    hostname === "instance-data";
+                    hostname === "instance-data" ||
+                    hostname === "localhost" ||
+                    hostname === "127.0.0.1" ||
+                    hostname === "::1" ||
+                    hostname.startsWith("127.") ||
+                    hostname.startsWith("169.254.");
                 if (isInternalHost) {
                     return {
                         success: false,
-                        message: "Target URL tidak diizinkan untuk verifikasi (metadata endpoint diblokir)."
+                        message: "Target URL tidak diizinkan untuk verifikasi (endpoint internal/metadata diblokir)."
                     };
                 }
             } catch {
