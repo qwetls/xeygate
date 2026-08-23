@@ -7,7 +7,7 @@
 SRouter is a local-first AI gateway and LLM proxy for OpenAI-, Anthropic-, and custom-compatible providers. Keep one stable API while SRouter handles routing, authentication, translation, quotas, and observability.
 
 <p>
-  <a href="https://github.com/seaavey/SRouter/releases"><img src="https://img.shields.io/badge/version-v0.1.1--rc.1-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/seaavey/SRouter/releases"><img src="https://img.shields.io/badge/version-v0.1.2-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-5.8-3178c6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript"></a>
@@ -88,6 +88,10 @@ The `/token-saver` tools can compress noisy developer input, encourage concise m
 
 Test models directly from the web UI with streaming, parameter controls, session history, reasoning inspection, and code export.
 
+### Built-in Cloudflare Tunnel
+
+Expose your local gateway to the internet without opening ports: install `cloudflared`, start a quick or named tunnel, watch live events over SSE, and optionally bind a custom domain — all managed from the dashboard or `/v1/tunnel`. The tunnel autostarts on reboot if it was left enabled.
+
 ### Local-first by design
 
 The core stack uses Hono + native SQLite WAL. No external database is required for the default deployment.
@@ -106,6 +110,7 @@ features may vary by provider and account configuration.
 | Anthropic Claude       | API key or OAuth      | `anthropic/*`    |    ✅     |      ✅      |
 | Qoder                  | Device token or OAuth | `qoder/*`        |    ✅     |      ✅      |
 | Amazon Q / Kiro        | AWS SigV4 or API key  | `kiro/*`         |    ✅     |      ✅      |
+| OpenCode Zen           | Free / access token   | `opencode_zen/*` |    ✅     |      ✅      |
 | Neosantara             | Bearer API key        | `neosantara/*`   |    ✅     |      ✅      |
 | GoRouter               | Bearer API key        | `gorouter/*`     |    ✅     |      ✅      |
 | BluesMinds             | Bearer API key        | `bluesminds/*`   |    ✅     |      ✅      |
@@ -331,6 +336,8 @@ Model:    <any discovered SRouter model>
 
 ## API
 
+> All gateway endpoints live under `/v1` (plus unversioned `/health`). Root-level paths such as `/models` or `/chat/completions` are not served by the API — always configure clients with a `.../v1` base URL.
+
 ### Core
 
 | Method | Endpoint               | Purpose                                 |
@@ -344,8 +351,12 @@ Model:    <any discovered SRouter model>
 ### Management & telemetry
 
 | Method   | Endpoint            | Purpose                       |
-| -------- | ------------------- | ----------------------------- |
+| ------ | ------------------- | ----------------------------- |
 | `GET`    | `/health`           | Gateway health                |
+| `GET`    | `/v1/tunnel/status` | Cloudflare tunnel state       |
+| `POST`   | `/v1/tunnel/start`  | Start the tunnel (admin)      |
+| `POST`   | `/v1/tunnel/stop`   | Stop the tunnel (admin)       |
+| `GET`    | `/v1/tunnel/events` | Live tunnel events (SSE)      |
 | `GET`    | `/v1/quota`         | Provider quota + reset timing |
 | `GET`    | `/v1/providers`     | List provider connections     |
 | `POST`   | `/v1/providers`     | Add/update a provider         |
@@ -475,6 +486,7 @@ For targeted package testing, see the individual package test scripts and `CONTR
 - [x] React 19 dashboard + Playground
 - [x] Anthropic Messages API
 - [x] GHCR Docker publishing
+- [x] Built-in Cloudflare Tunnel management (SSE events, custom domains)
 - [ ] Multi-region upstream load balancing
 - [ ] Semantic response caching with local SQLite vector search
 - [ ] One-click cloud deployment templates
