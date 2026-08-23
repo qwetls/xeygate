@@ -3,10 +3,11 @@ import { ModelsController } from "@/controllers/models.controller.js";
 import { apiKeyAuth } from "@/middleware/apiKeyAuth.js";
 
 export const modelsRoute = new Hono();
-modelsRoute.use("/*", apiKeyAuth);
 
-// GET /v1/models
-modelsRoute.get("/models", ModelsController.listModels);
+// GET /v1/models — apiKeyAuth applied per-route, not as a catch-all use("/*").
+// This route is also mounted at "/" for clients using a bare base URL, where
+// a catch-all would swallow the dashboard root and every unmatched path.
+modelsRoute.get("/models", apiKeyAuth, ModelsController.listModels);
 
 // GET /v1/models/:model (supports slashes in namespaced model IDs)
-modelsRoute.get("/models/:model{.+}", ModelsController.getModelById);
+modelsRoute.get("/models/:model{.+}", apiKeyAuth, ModelsController.getModelById);
