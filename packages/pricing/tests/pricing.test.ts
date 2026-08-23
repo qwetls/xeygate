@@ -61,10 +61,6 @@ test("Pricing resolution across different provider prefixes", () => {
         "commandcode",
         "commandcode/deepseek-v4-flash"
     );
-    const tagPrice = getPricingForModel(
-        "commandcode",
-        "commandcode/deepseek/deepseek-v4-flash:free"
-    );
 
     assert.equal(directPrice.input, 0.44);
     assert.equal(directPrice.output, 1.32);
@@ -72,7 +68,27 @@ test("Pricing resolution across different provider prefixes", () => {
     // All variations resolve to the exact same price
     assert.deepEqual(deepseekPrefixPrice, directPrice);
     assert.deepEqual(commandcodePrefixPrice, directPrice);
-    assert.deepEqual(tagPrice, directPrice);
+});
+
+test("Free model pricing returns 0 cost", () => {
+    const freeTagPrice = getPricingForModel(
+        "commandcode",
+        "commandcode/deepseek/deepseek-v4-flash:free"
+    );
+    assert.equal(freeTagPrice.input, 0);
+    assert.equal(freeTagPrice.output, 0);
+
+    const freeModel = getPricingForModel(undefined, "deepseek-r1:free");
+    assert.equal(freeModel.input, 0);
+    assert.equal(freeModel.output, 0);
+
+    const openrouterFree = getPricingForModel(undefined, "meta-llama/llama-3.3-70b-instruct:free");
+    assert.equal(openrouterFree.input, 0);
+    assert.equal(openrouterFree.output, 0);
+
+    const nameWithFree = getPricingForModel(undefined, "gemini-2.5-flash-free");
+    assert.equal(nameWithFree.input, 0);
+    assert.equal(nameWithFree.output, 0);
 });
 
 test("Alias pricing resolution", () => {

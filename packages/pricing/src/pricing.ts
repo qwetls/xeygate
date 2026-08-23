@@ -46,13 +46,29 @@ export const PROVIDER_MODELS = loadedDataset.providerModels;
  */
 export const MODEL_ALIASES: Record<string, string> = loadedDataset.aliases;
 
+/** Default free tier pricing (zero cost across all token types) */
+export const FREE_PRICING: ModelPrice = {
+    input: 0,
+    output: 0,
+    cached: 0,
+    reasoning: 0,
+    cache_creation: 0
+};
+
 /**
  * Resolves pricing for a model by normalizing prefixes ("commandcode/deepseek/deepseek-v4-flash"
  * or "deepseek/deepseek-v4-flash" -> "deepseek-v4-flash") and checking aliases.
+ * If the model name explicitly indicates a free tier (e.g. contains 'free'), returns 0 cost.
  * Falls back to DEFAULT_PRICING for unknown models.
  */
 export function getPricingForModel(_provider: string | undefined, model: string): ModelPrice {
     if (!model) return DEFAULT_PRICING;
+
+    // Check if the raw model name or normalized name explicitly specifies "free"
+    const lower = model.toLowerCase();
+    if (/(?:^|[/:._-])free(?:[/:._-]|$)/i.test(lower) || lower.endsWith(":free") || lower.includes("/free") || lower === "free") {
+        return FREE_PRICING;
+    }
 
     const matchedKey = findCanonicalModelKey(model, MODEL_PRICING, MODEL_ALIASES);
     if (matchedKey && MODEL_PRICING[matchedKey]) {
