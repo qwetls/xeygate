@@ -30,10 +30,9 @@ import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
 import { adminAuthStore } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
+import { SROUTER_VERSION } from "@srouter/constants";
 
 const app = new Hono();
-
-const SROUTER_VERSION = "0.1.1-rc.2";
 
 // Security Headers & Version Middleware
 app.use("/*", async (c, next) => {
@@ -124,7 +123,7 @@ app.get("/v1", (c) => {
     return c.json({
         name: "SRouter API",
         status: "ok",
-        version: "0.1.1-rc.2",
+        version: SROUTER_VERSION,
         documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
     });
 });
@@ -176,7 +175,7 @@ if (hasWebDist) {
         return c.json({
             name: "SRouter API",
             status: "ok",
-            version: "0.1.1-rc.2",
+            version: SROUTER_VERSION,
             documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
         });
     });

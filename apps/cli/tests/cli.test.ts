@@ -1,12 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { SROUTER_VERSION } from "@srouter/constants";
 import { createCli } from "../src/index.js";
 
 test("CLI - command registration and metadata", () => {
     const program = createCli();
 
     assert.equal(program.name(), "srouter");
-    assert.equal(program.version(), "0.1.1-rc.2");
+    assert.equal(program.version(), SROUTER_VERSION);
 
     const commandNames = program.commands.map((cmd) => cmd.name());
     assert.ok(commandNames.includes("setup"));

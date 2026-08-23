@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { SROUTER_VERSION_TAG } from "@srouter/constants";
 
-export const CURRENT_VERSION = "v0.1.1-rc.2";
+export const CURRENT_VERSION = SROUTER_VERSION_TAG;
 export const GITHUB_REPO = "seaavey/SRouter";
 
 export interface GitHubTag {

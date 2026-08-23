@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import { SROUTER_VERSION } from "@srouter/constants";
 import { setupCommand } from "./commands/setup.js";
 import { linkCommand } from "./commands/link.js";
 import { unlinkCommand } from "./commands/unlink.js";
@@ -16,7 +17,7 @@ export function createCli(): Command {
         .description(
             "CLI tool to connect, configure, and proxy AI coding tools with SRouter Gateway"
         )
-        .version("0.1.1-rc.2");
+        .version(SROUTER_VERSION);
 
     program
         .command("setup")
