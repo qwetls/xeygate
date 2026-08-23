@@ -9,6 +9,11 @@ on:
 env:
     REGISTRY: ghcr.io
 
+# A new push to the same ref replaces any in-flight build for that ref.
+concurrency:
+    group: docker-publish-${{ github.ref }}
+    cancel-in-progress: true
+
 jobs:
     check-version:
         name: Check Release Version
@@ -31,11 +36,23 @@ jobs:
                   echo "should_build=true" >> "$GITHUB_OUTPUT"
                 fi
 
-    build-and-push:
-        name: Build & Push Docker Image
+    # Build each architecture on a matching native runner. No QEMU emulation:
+    # pnpm install / turbo build run at native speed on both platforms.
+    build:
+        name: Build (${{ matrix.arch }})
         needs: check-version
         if: needs.check-version.outputs.should_build == 'true'
-        runs-on: ubuntu-latest
+        runs-on: ${{ matrix.runner }}
+        # Hard ceiling so a wedged build fails loudly instead of hanging for hours.
+        timeout-minutes: 30
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: amd64
+                      runner: ubuntu-latest
+                    - arch: arm64
+                      runner: ubuntu-24.04-arm
         permissions:
             contents: read
             packages: write
@@ -43,13 +60,6 @@ jobs:
         steps:
             - name: Checkout repository
               uses: actions/checkout@v4
-
-            - name: Downcase repository name for Docker registry
-              run: |
-                  echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-
-            - name: Set up QEMU (Multi-platform support)
-              uses: docker/setup-qemu-action@v3
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
@@ -60,6 +70,63 @@ jobs:
                   registry: ${{ env.REGISTRY }}
                   username: ${{ github.actor }}
                   password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Downcase repository name for Docker registry
+              run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+            - name: Build and push by digest
+              id: build
+              uses: docker/build-push-action@v6
+              with:
+                  context: .
+                  # Push an untagged per-arch image; the merge job creates the tags.
+                  push: true
+                  platforms: linux/${{ matrix.arch }}
+                  tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                  outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+                  # Scope the cache per arch so amd64 layers never poison arm64.
+                  cache-from: type=gha,scope=${{ matrix.arch }}
+                  cache-to: type=gha,mode=max,scope=${{ matrix.arch }}
+
+            - name: Upload image digest
+              uses: actions/upload-artifact@v4
+              with:
+                  name: digest-${{ matrix.arch }}
+                  path: ${{ steps.build.outputs.digest }}
+                  if-no-files-found: error
+                  retention-days: 1
+
+    # Combine the per-arch digests into one multi-arch manifest list and tag it.
+    merge:
+        name: Merge & Tag Manifest
+        needs: [check-version, build]
+        if: needs.check-version.outputs.should_build == 'true'
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: read
+            packages: write
+
+        steps:
+            - name: Download image digests
+              uses: actions/download-artifact@v4
+              with:
+                  pattern: digest-*
+                  path: /tmp/digests
+                  merge-multiple: true
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Log in to GitHub Container Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: ${{ env.REGISTRY }}
+                  username: ${{ github.actor }}
+                  password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Downcase repository name for Docker registry
+              run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
             - name: Extract Docker metadata (tags, labels)
               id: meta
@@ -74,13 +141,25 @@ jobs:
                       type=ref,event=branch
                       type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-            - name: Build and push Docker image
-              uses: docker/build-push-action@v6
-              with:
-                  context: .
-                  push: true
-                  tags: ${{ steps.meta.outputs.tags }}
-                  labels: ${{ steps.meta.outputs.labels }}
-                  cache-from: type=gha
-                  cache-to: type=gha,mode=max
-                  platforms: linux/amd64,linux/arm64
+            - name: Create and push multi-arch manifest
+              working-directory: /tmp/digests
+              env:
+                  TAGS: ${{ steps.meta.outputs.tags }}
+                  LABELS: ${{ steps.meta.outputs.labels }}
+              run: |
+                # metadata-action emits newline-delimited "image:tag" entries;
+                # buildx imagetools create wants one "-t <ref>" flag per line.
+                TAG_REFS=$(echo "$TAGS" | sed 's/^/-t /')
+                # Append OCI labels as imagetools annotations.
+                ANNOTATIONS=$(echo "$LABELS" | sed 's/^/--annotation index:/')
+                # Every digest-* file holds one arch image digest.
+                SOURCES=$(for digest_file in digest-*; do
+                  echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@$(cat "$digest_file")"
+                done)
+                # shellcheck disable=SC2086 # word splitting is intentional here
+                docker buildx imagetools create $TAG_REFS $ANNOTATIONS $SOURCES
+
+            - name: Inspect final manifest
+              run: |
+                docker buildx imagetools inspect \
+                  "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
