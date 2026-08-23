@@ -6,7 +6,7 @@ import { AdminAuthStore } from "../../../packages/db/src/adminAuth.js";
 import { createAdminRoute } from "../src/routes/v1/admin.js";
 import { hashAdminPassword } from "../src/services/adminAuth.js";
 
-function createTestApp(options: { address?: string; setupToken?: string } = {}) {
+function createTestApp(options: { address?: string } = {}) {
     const store = new AdminAuthStore(new DatabaseSync(":memory:"));
     const app = new Hono();
     app.route(
@@ -14,7 +14,6 @@ function createTestApp(options: { address?: string; setupToken?: string } = {}) 
         createAdminRoute({
             store,
             getClientAddress: () => options.address,
-            getSetupToken: () => options.setupToken,
             secureCookies: false
         })
     );
@@ -34,29 +33,7 @@ test("admin status reports setup and authentication state", async () => {
     assert.equal(initial.status, 200);
     assert.deepEqual(await initial.json(), {
         setupRequired: true,
-        authenticated: false,
-        setupTokenConfigured: false,
-        clientIsLoopback: false
-    });
-});
-
-test("admin status reports loopback and setup token configuration", async () => {
-    const local = createTestApp({ address: "127.0.0.1" });
-    const localStatus = await local.app.request("/v1/admin/status");
-    assert.deepEqual(await localStatus.json(), {
-        setupRequired: true,
-        authenticated: false,
-        setupTokenConfigured: false,
-        clientIsLoopback: true
-    });
-
-    const remote = createTestApp({ address: "192.168.1.10", setupToken: "setup-secret" });
-    const remoteStatus = await remote.app.request("/v1/admin/status");
-    assert.deepEqual(await remoteStatus.json(), {
-        setupRequired: true,
-        authenticated: false,
-        setupTokenConfigured: true,
-        clientIsLoopback: false
+        authenticated: false
     });
 });
 
@@ -81,15 +58,14 @@ test("local setup creates an account and establishes a session", async () => {
     });
     assert.deepEqual(await status.json(), {
         setupRequired: false,
-        authenticated: true,
-        setupTokenConfigured: false,
-        clientIsLoopback: true
+        authenticated: true
     });
 });
 
-test("remote setup requires the configured one-time setup token", async () => {
-    const withoutToken = createTestApp({ address: "192.168.1.10", setupToken: "setup-secret" });
-    const rejected = await withoutToken.app.request("/v1/admin/setup", {
+test("remote setup is first-come-wins and closes after the first account", async () => {
+    const { app } = createTestApp({ address: "192.168.1.10" });
+
+    const first = await app.request("/v1/admin/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -97,26 +73,14 @@ test("remote setup requires the configured one-time setup token", async () => {
             confirmation: "correct horse battery staple"
         })
     });
-    assert.equal(rejected.status, 403);
+    assert.equal(first.status, 201);
 
-    const accepted = await withoutToken.app.request("/v1/admin/setup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            password: "correct horse battery staple",
-            confirmation: "correct horse battery staple",
-            setupToken: "setup-secret"
-        })
-    });
-    assert.equal(accepted.status, 201);
-
-    const second = await withoutToken.app.request("/v1/admin/setup", {
+    const second = await app.request("/v1/admin/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
             password: "another correct password",
-            confirmation: "another correct password",
-            setupToken: "setup-secret"
+            confirmation: "another correct password"
         })
     });
     assert.equal(second.status, 409);
@@ -150,9 +114,7 @@ test("login and logout manage the admin session", async () => {
     const status = await app.request("/v1/admin/status", { headers: { Cookie: cookie } });
     assert.deepEqual(await status.json(), {
         setupRequired: false,
-        authenticated: false,
-        setupTokenConfigured: false,
-        clientIsLoopback: true
+        authenticated: false
     });
 });
 
@@ -214,17 +176,17 @@ test("change-password validates current password and updates admin account", asy
     });
     assert.equal(wrongCurrent.status, 401);
 
-    // Short password
-    const shortPass = await app.request("/v1/admin/change-password", {
+    // Over-length password (> 128)
+    const tooLong = await app.request("/v1/admin/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
             currentPassword: "correct horse battery staple",
-            newPassword: "short",
-            confirmation: "short"
+            newPassword: "a".repeat(129),
+            confirmation: "a".repeat(129)
         })
     });
-    assert.equal(shortPass.status, 400);
+    assert.equal(tooLong.status, 400);
 
     // Mismatched confirmation
     const mismatch = await app.request("/v1/admin/change-password", {

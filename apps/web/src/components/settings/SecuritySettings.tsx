@@ -113,11 +113,6 @@ print(response.choices[0].message.content)`;
             return;
         }
 
-        if (newPassword.length < 12) {
-            setPasswordError("New password must be at least 12 characters long.");
-            return;
-        }
-
         if (newPassword !== confirmation) {
             setPasswordError("New password and confirmation do not match.");
             return;
@@ -304,7 +299,7 @@ print(response.choices[0].message.content)`;
                             </label>
                             <Input
                                 type="password"
-                                placeholder="Min. 12 characters"
+                                placeholder="New password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 required

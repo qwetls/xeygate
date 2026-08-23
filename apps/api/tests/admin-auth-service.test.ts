@@ -24,9 +24,9 @@ test("admin passwords use salted scrypt hashes", () => {
 });
 
 test("admin password validation enforces the setup policy", () => {
-    assert.equal(validateAdminPassword("short"), "Password must be at least 12 characters");
+    assert.equal(validateAdminPassword("short"), null);
     assert.equal(validateAdminPassword("a".repeat(129)), "Password must be at most 128 characters");
-    assert.equal(validateAdminPassword("a".repeat(12)), null);
+    assert.equal(validateAdminPassword("a".repeat(128)), null);
     assert.equal(validateAdminPassword(null), "Password is required");
 });
 
