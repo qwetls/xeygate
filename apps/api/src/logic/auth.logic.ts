@@ -43,10 +43,6 @@ function cleanupExpiredSessions(): void {
     cleanupExpiredOAuthSessionsDB(PKCE_SESSION_MAX_AGE_MS);
 }
 
-/**
- * Resolve the PKCE client id for a handler, honoring per-call env + query overrides,
- * mirroring the original per-provider defaults exactly.
- */
 function resolveClientId(handler: AuthProviderHandler, params: OAuthLoginParams): string {
     return params.clientId || handler.clientId?.() || "";
 }
@@ -55,9 +51,6 @@ function resolveRedirectUri(handler: AuthProviderHandler, params: OAuthLoginPara
     return params.redirectUri || handler.defaultRedirectUri || "";
 }
 
-/**
- * Generate a stable, unique account id + human-friendly name for a newly saved provider.
- */
 function buildAccountIdentity(
     handler: AuthProviderHandler,
     now: number
@@ -67,8 +60,6 @@ function buildAccountIdentity(
         accountName: `${handler.displayName} (Account #${now.toString().slice(-4)})`
     };
 }
-
-// --- Generic engine (parameterized by an AuthProviderHandler) ---
 
 function initiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams): OAuthLoginResult {
     cleanupExpiredSessions();
@@ -204,10 +195,6 @@ function processTokenImportFor(
 
     return providerConfig;
 }
-
-// --- Public API (thin adapters, names preserved so routes/index.ts stay unchanged) ---
-
-// --- Device-flow providers (CodeBuddy, Qoder): bespoke flows kept explicit ---
 
 export async function initiateCodeBuddyOAuth(): Promise<{ authorizeUrl: string; state: string }> {
     return initiateCodeBuddyOAuthFor(new CodeBuddyOAuth());
@@ -431,8 +418,6 @@ export async function pollQoderDeviceToken(state: string): Promise<{
     };
 }
 
-// --- Provider handler registry: single source of truth for auth routes ---
-
 interface AuthProviderEntry {
     initiate?: (params: OAuthLoginParams) => OAuthLoginResult;
     callback?: (code: string, state: string) => Promise<ProviderConfig>;
@@ -488,10 +473,6 @@ for (const [key, handler] of [
     });
 }
 
-/**
- * Public API for controllers. Replaces ~20 one-line static delegators with
- * three registry lookups; route behavior is unchanged.
- */
 export const AuthLogic = {
     initiateOAuthPKCE: (params: OAuthLoginParams): OAuthLoginResult =>
         authProviderEntries.openai.initiate!(params),
@@ -526,12 +507,8 @@ export const AuthLogic = {
     initiateCodeBuddyCNOAuth,
     pollCodeBuddyDeviceToken,
     pollCodeBuddyCNDeviceToken,
-    pollQoderDeviceToken
-};
+    pollQoderDeviceToken,
 
-// Per-provider named adapters kept for backwards compatibility (tests + routes),
-// merged onto the AuthLogic facade so existing call sites keep working.
-export const AuthLogicAdapters = {
     initiateAntigravityOAuthPKCE: (params: OAuthLoginParams) =>
         AuthLogic.initiateProviderOAuth("antigravity", params),
     processAntigravityOAuthCallback: (code: string, state: string) =>
@@ -567,4 +544,3 @@ export const AuthLogicAdapters = {
     processQoderTokenImport: (params: TokenImportParams) =>
         AuthLogic.processProviderTokenImport("qoder", params)
 };
-Object.assign(AuthLogic, AuthLogicAdapters);

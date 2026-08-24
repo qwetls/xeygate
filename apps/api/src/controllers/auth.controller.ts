@@ -33,52 +33,17 @@ export interface TokenImportBody {
     name?: string;
 }
 
-function renderOAuthSuccessHTML(providerName: string): Response {
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Otorisasi Berhasil</title>
-  <style>
-    body { font-family: system-ui, -apple-system, sans-serif; background: #09090b; color: #f4f4f5; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
-    .card { background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 32px 40px; max-width: 380px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
-    .icon { font-size: 40px; margin-bottom: 12px; }
-    h1 { font-size: 18px; margin: 0 0 8px; color: #10b981; font-weight: 700; }
-    p { font-size: 13px; color: #a1a1aa; margin: 0; line-height: 1.5; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="icon">✨</div>
-    <h1>Otorisasi Berhasil!</h1>
-    <p>Koneksi <strong>${providerName}</strong> telah berhasil ditambahkan ke SRouter. Jendela ini akan tertutup otomatis...</p>
-  </div>
-  <script>
-    try {
-      if (window.opener) {
-        window.opener.postMessage({ type: "SROUTER_OAUTH_SUCCESS" }, "*");
-      }
-    } catch (e) {}
-    setTimeout(function() {
-      window.close();
-    }, 1200);
-  </script>
-</body>
-</html>`;
-    return new Response(html, {
-        headers: { "Content-Type": "text/html; charset=utf-8" }
-    });
+async function extractState(c: Context): Promise<string | undefined> {
+    let state = c.req.query("state");
+    if (!state && c.req.method === "POST") {
+        try {
+            const body = await c.req.json<{ state?: string }>();
+            state = body?.state;
+        } catch {}
+    }
+    return state || undefined;
 }
 
-// --- Generic engine (parameterized by an AuthProviderHandler) ---
-
-/**
- * Initiate a PKCE OAuth login. Mirrors the original per-provider behavior:
- * - OpenAI login lets errors bubble (global handler → 500).
- * - Antigravity login catches errors and returns 400 invalid_request_error.
- * The `handleErrors` flag encodes that asymmetry.
- */
 function loginFor(
     handler: AuthProviderHandler,
     initiate: (params: OAuthLoginParams) => ReturnType<typeof AuthLogic.initiateOAuthPKCE>,
@@ -104,10 +69,6 @@ function loginFor(
     }
 }
 
-/**
- * Handle an OAuth callback (GET from browser popup, or POST with a callbackUrl body).
- * Shared by the main app and the secondary OAuth listener (port 1455).
- */
 async function handleOAuthCallbackFor(
     handler: AuthProviderHandler,
     processCallback: (code: string, state: string) => Promise<unknown>,
@@ -124,15 +85,11 @@ async function handleOAuthCallbackFor(
                     const parsedUrl = new URL(body.callbackUrl);
                     code = code || parsedUrl.searchParams.get("code") || undefined;
                     state = state || parsedUrl.searchParams.get("state") || undefined;
-                } catch {
-                    // Ignore invalid URL string
-                }
+                } catch {}
             }
             code = code || body.code;
             state = state || body.state;
-        } catch {
-            // Ignore JSON parse error
-        }
+        } catch {}
     }
 
     if (!code || !state) {
@@ -146,24 +103,17 @@ async function handleOAuthCallbackFor(
             name: string;
         };
 
-        if (c.req.method === "POST" || c.req.header("accept")?.includes("application/json")) {
-            return ok(c, {
-                success: true,
-                message: handler.oauthSuccessMessage,
-                provider: providerConfig
-            });
-        }
-
-        return renderOAuthSuccessHTML(providerConfig.name);
+        return ok(c, {
+            success: true,
+            message: handler.oauthSuccessMessage,
+            provider: providerConfig
+        });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         return err(c, errorMessage, 500);
     }
 }
 
-/**
- * Import a provider token/API key from a JSON body.
- */
 async function importTokenFor(
     handler: AuthProviderHandler,
     importLogic: (body: TokenImportParams) => unknown,
@@ -193,10 +143,7 @@ async function importTokenFor(
     );
 }
 
-// --- Public API (thin adapters, names preserved so routes/index.ts stay unchanged) ---
-
 export class AuthController {
-    // OpenAI OAuth
     public static loginOpenAI(c: Context): Response {
         return loginFor(openaiCodexAuthHandler, (p) => AuthLogic.initiateOAuthPKCE(p), c, false);
     }
@@ -213,7 +160,6 @@ export class AuthController {
         return importTokenFor(openaiCodexAuthHandler, (b) => AuthLogic.processTokenImport(b), c);
     }
 
-    // Antigravity OAuth
     public static loginAntigravity(c: Context): Response {
         return loginFor(
             antigravityAuthHandler,
@@ -239,7 +185,6 @@ export class AuthController {
         );
     }
 
-    // CommandCode Provider (API key)
     public static async importCommandCodeToken(c: Context): Promise<Response> {
         return importTokenFor(
             commandCodeAuthHandler,
@@ -248,7 +193,6 @@ export class AuthController {
         );
     }
 
-    // Anthropic Provider (API key)
     public static async importAnthropicToken(c: Context): Promise<Response> {
         return importTokenFor(
             anthropicAuthHandler,
@@ -257,7 +201,6 @@ export class AuthController {
         );
     }
 
-    // Claude Code OAuth
     public static loginClaude(c: Context): Response {
         return loginFor(
             claudeAuthHandler,
@@ -283,7 +226,6 @@ export class AuthController {
         );
     }
 
-    // GoRouter Provider (API key)
     public static async importGoRouterToken(c: Context): Promise<Response> {
         return importTokenFor(
             goRouterAuthHandler,
@@ -292,7 +234,6 @@ export class AuthController {
         );
     }
 
-    // BluesMinds Provider (API key)
     public static async importBluesMindsToken(c: Context): Promise<Response> {
         return importTokenFor(
             bluesMindsAuthHandler,
@@ -301,7 +242,6 @@ export class AuthController {
         );
     }
 
-    // SeekAI Provider (API key)
     public static async importSeekAIToken(c: Context): Promise<Response> {
         return importTokenFor(
             seekAIAuthHandler,
@@ -310,7 +250,6 @@ export class AuthController {
         );
     }
 
-    // TabiToken Provider (API key)
     public static async importTabiTokenToken(c: Context): Promise<Response> {
         return importTokenFor(
             tabiTokenAuthHandler,
@@ -319,7 +258,6 @@ export class AuthController {
         );
     }
 
-    // TokenRouter Provider (API key)
     public static async importTokenRouterToken(c: Context): Promise<Response> {
         return importTokenFor(
             tokenRouterAuthHandler,
@@ -328,7 +266,6 @@ export class AuthController {
         );
     }
 
-    // CodeBuddy Provider (OAuth & Access Token)
     public static async loginCodeBuddy(c: Context): Promise<Response> {
         try {
             const result = await AuthLogic.initiateCodeBuddyOAuth();
@@ -349,14 +286,7 @@ export class AuthController {
     }
 
     public static async pollCodeBuddy(c: Context): Promise<Response> {
-        let state = c.req.query("state");
-        if (!state) {
-            try {
-                const body = await c.req.json<{ state?: string }>();
-                state = body?.state;
-            } catch {}
-        }
-
+        const state = await extractState(c);
         if (!state) {
             return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
         }
@@ -373,7 +303,6 @@ export class AuthController {
         );
     }
 
-    // CodeBuddy CN Provider (OAuth & Access Token)
     public static async loginCodeBuddyCN(c: Context): Promise<Response> {
         try {
             const result = await AuthLogic.initiateCodeBuddyCNOAuth();
@@ -390,13 +319,7 @@ export class AuthController {
     }
 
     public static async pollCodeBuddyCN(c: Context): Promise<Response> {
-        let state = c.req.query("state");
-        if (!state) {
-            try {
-                const body = await c.req.json<{ state?: string }>();
-                state = body?.state;
-            } catch {}
-        }
+        const state = await extractState(c);
         if (!state) {
             return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
         }
@@ -412,7 +335,6 @@ export class AuthController {
         );
     }
 
-    // Qoder Provider (OAuth & PAT)
     public static loginQoder(c: Context): Response {
         return loginFor(
             qoderAuthHandler,
@@ -439,14 +361,7 @@ export class AuthController {
     }
 
     public static async pollQoder(c: Context): Promise<Response> {
-        let state = c.req.query("state");
-        if (!state) {
-            try {
-                const body = await c.req.json<{ state?: string }>();
-                state = body?.state;
-            } catch {}
-        }
-
+        const state = await extractState(c);
         if (!state) {
             return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
         }
