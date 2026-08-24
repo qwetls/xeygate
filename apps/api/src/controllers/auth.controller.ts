@@ -1,37 +1,15 @@
 import type { Context } from "hono";
 import { AuthLogic } from "@/logic/auth.logic.js";
-import {
-    anthropicAuthHandler,
-    antigravityAuthHandler,
-    bluesMindsAuthHandler,
-    claudeAuthHandler,
-    codeBuddyAuthHandler,
-    codeBuddyCNAuthHandler,
-    commandCodeAuthHandler,
-    goRouterAuthHandler,
-    openaiCodexAuthHandler,
-    qoderAuthHandler,
-    seekAIAuthHandler,
-    tabiTokenAuthHandler,
-    tokenRouterAuthHandler,
-    type AuthProviderHandler,
-    type OAuthLoginParams,
-    type TokenImportParams
-} from "@/logic/auth.providers.js";
+import { AuthHandlers } from "@/services/authHandlers.js";
+import type {
+    AuthProviderHandler,
+    OAuthCallbackBody,
+    OAuthLoginParams,
+    ProviderConfig,
+    TokenImportBody,
+    TokenImportParams
+} from "@srouter/types";
 import { err, ok } from "@/utils/response.js";
-
-export interface OAuthCallbackBody {
-    code?: string;
-    state?: string;
-    callbackUrl?: string;
-}
-
-export interface TokenImportBody {
-    accessToken: string;
-    refreshToken?: string;
-    baseUrl?: string;
-    name?: string;
-}
 
 async function extractState(c: Context): Promise<string | undefined> {
     let state = c.req.query("state");
@@ -71,7 +49,7 @@ function loginFor(
 
 async function handleOAuthCallbackFor(
     handler: AuthProviderHandler,
-    processCallback: (code: string, state: string) => Promise<unknown>,
+    processCallback: (code: string, state: string) => Promise<ProviderConfig>,
     c: Context
 ): Promise<Response> {
     let code = c.req.query("code") || undefined;
@@ -99,9 +77,7 @@ async function handleOAuthCallbackFor(
     }
 
     try {
-        const providerConfig = (await processCallback(code, state)) as {
-            name: string;
-        };
+        const providerConfig = await processCallback(code, state);
 
         return ok(c, {
             success: true,
@@ -116,7 +92,7 @@ async function handleOAuthCallbackFor(
 
 async function importTokenFor(
     handler: AuthProviderHandler,
-    importLogic: (body: TokenImportParams) => unknown,
+    importLogic: (body: TokenImportParams) => ProviderConfig,
     c: Context
 ): Promise<Response> {
     let body: TokenImportBody;
@@ -126,11 +102,11 @@ async function importTokenFor(
         return err(c, "Invalid JSON body", 400, { type: "invalid_request_error" });
     }
 
-    if (!body.accessToken) {
+    if (!body?.accessToken) {
         return err(c, "Field 'accessToken' is required", 400, { type: "invalid_request_error" });
     }
 
-    const providerConfig = importLogic(body);
+    const providerConfig = importLogic(body as TokenImportParams);
 
     return ok(
         c,
@@ -143,230 +119,222 @@ async function importTokenFor(
     );
 }
 
-export class AuthController {
-    public static loginOpenAI(c: Context): Response {
-        return loginFor(openaiCodexAuthHandler, (p) => AuthLogic.initiateOAuthPKCE(p), c, false);
-    }
+export const AuthController = {
+    OpenAI: {
+        OAuth: (c: Context): Response =>
+            loginFor(AuthHandlers.OpenAI, (p) => AuthLogic.initiateOAuthPKCE(p), c, false),
+        Callback: (c: Context): Promise<Response> =>
+            handleOAuthCallbackFor(
+                AuthHandlers.OpenAI,
+                (code, state) => AuthLogic.processOAuthCallback(code, state),
+                c
+            ),
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(AuthHandlers.OpenAI, (b) => AuthLogic.processTokenImport(b), c)
+    },
 
-    public static async handleOAuthCallback(c: Context): Promise<Response> {
-        return handleOAuthCallbackFor(
-            openaiCodexAuthHandler,
-            (code, state) => AuthLogic.processOAuthCallback(code, state),
-            c
-        );
-    }
+    Antigravity: {
+        OAuth: (c: Context): Response =>
+            loginFor(
+                AuthHandlers.Antigravity,
+                (p) => AuthLogic.initiateProviderOAuth("antigravity", p),
+                c,
+                true
+            ),
+        Callback: (c: Context): Promise<Response> =>
+            handleOAuthCallbackFor(
+                AuthHandlers.Antigravity,
+                (code, state) => AuthLogic.processProviderOAuthCallback("antigravity", code, state),
+                c
+            ),
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.Antigravity,
+                (b) => AuthLogic.processProviderTokenImport("antigravity", b),
+                c
+            )
+    },
 
-    public static async importToken(c: Context): Promise<Response> {
-        return importTokenFor(openaiCodexAuthHandler, (b) => AuthLogic.processTokenImport(b), c);
-    }
+    CommandCode: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.CommandCode,
+                (b) => AuthLogic.processProviderTokenImport("commandcode", b),
+                c
+            )
+    },
 
-    public static loginAntigravity(c: Context): Response {
-        return loginFor(
-            antigravityAuthHandler,
-            (p) => AuthLogic.initiateProviderOAuth("antigravity", p),
-            c,
-            true
-        );
-    }
+    Anthropic: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.Anthropic,
+                (b) => AuthLogic.processProviderTokenImport("anthropic", b),
+                c
+            )
+    },
 
-    public static async handleAntigravityOAuthCallback(c: Context): Promise<Response> {
-        return handleOAuthCallbackFor(
-            antigravityAuthHandler,
-            (code, state) => AuthLogic.processProviderOAuthCallback("antigravity", code, state),
-            c
-        );
-    }
+    Claude: {
+        OAuth: (c: Context): Response =>
+            loginFor(
+                AuthHandlers.Claude,
+                (p) => AuthLogic.initiateProviderOAuth("claude", p),
+                c,
+                false
+            ),
+        Callback: (c: Context): Promise<Response> =>
+            handleOAuthCallbackFor(
+                AuthHandlers.Claude,
+                (code, state) => AuthLogic.processProviderOAuthCallback("claude", code, state),
+                c
+            ),
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.Claude,
+                (b) => AuthLogic.processProviderTokenImport("claude", b),
+                c
+            )
+    },
 
-    public static async importAntigravityToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            antigravityAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("antigravity", b),
-            c
-        );
-    }
+    GoRouter: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.GoRouter,
+                (b) => AuthLogic.processProviderTokenImport("gorouter", b),
+                c
+            )
+    },
 
-    public static async importCommandCodeToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            commandCodeAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("commandcode", b),
-            c
-        );
-    }
+    BluesMinds: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.BluesMinds,
+                (b) => AuthLogic.processProviderTokenImport("bluesminds", b),
+                c
+            )
+    },
 
-    public static async importAnthropicToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            anthropicAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("anthropic", b),
-            c
-        );
-    }
+    SeekAI: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.SeekAI,
+                (b) => AuthLogic.processProviderTokenImport("seekai", b),
+                c
+            )
+    },
 
-    public static loginClaude(c: Context): Response {
-        return loginFor(
-            claudeAuthHandler,
-            (p) => AuthLogic.initiateProviderOAuth("claude", p),
-            c,
-            false
-        );
-    }
+    TabiToken: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.TabiToken,
+                (b) => AuthLogic.processProviderTokenImport("tabitoken", b),
+                c
+            )
+    },
 
-    public static async handleClaudeOAuthCallback(c: Context): Promise<Response> {
-        return handleOAuthCallbackFor(
-            claudeAuthHandler,
-            (code, state) => AuthLogic.processProviderOAuthCallback("claude", code, state),
-            c
-        );
-    }
+    TokenRouter: {
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.TokenRouter,
+                (b) => AuthLogic.processProviderTokenImport("tokenrouter", b),
+                c
+            )
+    },
 
-    public static async importClaudeToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            claudeAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("claude", b),
-            c
-        );
-    }
-
-    public static async importGoRouterToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            goRouterAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("gorouter", b),
-            c
-        );
-    }
-
-    public static async importBluesMindsToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            bluesMindsAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("bluesminds", b),
-            c
-        );
-    }
-
-    public static async importSeekAIToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            seekAIAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("seekai", b),
-            c
-        );
-    }
-
-    public static async importTabiTokenToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            tabiTokenAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("tabitoken", b),
-            c
-        );
-    }
-
-    public static async importTokenRouterToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            tokenRouterAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("tokenrouter", b),
-            c
-        );
-    }
-
-    public static async loginCodeBuddy(c: Context): Promise<Response> {
-        try {
-            const result = await AuthLogic.initiateCodeBuddyOAuth();
-            const format = c.req.query("format");
-            if (format === "json") {
-                return ok(c, {
-                    authorizeUrl: result.authorizeUrl,
-                    state: result.state
+    CodeBuddy: {
+        OAuth: async (c: Context): Promise<Response> => {
+            try {
+                const result = await AuthLogic.initiateCodeBuddyOAuth();
+                const format = c.req.query("format");
+                if (format === "json") {
+                    return ok(c, {
+                        authorizeUrl: result.authorizeUrl,
+                        state: result.state
+                    });
+                }
+                return c.redirect(result.authorizeUrl);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "Internal Server Error";
+                return err(c, `Failed to initiate CodeBuddy login: ${message}`, 500, {
+                    type: "api_error"
                 });
             }
-            return c.redirect(result.authorizeUrl);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "Internal Server Error";
-            return err(c, `Failed to initiate CodeBuddy login: ${message}`, 500, {
-                type: "api_error"
-            });
-        }
-    }
-
-    public static async pollCodeBuddy(c: Context): Promise<Response> {
-        const state = await extractState(c);
-        if (!state) {
-            return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
-        }
-
-        const result = await AuthLogic.pollCodeBuddyDeviceToken(state);
-        return ok(c, result);
-    }
-
-    public static async importCodeBuddyToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            codeBuddyAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("codebuddy", b),
-            c
-        );
-    }
-
-    public static async loginCodeBuddyCN(c: Context): Promise<Response> {
-        try {
-            const result = await AuthLogic.initiateCodeBuddyCNOAuth();
-            if (c.req.query("format") === "json") {
-                return ok(c, { authorizeUrl: result.authorizeUrl, state: result.state });
+        },
+        Poll: async (c: Context): Promise<Response> => {
+            const state = await extractState(c);
+            if (!state) {
+                return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
             }
-            return c.redirect(result.authorizeUrl);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : "Internal Server Error";
-            return err(c, `Failed to initiate CodeBuddy CN login: ${message}`, 500, {
-                type: "api_error"
-            });
-        }
+
+            const result = await AuthLogic.pollCodeBuddyDeviceToken(state);
+            return ok(c, result);
+        },
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.CodeBuddy,
+                (b) => AuthLogic.processProviderTokenImport("codebuddy", b),
+                c
+            )
+    },
+
+    CodeBuddyCN: {
+        OAuth: async (c: Context): Promise<Response> => {
+            try {
+                const result = await AuthLogic.initiateCodeBuddyCNOAuth();
+                if (c.req.query("format") === "json") {
+                    return ok(c, { authorizeUrl: result.authorizeUrl, state: result.state });
+                }
+                return c.redirect(result.authorizeUrl);
+            } catch (error) {
+                const message = error instanceof Error ? error.message : "Internal Server Error";
+                return err(c, `Failed to initiate CodeBuddy CN login: ${message}`, 500, {
+                    type: "api_error"
+                });
+            }
+        },
+        Poll: async (c: Context): Promise<Response> => {
+            const state = await extractState(c);
+            if (!state) {
+                return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
+            }
+
+            return ok(c, await AuthLogic.pollCodeBuddyCNDeviceToken(state));
+        },
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.CodeBuddyCN,
+                (b) => AuthLogic.processProviderTokenImport("codebuddy-cn", b),
+                c
+            )
+    },
+
+    Qoder: {
+        OAuth: (c: Context): Response =>
+            loginFor(
+                AuthHandlers.Qoder,
+                (p) => AuthLogic.initiateProviderOAuth("qoder", p),
+                c,
+                true
+            ),
+        Callback: (c: Context): Promise<Response> =>
+            handleOAuthCallbackFor(
+                AuthHandlers.Qoder,
+                (code, state) => AuthLogic.processProviderOAuthCallback("qoder", code, state),
+                c
+            ),
+        Poll: async (c: Context): Promise<Response> => {
+            const state = await extractState(c);
+            if (!state) {
+                return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
+            }
+
+            const result = await AuthLogic.pollQoderDeviceToken(state);
+            return ok(c, result);
+        },
+        ImportToken: (c: Context): Promise<Response> =>
+            importTokenFor(
+                AuthHandlers.Qoder,
+                (b) => AuthLogic.processProviderTokenImport("qoder", b),
+                c
+            )
     }
-
-    public static async pollCodeBuddyCN(c: Context): Promise<Response> {
-        const state = await extractState(c);
-        if (!state) {
-            return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
-        }
-
-        return ok(c, await AuthLogic.pollCodeBuddyCNDeviceToken(state));
-    }
-
-    public static async importCodeBuddyCNToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            codeBuddyCNAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("codebuddy-cn", b),
-            c
-        );
-    }
-
-    public static loginQoder(c: Context): Response {
-        return loginFor(
-            qoderAuthHandler,
-            (p) => AuthLogic.initiateProviderOAuth("qoder", p),
-            c,
-            true
-        );
-    }
-
-    public static async handleQoderOAuthCallback(c: Context): Promise<Response> {
-        return handleOAuthCallbackFor(
-            qoderAuthHandler,
-            (code, state) => AuthLogic.processProviderOAuthCallback("qoder", code, state),
-            c
-        );
-    }
-
-    public static async importQoderToken(c: Context): Promise<Response> {
-        return importTokenFor(
-            qoderAuthHandler,
-            (b) => AuthLogic.processProviderTokenImport("qoder", b),
-            c
-        );
-    }
-
-    public static async pollQoder(c: Context): Promise<Response> {
-        const state = await extractState(c);
-        if (!state) {
-            return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
-        }
-
-        const result = await AuthLogic.pollQoderDeviceToken(state);
-        return ok(c, result);
-    }
-}
+};

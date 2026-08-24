@@ -5,11 +5,11 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import {
-    authRoute,
-    handleAntigravityOAuthCallback,
-    handleClaudeOAuthCallback,
-    handleOAuthCallback,
-    handleQoderOAuthCallback
+    AuthRouter,
+    AntigravityOAuthCallback,
+    ClaudeOAuthCallback,
+    CodexOAuthCallback,
+    QoderOAuthCallback
 } from "@/routes/v1/auth.js";
 import { adminRoute } from "@/routes/v1/admin.js";
 import { chatRoute } from "@/routes/v1/chat.js";
@@ -21,7 +21,7 @@ import { providersRoute } from "@/routes/v1/providers.js";
 import { quotaRoute } from "@/routes/v1/quota.js";
 import { settingsRoute } from "@/routes/v1/settings.js";
 import { tunnelRoute } from "@/routes/v1/tunnel.js";
-import { adminAuth } from "@/middleware/adminAuth.js";
+import { RequireAdmin } from "@/middleware/adminAuth.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry } from "@/services/registry.js";
@@ -141,16 +141,16 @@ app.route("/v1", messagesRoute);
 app.route("/v1", providersRoute);
 app.route("/v1", keysRoute);
 app.route("/v1", logsRoute);
-app.route("/v1", authRoute);
+app.route("/v1", AuthRouter);
 app.route("/v1", quotaRoute);
 app.route("/v1", settingsRoute);
 
 // Cloudflare Tunnel management (admin-only; status readable via API key too)
 app.route("/v1", tunnelRoute);
-app.use("/v1/tunnel/start", adminAuth);
-app.use("/v1/tunnel/stop", adminAuth);
-app.use("/v1/tunnel/config", adminAuth);
-app.use("/v1/tunnel/install", adminAuth);
+app.use("/v1/tunnel/start", RequireAdmin);
+app.use("/v1/tunnel/stop", RequireAdmin);
+app.use("/v1/tunnel/config", RequireAdmin);
+app.use("/v1/tunnel/install", RequireAdmin);
 
 // Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
 app.route("/v1/v1", messagesRoute);
@@ -196,14 +196,14 @@ serve(
 // Secondary listener on Port 1455 for OAuth callbacks and local Anthropic proxy
 const oauthApp = new Hono();
 oauthApp.onError(errorHandler("OAuth API Route"));
-oauthApp.get("/auth/callback", (c) => handleOAuthCallback(c));
-oauthApp.post("/auth/callback", (c) => handleOAuthCallback(c));
-oauthApp.get("/auth/antigravity/callback", (c) => handleAntigravityOAuthCallback(c));
-oauthApp.post("/auth/antigravity/callback", (c) => handleAntigravityOAuthCallback(c));
-oauthApp.get("/auth/claude/callback", (c) => handleClaudeOAuthCallback(c));
-oauthApp.post("/auth/claude/callback", (c) => handleClaudeOAuthCallback(c));
-oauthApp.get("/auth/qoder/callback", (c) => handleQoderOAuthCallback(c));
-oauthApp.post("/auth/qoder/callback", (c) => handleQoderOAuthCallback(c));
+oauthApp.get("/auth/callback", (c) => CodexOAuthCallback(c));
+oauthApp.post("/auth/callback", (c) => CodexOAuthCallback(c));
+oauthApp.get("/auth/antigravity/callback", (c) => AntigravityOAuthCallback(c));
+oauthApp.post("/auth/antigravity/callback", (c) => AntigravityOAuthCallback(c));
+oauthApp.get("/auth/claude/callback", (c) => ClaudeOAuthCallback(c));
+oauthApp.post("/auth/claude/callback", (c) => ClaudeOAuthCallback(c));
+oauthApp.get("/auth/qoder/callback", (c) => QoderOAuthCallback(c));
+oauthApp.post("/auth/qoder/callback", (c) => QoderOAuthCallback(c));
 oauthApp.route("/v1", messagesRoute);
 oauthApp.route("/v1", chatRoute);
 oauthApp.route("/v1", modelsRoute);

@@ -15,27 +15,15 @@ import { CodeBuddyCNOAuth, CodeBuddyOAuth, generatePKCE, QoderOAuth } from "@sro
 import { CodeBuddyExecutor, QoderExecutor } from "@srouter/executors";
 import type { ProviderConfig } from "@srouter/types";
 import { registry } from "@/services/registry.js";
-import {
-    anthropicAuthHandler,
-    antigravityAuthHandler,
-    bluesMindsAuthHandler,
-    claudeAuthHandler,
-    codeBuddyAuthHandler,
-    codeBuddyCNAuthHandler,
-    commandCodeAuthHandler,
-    goRouterAuthHandler,
-    openaiCodexAuthHandler,
-    qoderAuthHandler,
-    seekAIAuthHandler,
-    tabiTokenAuthHandler,
-    tokenRouterAuthHandler,
-    type AuthProviderHandler,
-    type OAuthLoginParams,
-    type OAuthLoginResult,
-    type TokenImportParams
-} from "./auth.providers.js";
+import type {
+    AuthProviderHandler,
+    OAuthLoginParams,
+    OAuthLoginResult,
+    TokenImportParams
+} from "@srouter/types";
+import { AuthHandlers } from "@/services/authHandlers.js";
 
-export type { OAuthLoginParams, OAuthLoginResult, TokenImportParams } from "./auth.providers.js";
+export type { OAuthLoginParams, OAuthLoginResult, TokenImportParams } from "@srouter/types";
 
 const PKCE_SESSION_MAX_AGE_MS = 15 * 60 * 1000;
 
@@ -67,7 +55,7 @@ function initiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams)
     const redirectUri = resolveRedirectUri(handler, params);
     const prompt = params.prompt;
 
-    const oauthInstance = new handler.oauthClass!({ clientId, redirectUri, prompt });
+    const oAuthInstance = new handler.oauthClass!({ clientId, redirectUri, prompt });
 
     const pkce = generatePKCE();
     saveOAuthSessionDB({
@@ -78,7 +66,7 @@ function initiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams)
         createdAt: Date.now()
     });
 
-    const authorizeUrl = oauthInstance.getAuthorizationUrl(pkce);
+    const authorizeUrl = oAuthInstance.getAuthorizationUrl!(pkce);
 
     return {
         authorizeUrl,
@@ -102,12 +90,12 @@ async function processOAuthCallbackFor(
 
     deleteOAuthSessionDB(state);
 
-    const oauthInstance = new handler.oauthClass!({
+    const oAuthInstance = new handler.oauthClass!({
         clientId: session.clientId,
         redirectUri: session.redirectUri
     });
 
-    const rawTokens = await oauthInstance.exchangeCodeForTokens(code, session.codeVerifier);
+    const rawTokens = await oAuthInstance.exchangeCodeForTokens!(code, session.codeVerifier || "");
     const tokens = handler.mapOAuthTokens?.(rawTokens) ?? {
         accessToken: rawTokens.accessToken,
         refreshToken: rawTokens.refreshToken,
@@ -434,39 +422,39 @@ const registerEntry = (
 };
 
 registerEntry("openai", {
-    initiate: (params) => initiatePKCEFor(openaiCodexAuthHandler, params),
-    callback: (code, state) => processOAuthCallbackFor(openaiCodexAuthHandler, code, state),
-    importToken: (params) => processTokenImportFor(openaiCodexAuthHandler, params)
+    initiate: (params) => initiatePKCEFor(AuthHandlers.OpenAI, params),
+    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.OpenAI, code, state),
+    importToken: (params) => processTokenImportFor(AuthHandlers.OpenAI, params)
 });
 registerEntry("antigravity", {
-    initiate: (params) => initiatePKCEFor(antigravityAuthHandler, params),
-    callback: (code, state) => processOAuthCallbackFor(antigravityAuthHandler, code, state),
-    importToken: (params) => processTokenImportFor(antigravityAuthHandler, params)
+    initiate: (params) => initiatePKCEFor(AuthHandlers.Antigravity, params),
+    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.Antigravity, code, state),
+    importToken: (params) => processTokenImportFor(AuthHandlers.Antigravity, params)
 });
 registerEntry("claude", {
-    initiate: (params) => initiatePKCEFor(claudeAuthHandler, params),
-    callback: (code, state) => processOAuthCallbackFor(claudeAuthHandler, code, state),
-    importToken: (params) => processTokenImportFor(claudeAuthHandler, params)
+    initiate: (params) => initiatePKCEFor(AuthHandlers.Claude, params),
+    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.Claude, code, state),
+    importToken: (params) => processTokenImportFor(AuthHandlers.Claude, params)
 });
 registerEntry("qoder", {
-    initiate: (params) => initiatePKCEFor(qoderAuthHandler, params),
-    callback: (code, state) => processOAuthCallbackFor(qoderAuthHandler, code, state),
-    importToken: (params) => processTokenImportFor(qoderAuthHandler, params)
+    initiate: (params) => initiatePKCEFor(AuthHandlers.Qoder, params),
+    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.Qoder, code, state),
+    importToken: (params) => processTokenImportFor(AuthHandlers.Qoder, params)
 });
 registerEntry("codebuddy", {
-    importToken: (params) => processTokenImportFor(codeBuddyAuthHandler, params)
+    importToken: (params) => processTokenImportFor(AuthHandlers.CodeBuddy, params)
 });
 registerEntry("codebuddy-cn", {
-    importToken: (params) => processTokenImportFor(codeBuddyCNAuthHandler, params)
+    importToken: (params) => processTokenImportFor(AuthHandlers.CodeBuddyCN, params)
 });
 for (const [key, handler] of [
-    ["commandcode", commandCodeAuthHandler],
-    ["anthropic", anthropicAuthHandler],
-    ["gorouter", goRouterAuthHandler],
-    ["bluesminds", bluesMindsAuthHandler],
-    ["seekai", seekAIAuthHandler],
-    ["tabitoken", tabiTokenAuthHandler],
-    ["tokenrouter", tokenRouterAuthHandler]
+    ["commandcode", AuthHandlers.CommandCode],
+    ["anthropic", AuthHandlers.Anthropic],
+    ["gorouter", AuthHandlers.GoRouter],
+    ["bluesminds", AuthHandlers.BluesMinds],
+    ["seekai", AuthHandlers.SeekAI],
+    ["tabitoken", AuthHandlers.TabiToken],
+    ["tokenrouter", AuthHandlers.TokenRouter]
 ] as const) {
     registerEntry(key, {
         importToken: (params) => processTokenImportFor(handler, params)
