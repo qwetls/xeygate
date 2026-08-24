@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import {
     authRoute,
@@ -74,8 +74,15 @@ bootstrapAdminAccountFromEnv(adminAuthStore);
 // Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
 autostartTunnelIfEnabled();
 
-// Global Error Handler
-app.onError((err, c) => {
+const apiInfo = () => ({
+    name: "SRouter API",
+    status: "ok",
+    version: API_VERSION,
+    documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
+});
+
+// Shared error handler: renders the OpenAI-style error envelope for both servers.
+const errorHandler = (label: string) => (err: Error, c: Context) => {
     if (err instanceof HTTPException) {
         return c.json(
             {
@@ -89,7 +96,7 @@ app.onError((err, c) => {
         );
     }
 
-    if (err instanceof SyntaxError && "message" in err && (err as Error).message.includes("JSON")) {
+    if (err instanceof SyntaxError && err.message.includes("JSON")) {
         return c.json(
             {
                 error: {
@@ -102,7 +109,7 @@ app.onError((err, c) => {
         );
     }
 
-    console.error("🔥 API Route Exception:", err);
+    console.error(`🔥 ${label} Exception:`, err);
     return c.json(
         {
             error: {
@@ -112,7 +119,9 @@ app.onError((err, c) => {
         },
         500
     );
-});
+};
+
+app.onError(errorHandler("API Route"));
 
 // Health check endpoint
 app.get("/health", (c) => {
@@ -121,12 +130,7 @@ app.get("/health", (c) => {
 
 // Base /v1 endpoint for baseURL discovery
 app.get("/v1", (c) => {
-    return c.json({
-        name: "SRouter API",
-        status: "ok",
-        version: API_VERSION,
-        documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
-    });
+    return c.json(apiInfo());
 });
 
 // Mount OpenAI & Anthropic v1 API routes
@@ -153,8 +157,6 @@ app.route("/v1/v1", messagesRoute);
 app.route("/v1/v1", chatRoute);
 app.route("/v1/v1", modelsRoute);
 
-// All endpoints must start with /v1 (OpenAI/Anthropic compatible baseURLs)
-
 // Serve Web Dashboard in production if built dist exists
 const webDistPath = resolveWebDistPath();
 const hasWebDist =
@@ -167,12 +169,7 @@ if (hasWebDist) {
 } else {
     // API Welcome / Health info when web dist is not present
     app.get("/", (c) => {
-        return c.json({
-            name: "SRouter API",
-            status: "ok",
-            version: API_VERSION,
-            documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
-        });
+        return c.json(apiInfo());
     });
 }
 
@@ -198,42 +195,7 @@ serve(
 
 // Secondary listener on Port 1455 for OAuth callbacks and local Anthropic proxy
 const oauthApp = new Hono();
-oauthApp.onError((err, c) => {
-    if (err instanceof HTTPException) {
-        return c.json(
-            {
-                error: {
-                    message: err.message || "Invalid request",
-                    type: "invalid_request_error",
-                    code: err.status === 400 ? "invalid_request" : undefined
-                }
-            },
-            err.status
-        );
-    }
-    if (err instanceof SyntaxError && "message" in err && (err as Error).message.includes("JSON")) {
-        return c.json(
-            {
-                error: {
-                    message: "Malformed JSON in request body",
-                    type: "invalid_request_error",
-                    code: "invalid_json"
-                }
-            },
-            400
-        );
-    }
-    console.error("🔥 OAuth API Route Exception:", err);
-    return c.json(
-        {
-            error: {
-                message: err.message || "Internal Server Error",
-                type: "internal_error"
-            }
-        },
-        500
-    );
-});
+oauthApp.onError(errorHandler("OAuth API Route"));
 oauthApp.get("/auth/callback", (c) => handleOAuthCallback(c));
 oauthApp.post("/auth/callback", (c) => handleOAuthCallback(c));
 oauthApp.get("/auth/antigravity/callback", (c) => handleAntigravityOAuthCallback(c));
