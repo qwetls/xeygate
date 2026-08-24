@@ -20,6 +20,11 @@ export interface CodeBuddyExecutorOptions {
     baseUrl?: string;
     apiKey?: string;
     accessToken?: string;
+    modelPrefix?: string;
+    domain?: string;
+    userAgent?: string;
+    /** Header profile: "cli" identifies as the CodeBuddy CLI (X-IDE-Type: CLI), "ide" as the IDE plugin */
+    flavor?: "ide" | "cli";
 }
 
 export class CodeBuddyExecutor implements AIProvider {
@@ -28,6 +33,10 @@ export class CodeBuddyExecutor implements AIProvider {
     private baseUrl: string;
     private apiKey: string;
     private accessToken: string;
+    private modelPrefix: string;
+    private domain?: string;
+    private userAgent: string;
+    private flavor: "ide" | "cli";
 
     constructor(options: CodeBuddyExecutorOptions = {}) {
         this.id = options.id ?? "codebuddy";
@@ -35,6 +44,10 @@ export class CodeBuddyExecutor implements AIProvider {
         this.baseUrl = (options.baseUrl ?? CODEBUDDY_BASE_URL).replace(/\/$/, "");
         this.apiKey = options.apiKey ?? "";
         this.accessToken = options.accessToken ?? "";
+        this.modelPrefix = options.modelPrefix ?? this.id.split("_")[0]?.split("-")[0] ?? this.id;
+        this.domain = options.domain;
+        this.userAgent = options.userAgent ?? "IDE/2.108.1 CodeBuddy/2.108.1";
+        this.flavor = options.flavor ?? "ide";
     }
 
     updateToken(accessToken: string): void {
@@ -44,13 +57,15 @@ export class CodeBuddyExecutor implements AIProvider {
     private getHeaders(): Record<string, string> {
         const headers: Record<string, string> = {
             "Content-Type": "application/json",
-            "User-Agent": "IDE/2.108.1 CodeBuddy/2.108.1",
-            "X-Product": "SaaS",
-            "X-IDE-Type": "IDE",
-            "X-IDE-Name": "IDE",
-            "x-requested-with": "XMLHttpRequest",
-            "x-codebuddy-request": "1"
+            "User-Agent": this.userAgent
         };
+        const ideName = this.flavor === "cli" ? "CLI" : "IDE";
+        headers["X-Product"] = "SaaS";
+        headers["X-IDE-Type"] = ideName;
+        headers["X-IDE-Name"] = ideName;
+        headers["x-requested-with"] = "XMLHttpRequest";
+        headers["x-codebuddy-request"] = "1";
+        if (this.domain) headers["X-Domain"] = this.domain;
         const token = this.accessToken || this.apiKey;
         if (token) {
             headers["Authorization"] = `Bearer ${token}`;
@@ -114,11 +129,10 @@ export class CodeBuddyExecutor implements AIProvider {
     }
 
     async listModels(): Promise<ModelObject[]> {
-        const baseId = this.id.split("_")[0]?.split("-")[0] ?? this.id;
         return CODEBUDDY_MODELS.map((m) => ({
-            id: `${baseId}/${m.id}`,
+            id: `${this.modelPrefix}/${m.id}`,
             object: "model",
-            owned_by: baseId
+            owned_by: this.modelPrefix
         }));
     }
 

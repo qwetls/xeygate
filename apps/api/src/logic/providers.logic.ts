@@ -54,8 +54,12 @@ function isProviderProtocol(value: string): value is ProviderProtocol {
  * connections collapse under one driver (e.g. openai_codex_1700000000 →
  * openai_codex). Custom ids that match no known driver keep their full id.
  */
+const PROVIDER_IDS_BY_LENGTH = Object.keys(DEFAULT_PROVIDER_MAP).sort(
+    (left, right) => right.length - left.length
+);
+
 function baseIdOf(providerId: string): string {
-    for (const id of Object.keys(DEFAULT_PROVIDER_MAP)) {
+    for (const id of PROVIDER_IDS_BY_LENGTH) {
         if (
             providerId === id ||
             providerId.startsWith(`${id}_`) ||
@@ -367,7 +371,8 @@ export class ProvidersLogic {
                 if (isInternalHost) {
                     return {
                         success: false,
-                        message: "Target URL tidak diizinkan untuk verifikasi (endpoint internal/metadata diblokir)."
+                        message:
+                            "Target URL tidak diizinkan untuk verifikasi (endpoint internal/metadata diblokir)."
                     };
                 }
             } catch {

@@ -31,6 +31,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
     const popupRef = useRef<Window | null>(null);
 
     const baseId = provider?.id.split("_")[0]?.split("-")[0] ?? provider?.id ?? "";
+    const authProviderId = provider?.id === "codebuddy-cn" ? "codebuddy-cn" : baseId;
     const isQoder = baseId === "qoder";
     const isCodeBuddy = baseId === "codebuddy";
     const isPolling = isQoder || isCodeBuddy;
@@ -58,7 +59,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                 : baseId === "qoder"
                   ? "/v1/auth/qoder/login?format=json"
                   : baseId === "codebuddy"
-                    ? "/v1/auth/codebuddy/login?format=json"
+                    ? `/v1/auth/${authProviderId}/login?format=json`
                     : baseId === "claude" || baseId === "anthropic"
                       ? "/v1/auth/claude/login?format=json"
                       : "/v1/auth/openai/login?format=json";
@@ -73,7 +74,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                 setIsLoadingUrl(false);
                 setError(err.message || "Failed to initiate OAuth login session");
             });
-    }, [open, provider, baseId]);
+    }, [open, provider, baseId, authProviderId]);
 
     const handleOpenPopup = () => {
         if (!authUrl) return;
@@ -123,7 +124,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
             try {
                 const pollUrl =
                     baseId === "codebuddy"
-                        ? `/v1/auth/codebuddy/poll?state=${encodeURIComponent(oauthState)}`
+                        ? `/v1/auth/${authProviderId}/poll?state=${encodeURIComponent(oauthState)}`
                         : `/v1/auth/qoder/poll?state=${encodeURIComponent(oauthState)}`;
                 const res = await api.get<{ status: string; provider?: ProviderConfig }>(pollUrl);
                 if (res && res.status === "ok") {
@@ -142,7 +143,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
         }, 2000);
 
         return () => clearInterval(interval);
-    }, [open, provider, isPolling, baseId, oauthState, queryClient, onOpenChange]);
+    }, [open, provider, isPolling, baseId, authProviderId, oauthState, queryClient, onOpenChange]);
 
     const callbackMutation = useMutation({
         mutationFn: (payload: { callbackUrl: string }) => {
@@ -174,7 +175,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
 
     const patMutation = useMutation({
         mutationFn: (payload: { accessToken: string }) => {
-            const endpoint = `/v1/auth/${baseId}/token`;
+            const endpoint = `/v1/auth/${authProviderId}/token`;
             return api.post(endpoint, payload);
         },
         onSuccess: () => {

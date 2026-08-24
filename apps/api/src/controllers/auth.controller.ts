@@ -6,6 +6,7 @@ import {
     bluesMindsAuthHandler,
     claudeAuthHandler,
     codeBuddyAuthHandler,
+    codeBuddyCNAuthHandler,
     commandCodeAuthHandler,
     goRouterAuthHandler,
     openaiCodexAuthHandler,
@@ -368,6 +369,45 @@ export class AuthController {
         return importTokenFor(
             codeBuddyAuthHandler,
             (b) => AuthLogic.processProviderTokenImport("codebuddy", b),
+            c
+        );
+    }
+
+    // CodeBuddy CN Provider (OAuth & Access Token)
+    public static async loginCodeBuddyCN(c: Context): Promise<Response> {
+        try {
+            const result = await AuthLogic.initiateCodeBuddyCNOAuth();
+            if (c.req.query("format") === "json") {
+                return ok(c, { authorizeUrl: result.authorizeUrl, state: result.state });
+            }
+            return c.redirect(result.authorizeUrl);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : "Internal Server Error";
+            return err(c, `Failed to initiate CodeBuddy CN login: ${message}`, 500, {
+                type: "api_error"
+            });
+        }
+    }
+
+    public static async pollCodeBuddyCN(c: Context): Promise<Response> {
+        let state = c.req.query("state");
+        if (!state) {
+            try {
+                const body = await c.req.json<{ state?: string }>();
+                state = body?.state;
+            } catch {}
+        }
+        if (!state) {
+            return err(c, "Missing state parameter", 400, { type: "invalid_request_error" });
+        }
+
+        return ok(c, await AuthLogic.pollCodeBuddyCNDeviceToken(state));
+    }
+
+    public static async importCodeBuddyCNToken(c: Context): Promise<Response> {
+        return importTokenFor(
+            codeBuddyCNAuthHandler,
+            (b) => AuthLogic.processProviderTokenImport("codebuddy-cn", b),
             c
         );
     }

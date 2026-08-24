@@ -108,6 +108,44 @@ test("CodeBuddy transforms chat request: forces stream, wraps user message in ty
     assert.equal(res.choices[0]?.finish_reason, "stop");
 });
 
+test("CodeBuddy CN sends requests to Tencent with the CN CLI identity", async () => {
+    let url = "";
+    let headers: Headers | undefined;
+    globalThis.fetch = async (input, init) => {
+        url = String(input);
+        headers = new Headers(init?.headers);
+        const stream = new ReadableStream({
+            start(controller) {
+                controller.enqueue(
+                    new TextEncoder().encode(
+                        'data: {"id":"cn","object":"chat.completion.chunk","created":1,"model":"glm-5.2","choices":[{"index":0,"delta":{"content":"ok"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n'
+                    )
+                );
+                controller.close();
+            }
+        });
+        return new Response(stream, {
+            status: 200,
+            headers: { "Content-Type": "text/event-stream" }
+        });
+    };
+
+    await executor({
+        baseUrl: "https://copilot.tencent.com/v2/chat/completions",
+        domain: "www.codebuddy.cn",
+        userAgent: "CLI/2.96.0 CodeBuddy/2.96.0",
+        flavor: "cli" as const,
+        modelPrefix: "codebuddy-cn"
+    }).chatCompletion(request("codebuddy-cn/glm-5.2"));
+
+    assert.equal(url, "https://copilot.tencent.com/v2/chat/completions");
+    assert.equal(headers?.get("x-domain"), "www.codebuddy.cn");
+    assert.equal(headers?.get("user-agent"), "CLI/2.96.0 CodeBuddy/2.96.0");
+    assert.equal(headers?.get("x-ide-type"), "CLI");
+    assert.equal(headers?.get("x-ide-name"), "CLI");
+    assert.equal(headers?.get("x-codebuddy-request"), "1");
+});
+
 test("CodeBuddy removes reasoning_effort when set to none or off", async () => {
     let body: Record<string, unknown> | undefined;
 

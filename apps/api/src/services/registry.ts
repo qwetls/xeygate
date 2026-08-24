@@ -1,6 +1,9 @@
 import {
     BLUESMINDS_BASE_URL,
     CODEBUDDY_BASE_URL,
+    CODEBUDDY_CN_BASE_URL,
+    CODEBUDDY_CN_DOMAIN,
+    CODEBUDDY_CN_USER_AGENT,
     DEFAULT_PROVIDERS,
     GOROUTER_BASE_URL,
     isProviderBaseId,
@@ -116,9 +119,21 @@ export function loadSavedProvidersFromDB(): void {
                     new CodeBuddyExecutor({
                         id: p.id || p.providerId,
                         name: p.name,
-                        baseUrl: baseUrl || CODEBUDDY_BASE_URL,
+                        baseUrl:
+                            baseUrl ||
+                            (providerType === "codebuddy-cn"
+                                ? CODEBUDDY_CN_BASE_URL
+                                : CODEBUDDY_BASE_URL),
                         apiKey: p.apiKey,
-                        accessToken: p.accessToken
+                        accessToken: p.accessToken,
+                        modelPrefix: providerType === "codebuddy-cn" ? "codebuddy-cn" : "codebuddy",
+                        ...(providerType === "codebuddy-cn"
+                            ? {
+                                  domain: CODEBUDDY_CN_DOMAIN,
+                                  userAgent: CODEBUDDY_CN_USER_AGENT,
+                                  flavor: "cli" as const
+                              }
+                            : {})
                     })
                 );
                 break;
