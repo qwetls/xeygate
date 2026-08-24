@@ -10,7 +10,7 @@ WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 ENV COREPACK_ENABLE_PROJECT_SPEC=0
-RUN corepack enable && corepack prepare pnpm@11.20.0 --activate
+RUN corepack enable && corepack prepare pnpm@11.23.0 --activate
 
 # --- Stage 2: Dependencies and Build ---
 FROM base AS builder
