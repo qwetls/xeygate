@@ -1,52 +1,31 @@
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import {
-    anthropicToOpenAIRequest,
-    openAIToAnthropicResponse,
-    openAIToAnthropicStream
+    AnthropicToOpenAIRequest,
+    OpenAIToAnthropicResponse,
+    OpenAIToAnthropicStream
 } from "@srouter/translator";
-import type { AnthropicMessageRequest } from "@srouter/types";
+import { AnthropicMessageRequestSchema, type AnthropicMessageRequest } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
+import { AnthropicErr, FormatAnthropicErrorPayload, Ok } from "@/utils/response.js";
 
 export class MessagesController {
-    public static async createMessage(c: Context): Promise<Response> {
+    public static async CreateMessage(c: Context): Promise<Response> {
         const startTime = Date.now();
-        let body: AnthropicMessageRequest;
-        try {
-            body = await c.req.json<AnthropicMessageRequest>();
-        } catch {
-            return c.json(
-                {
-                    type: "error",
-                    error: {
-                        type: "invalid_request_error",
-                        message: "Invalid JSON request body"
-                    }
-                },
-                400
-            );
+        const rawBody = await c.req.json().catch(() => null);
+        if (!rawBody || typeof rawBody !== "object") {
+            return AnthropicErr(c, "Invalid JSON request body", 400);
         }
 
-        if (!body.model) {
-            return c.json(
-                {
-                    type: "error",
-                    error: {
-                        type: "invalid_request_error",
-                        message: "Missing required field 'model'"
-                    }
-                },
-                400
-            );
+        const parsed = AnthropicMessageRequestSchema.safeParse(rawBody);
+        if (!parsed.success) {
+            return AnthropicErr(c, parsed.error.issues[0]?.message || "Validation failed", 400);
         }
 
-        const openAIReq = anthropicToOpenAIRequest(body);
+        const body = parsed.data as AnthropicMessageRequest;
+        const OpenAIReq = AnthropicToOpenAIRequest(body);
+        const isThinkingEnabled = Boolean(body.thinking?.type === "enabled");
 
-        const isThinkingEnabled = Boolean(
-            body.thinking && (body.thinking as { type?: string }).type === "enabled"
-        );
-
-        // 1. Streaming response (Anthropic SSE)
         if (body.stream) {
             c.header("Content-Type", "text/event-stream");
             c.header("Cache-Control", "no-cache");
@@ -54,55 +33,38 @@ export class MessagesController {
 
             return streamSSE(c, async (stream) => {
                 try {
-                    const chunkGenerator = ChatLogic.processStreamingCompletion(
-                        openAIReq,
-                        startTime
-                    );
-                    const anthropicStream = openAIToAnthropicStream(chunkGenerator, body.model, {
+                    const chunkGenerator = ChatLogic.ProcessStreamingCompletion(OpenAIReq, startTime);
+                    const AnthropicStream = OpenAIToAnthropicStream(chunkGenerator, body.model, {
                         allowThinking: isThinkingEnabled
                     });
 
-                    for await (const event of anthropicStream) {
+                    for await (const event of AnthropicStream) {
                         await stream.writeSSE({
                             event: event.type,
                             data: JSON.stringify(event)
                         });
                     }
                 } catch (error) {
-                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    const errorMessage = error instanceof Error ? error.message : "Error occurred during streaming";
                     await stream.writeSSE({
                         event: "error",
-                        data: JSON.stringify({
-                            type: "error",
-                            error: {
-                                type: "api_error",
-                                message: errorMessage || "Error occurred during streaming"
-                            }
-                        })
+                        data: JSON.stringify(FormatAnthropicErrorPayload(errorMessage, 500))
                     });
                 }
             });
         }
 
-        // 2. Non-streaming response (JSON)
         try {
-            const openAIRes = await ChatLogic.processNonStreamingCompletion(openAIReq, startTime);
-            const anthropicRes = openAIToAnthropicResponse(openAIRes, body.model, {
+            const OpenAIRes = await ChatLogic.ProcessNonStreamingCompletion(OpenAIReq, startTime);
+            const AnthropicRes = OpenAIToAnthropicResponse(OpenAIRes, body.model, {
                 allowThinking: isThinkingEnabled
             });
-            return c.json(anthropicRes);
+            return Ok(c, AnthropicRes);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            return c.json(
-                {
-                    type: "error",
-                    error: {
-                        type: "api_error",
-                        message: errorMessage || "Internal server error"
-                    }
-                },
-                500
-            );
+            const errorMessage = error instanceof Error ? error.message : "Internal server error";
+            return AnthropicErr(c, errorMessage, 500);
         }
     }
+
+
 }

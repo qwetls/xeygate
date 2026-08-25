@@ -1,45 +1,58 @@
 import type { Context } from "hono";
 import { getTokenSaverSettingsDB, setTokenSaverSettingsDB } from "@srouter/db";
-import { previewTokenSaver } from "@srouter/translator";
-import type { TokenSaverPreviewRequest } from "@srouter/types";
-import { ok, err } from "@/utils/response.js";
+import { PreviewTokenSaver } from "@srouter/translator";
+import {
+    TokenSaverPreviewRequestSchema,
+    TokenSaverSettingsSchema,
+    type TokenSaverPreviewRequest,
+    type TokenSaverSettings
+} from "@srouter/types";
+import { Err, Ok } from "@/utils/response.js";
 
 export class TokenSaverController {
-    public static getSettings(c: Context): Response {
-        const settings = getTokenSaverSettingsDB();
-        return ok(c, { settings });
+    public static GetSettings(c: Context): Response {
+        return Ok(c, { settings: getTokenSaverSettingsDB() });
     }
 
-    public static async updateSettings(c: Context): Promise<Response> {
+    public static async UpdateSettings(c: Context): Promise<Response> {
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = TokenSaverSettingsSchema.partial().safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid settings payload", 400);
+        }
+
         try {
-            const body = await c.req.json();
-            const updated = setTokenSaverSettingsDB(body);
-            return ok(c, {
+            const Updated = setTokenSaverSettingsDB(Parsed.data as Partial<TokenSaverSettings>);
+            return Ok(c, {
                 message: "Token Saver settings updated successfully",
-                settings: updated
+                settings: Updated
             });
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            return err(c, errorMessage, 400);
+            return Err(c, error instanceof Error ? error.message : "Failed to update Token Saver settings", 500);
         }
     }
 
-    public static async preview(c: Context): Promise<Response> {
-        try {
-            const body = await c.req.json<TokenSaverPreviewRequest>();
-            if (!body.text || typeof body.text !== "string") {
-                return err(c, "Field 'text' is required and must be a string", 400);
-            }
-            const type = body.type === "prompt" ? "prompt" : "tool_output";
-            const settings = body.settings
-                ? { ...getTokenSaverSettingsDB(), ...body.settings }
-                : getTokenSaverSettingsDB();
+    public static async Preview(c: Context): Promise<Response> {
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = TokenSaverPreviewRequestSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid preview payload", 400);
+        }
 
-            const preview = previewTokenSaver(type, body.text, settings);
-            return ok(c, preview);
+        try {
+            const CurrentSettings = getTokenSaverSettingsDB();
+            const MergedSettings = Parsed.data.settings
+                ? { ...CurrentSettings, ...Parsed.data.settings }
+                : CurrentSettings;
+
+            const PreviewResult = PreviewTokenSaver(
+                Parsed.data.type,
+                Parsed.data.text,
+                MergedSettings as TokenSaverSettings
+            );
+            return Ok(c, PreviewResult);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            return err(c, errorMessage, 400);
+            return Err(c, error instanceof Error ? error.message : "Failed to generate preview", 500);
         }
     }
 }
