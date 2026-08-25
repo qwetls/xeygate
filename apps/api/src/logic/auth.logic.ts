@@ -15,11 +15,13 @@ import { CodeBuddyCNOAuth, CodeBuddyOAuth, generatePKCE, QoderOAuth } from "@sro
 import { CodeBuddyExecutor, QoderExecutor } from "@srouter/executors";
 import type { ProviderConfig } from "@srouter/types";
 import { registry } from "@/services/registry.js";
-import type {
-    AuthProviderHandler,
-    OAuthLoginParams,
-    OAuthLoginResult,
-    TokenImportParams
+import {
+    AuthPollStatus,
+    type AuthPollResult,
+    type AuthProviderHandler,
+    type OAuthLoginParams,
+    type OAuthLoginResult,
+    type TokenImportParams
 } from "@srouter/types";
 import { AuthHandlers } from "@/services/authHandlers.js";
 
@@ -27,19 +29,19 @@ export type { OAuthLoginParams, OAuthLoginResult, TokenImportParams } from "@sro
 
 const PKCE_SESSION_MAX_AGE_MS = 15 * 60 * 1000;
 
-function cleanupExpiredSessions(): void {
+function CleanupExpiredSessions(): void {
     cleanupExpiredOAuthSessionsDB(PKCE_SESSION_MAX_AGE_MS);
 }
 
-function resolveClientId(handler: AuthProviderHandler, params: OAuthLoginParams): string {
+function ResolveClientId(handler: AuthProviderHandler, params: OAuthLoginParams): string {
     return params.clientId || handler.clientId?.() || "";
 }
 
-function resolveRedirectUri(handler: AuthProviderHandler, params: OAuthLoginParams): string {
+function ResolveRedirectUri(handler: AuthProviderHandler, params: OAuthLoginParams): string {
     return params.redirectUri || handler.defaultRedirectUri || "";
 }
 
-function buildAccountIdentity(
+function BuildAccountIdentity(
     handler: AuthProviderHandler,
     now: number
 ): { accountId: string; accountName: string } {
@@ -49,10 +51,10 @@ function buildAccountIdentity(
     };
 }
 
-function initiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams): OAuthLoginResult {
-    cleanupExpiredSessions();
-    const clientId = resolveClientId(handler, params);
-    const redirectUri = resolveRedirectUri(handler, params);
+function InitiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams): OAuthLoginResult {
+    CleanupExpiredSessions();
+    const clientId = ResolveClientId(handler, params);
+    const redirectUri = ResolveRedirectUri(handler, params);
     const prompt = params.prompt;
 
     const oAuthInstance = new handler.oauthClass!({ clientId, redirectUri, prompt });
@@ -76,12 +78,12 @@ function initiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams)
     };
 }
 
-async function processOAuthCallbackFor(
+async function ProcessOAuthCallbackFor(
     handler: AuthProviderHandler,
     code: string,
     state: string
 ): Promise<ProviderConfig> {
-    cleanupExpiredSessions();
+    CleanupExpiredSessions();
 
     const session = getOAuthSessionDB(state);
     if (!session) {
@@ -103,7 +105,7 @@ async function processOAuthCallbackFor(
     };
 
     const timestamp = Date.now();
-    const { accountId, accountName } = buildAccountIdentity(handler, timestamp);
+    const { accountId, accountName } = BuildAccountIdentity(handler, timestamp);
 
     const baseUrl = handler.baseUrl ? handler.baseUrl() : undefined;
 
@@ -138,7 +140,7 @@ async function processOAuthCallbackFor(
     return providerConfig;
 }
 
-function processTokenImportFor(
+function ProcessTokenImportFor(
     handler: AuthProviderHandler,
     params: TokenImportParams
 ): ProviderConfig {
@@ -184,18 +186,21 @@ function processTokenImportFor(
     return providerConfig;
 }
 
-export async function initiateCodeBuddyOAuth(): Promise<{ authorizeUrl: string; state: string }> {
-    return initiateCodeBuddyOAuthFor(new CodeBuddyOAuth());
+export async function InitiateCodeBuddyOAuth(): Promise<{ authorizeUrl: string; state: string }> {
+    return InitiateCodeBuddyOAuthFor(new CodeBuddyOAuth());
 }
 
-export async function initiateCodeBuddyCNOAuth(): Promise<{ authorizeUrl: string; state: string }> {
-    return initiateCodeBuddyOAuthFor(new CodeBuddyCNOAuth());
+export async function InitiateCodeBuddyCNOAuth(): Promise<{
+    authorizeUrl: string;
+    state: string;
+}> {
+    return InitiateCodeBuddyOAuthFor(new CodeBuddyCNOAuth());
 }
 
-async function initiateCodeBuddyOAuthFor(
+async function InitiateCodeBuddyOAuthFor(
     codeBuddyOAuth: CodeBuddyOAuth
 ): Promise<{ authorizeUrl: string; state: string }> {
-    cleanupExpiredSessions();
+    CleanupExpiredSessions();
     const { state, authUrl } = await codeBuddyOAuth.requestAuthState();
 
     saveOAuthSessionDB({
@@ -212,12 +217,8 @@ async function initiateCodeBuddyOAuthFor(
     };
 }
 
-export async function pollCodeBuddyDeviceToken(state: string): Promise<{
-    status: "pending" | "ok";
-    provider?: ProviderConfig;
-    error?: string;
-}> {
-    return pollCodeBuddyDeviceTokenFor(state, {
+export async function PollCodeBuddyDeviceToken(state: string): Promise<AuthPollResult> {
+    return PollCodeBuddyDeviceTokenFor(state, {
         oauth: new CodeBuddyOAuth(),
         providerId: "codebuddy",
         displayName: "CodeBuddy",
@@ -225,12 +226,8 @@ export async function pollCodeBuddyDeviceToken(state: string): Promise<{
     });
 }
 
-export async function pollCodeBuddyCNDeviceToken(state: string): Promise<{
-    status: "pending" | "ok";
-    provider?: ProviderConfig;
-    error?: string;
-}> {
-    return pollCodeBuddyDeviceTokenFor(state, {
+export async function PollCodeBuddyCNDeviceToken(state: string): Promise<AuthPollResult> {
+    return PollCodeBuddyDeviceTokenFor(state, {
         oauth: new CodeBuddyCNOAuth(),
         providerId: "codebuddy-cn",
         displayName: "CodeBuddy CN",
@@ -238,7 +235,7 @@ export async function pollCodeBuddyCNDeviceToken(state: string): Promise<{
     });
 }
 
-async function pollCodeBuddyDeviceTokenFor(
+async function PollCodeBuddyDeviceTokenFor(
     state: string,
     options: {
         oauth: CodeBuddyOAuth;
@@ -246,18 +243,18 @@ async function pollCodeBuddyDeviceTokenFor(
         displayName: string;
         baseUrl: string;
     }
-): Promise<{ status: "pending" | "ok"; provider?: ProviderConfig; error?: string }> {
+): Promise<AuthPollResult> {
     if (!state) {
-        return { status: "pending", error: "Missing state parameter" };
+        return { status: AuthPollStatus.PENDING, error: "Missing state parameter" };
     }
 
     const session = getOAuthSessionDB(state);
     if (!session) {
-        return { status: "pending", error: "Session expired or not found" };
+        return { status: AuthPollStatus.PENDING, error: "Session expired or not found" };
     }
 
     let poll: {
-        status: "pending" | "ok";
+        status: AuthPollStatus;
         accessToken?: string;
         refreshToken?: string;
         expiresIn?: number;
@@ -268,11 +265,11 @@ async function pollCodeBuddyDeviceTokenFor(
         poll = await options.oauth.pollToken(state);
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { status: "pending", error: msg };
+        return { status: AuthPollStatus.PENDING, error: msg };
     }
 
-    if (poll.status !== "ok" || !poll.accessToken) {
-        return { status: "pending", error: poll.error };
+    if (poll.status !== AuthPollStatus.OK || !poll.accessToken) {
+        return { status: AuthPollStatus.PENDING, error: poll.error };
     }
 
     deleteOAuthSessionDB(state);
@@ -313,28 +310,24 @@ async function pollCodeBuddyDeviceTokenFor(
     registry.registerProvider(providerInstance);
 
     return {
-        status: "ok",
+        status: AuthPollStatus.OK,
         provider: providerConfig
     };
 }
 
-export async function pollQoderDeviceToken(state: string): Promise<{
-    status: "pending" | "ok";
-    provider?: ProviderConfig;
-    error?: string;
-}> {
+export async function PollQoderDeviceToken(state: string): Promise<AuthPollResult> {
     if (!state) {
-        return { status: "pending", error: "Missing state parameter" };
+        return { status: AuthPollStatus.PENDING, error: "Missing state parameter" };
     }
 
     const session = getOAuthSessionDB(state);
     if (!session) {
-        return { status: "pending", error: "Session expired or not found" };
+        return { status: AuthPollStatus.PENDING, error: "Session expired or not found" };
     }
 
     const qoderOAuth = new QoderOAuth();
     let poll: {
-        status: "pending" | "ok";
+        status: AuthPollStatus;
         accessToken?: string;
         refreshToken?: string;
         userId?: string;
@@ -347,11 +340,11 @@ export async function pollQoderDeviceToken(state: string): Promise<{
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        return { status: "pending", error: msg };
+        return { status: AuthPollStatus.PENDING, error: msg };
     }
 
-    if (poll.status !== "ok" || !poll.accessToken) {
-        return { status: "pending" };
+    if (poll.status !== AuthPollStatus.OK || !poll.accessToken) {
+        return { status: AuthPollStatus.PENDING };
     }
 
     deleteOAuthSessionDB(state);
@@ -401,7 +394,7 @@ export async function pollQoderDeviceToken(state: string): Promise<{
     registry.registerProvider(providerInstance);
 
     return {
-        status: "ok",
+        status: AuthPollStatus.OK,
         provider: providerConfig
     };
 }
@@ -413,7 +406,8 @@ interface AuthProviderEntry {
 }
 
 const authProviderEntries: Record<string, AuthProviderEntry> = {};
-const registerEntry = (
+
+const RegisterEntry = (
     key: string,
     entry: Omit<AuthProviderEntry, "initiate" | "callback"> &
         Partial<Pick<AuthProviderEntry, "initiate" | "callback">>
@@ -421,32 +415,38 @@ const registerEntry = (
     authProviderEntries[key] = entry as AuthProviderEntry;
 };
 
-registerEntry("openai", {
-    initiate: (params) => initiatePKCEFor(AuthHandlers.OpenAI, params),
-    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.OpenAI, code, state),
-    importToken: (params) => processTokenImportFor(AuthHandlers.OpenAI, params)
+RegisterEntry("openai", {
+    initiate: (params) => InitiatePKCEFor(AuthHandlers.OpenAI, params),
+    callback: (code, state) => ProcessOAuthCallbackFor(AuthHandlers.OpenAI, code, state),
+    importToken: (params) => ProcessTokenImportFor(AuthHandlers.OpenAI, params)
 });
-registerEntry("antigravity", {
-    initiate: (params) => initiatePKCEFor(AuthHandlers.Antigravity, params),
-    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.Antigravity, code, state),
-    importToken: (params) => processTokenImportFor(AuthHandlers.Antigravity, params)
+
+RegisterEntry("antigravity", {
+    initiate: (params) => InitiatePKCEFor(AuthHandlers.Antigravity, params),
+    callback: (code, state) => ProcessOAuthCallbackFor(AuthHandlers.Antigravity, code, state),
+    importToken: (params) => ProcessTokenImportFor(AuthHandlers.Antigravity, params)
 });
-registerEntry("claude", {
-    initiate: (params) => initiatePKCEFor(AuthHandlers.Claude, params),
-    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.Claude, code, state),
-    importToken: (params) => processTokenImportFor(AuthHandlers.Claude, params)
+
+RegisterEntry("claude", {
+    initiate: (params) => InitiatePKCEFor(AuthHandlers.Claude, params),
+    callback: (code, state) => ProcessOAuthCallbackFor(AuthHandlers.Claude, code, state),
+    importToken: (params) => ProcessTokenImportFor(AuthHandlers.Claude, params)
 });
-registerEntry("qoder", {
-    initiate: (params) => initiatePKCEFor(AuthHandlers.Qoder, params),
-    callback: (code, state) => processOAuthCallbackFor(AuthHandlers.Qoder, code, state),
-    importToken: (params) => processTokenImportFor(AuthHandlers.Qoder, params)
+
+RegisterEntry("qoder", {
+    initiate: (params) => InitiatePKCEFor(AuthHandlers.Qoder, params),
+    callback: (code, state) => ProcessOAuthCallbackFor(AuthHandlers.Qoder, code, state),
+    importToken: (params) => ProcessTokenImportFor(AuthHandlers.Qoder, params)
 });
-registerEntry("codebuddy", {
-    importToken: (params) => processTokenImportFor(AuthHandlers.CodeBuddy, params)
+
+RegisterEntry("codebuddy", {
+    importToken: (params) => ProcessTokenImportFor(AuthHandlers.CodeBuddy, params)
 });
-registerEntry("codebuddy-cn", {
-    importToken: (params) => processTokenImportFor(AuthHandlers.CodeBuddyCN, params)
+
+RegisterEntry("codebuddy-cn", {
+    importToken: (params) => ProcessTokenImportFor(AuthHandlers.CodeBuddyCN, params)
 });
+
 for (const [key, handler] of [
     ["commandcode", AuthHandlers.CommandCode],
     ["anthropic", AuthHandlers.Anthropic],
@@ -456,8 +456,8 @@ for (const [key, handler] of [
     ["tabitoken", AuthHandlers.TabiToken],
     ["tokenrouter", AuthHandlers.TokenRouter]
 ] as const) {
-    registerEntry(key, {
-        importToken: (params) => processTokenImportFor(handler, params)
+    RegisterEntry(key, {
+        importToken: (params) => ProcessTokenImportFor(handler, params)
     });
 }
 
@@ -491,11 +491,17 @@ export const AuthLogic = {
         return entry.importToken(params);
     },
 
-    initiateCodeBuddyOAuth,
-    initiateCodeBuddyCNOAuth,
-    pollCodeBuddyDeviceToken,
-    pollCodeBuddyCNDeviceToken,
-    pollQoderDeviceToken,
+    initiateCodeBuddyOAuth: InitiateCodeBuddyOAuth,
+    initiateCodeBuddyCNOAuth: InitiateCodeBuddyCNOAuth,
+    pollCodeBuddyDeviceToken: PollCodeBuddyDeviceToken,
+    pollCodeBuddyCNDeviceToken: PollCodeBuddyCNDeviceToken,
+    pollQoderDeviceToken: PollQoderDeviceToken,
+
+    InitiateCodeBuddyOAuth,
+    InitiateCodeBuddyCNOAuth,
+    PollCodeBuddyDeviceToken,
+    PollCodeBuddyCNDeviceToken,
+    PollQoderDeviceToken,
 
     initiateAntigravityOAuthPKCE: (params: OAuthLoginParams) =>
         AuthLogic.initiateProviderOAuth("antigravity", params),
