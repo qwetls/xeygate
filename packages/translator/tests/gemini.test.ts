@@ -7,6 +7,7 @@ import {
     cleanJSONSchemaForAntigravity,
     createGeminiStreamState,
     geminiStreamToOpenAIChunks,
+    geminiToOpenAIResponse,
     getAntigravityModelFallbacks,
     parseAntigravityModelName,
     parseAntigravityTextualToolCall,
@@ -326,4 +327,49 @@ test("geminiStreamToOpenAIChunks propagates thoughtSignature in tool calls", () 
     assert.ok(tc);
     assert.equal(tc.thoughtSignature, "sig_12345");
     assert.equal(tc.thought_signature, "sig_12345");
+});
+
+test("geminiToOpenAIResponse and geminiStreamToOpenAIChunks map cachedContentTokenCount correctly", () => {
+    const rawResponse = {
+        candidates: [
+            {
+                content: {
+                    parts: [{ text: "Hello with cache!" }],
+                    role: "model"
+                },
+                finishReason: "STOP"
+            }
+        ],
+        usageMetadata: {
+            promptTokenCount: 5000,
+            candidatesTokenCount: 150,
+            totalTokenCount: 5150,
+            cachedContentTokenCount: 4096
+        }
+    };
+
+    const res = geminiToOpenAIResponse(rawResponse, "gemini-3.7-flash");
+    assert.equal(res.choices[0]?.message.content, "Hello with cache!");
+    assert.deepEqual(res.usage, {
+        prompt_tokens: 5000,
+        completion_tokens: 150,
+        total_tokens: 5150,
+        prompt_tokens_details: {
+            cached_tokens: 4096
+        }
+    });
+
+    const streamState = createGeminiStreamState("gemini-3.7-flash");
+    const streamChunks = geminiStreamToOpenAIChunks(rawResponse, streamState);
+    assert.ok(streamChunks);
+    const finalChunk = streamChunks.find((c) => c.usage);
+    assert.ok(finalChunk);
+    assert.deepEqual(finalChunk.usage, {
+        prompt_tokens: 5000,
+        completion_tokens: 150,
+        total_tokens: 5150,
+        prompt_tokens_details: {
+            cached_tokens: 4096
+        }
+    });
 });

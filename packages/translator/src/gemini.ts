@@ -95,6 +95,13 @@ export interface GeminiRawResponse {
             };
         }>;
     };
+    usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        candidates_tokens_count?: number;
+        totalTokenCount?: number;
+        cachedContentTokenCount?: number;
+    };
 }
 
 export function parseGeminiResponse(data: GeminiRawResponse): string {
@@ -111,6 +118,27 @@ export function geminiToOpenAIResponse(
     requestedModel: string
 ): ChatCompletionResponse {
     const textResponse = parseGeminiResponse(data);
+    const usageMeta = data.usageMetadata;
+    let usage: ChatCompletionResponse["usage"] = undefined;
+
+    if (usageMeta) {
+        const promptTokens = Number(usageMeta.promptTokenCount ?? 0);
+        const completionTokens = Number(
+            usageMeta.candidatesTokenCount ?? usageMeta.candidates_tokens_count ?? 0
+        );
+        const cachedTokens = Number(usageMeta.cachedContentTokenCount ?? 0);
+        const total = promptTokens + completionTokens;
+
+        usage = {
+            prompt_tokens: promptTokens,
+            completion_tokens: completionTokens,
+            total_tokens: total,
+            ...(cachedTokens > 0
+                ? { prompt_tokens_details: { cached_tokens: cachedTokens } }
+                : {})
+        };
+    }
+
     return {
         id: `chatcmpl-${Date.now()}`,
         object: "chat.completion",
@@ -125,7 +153,8 @@ export function geminiToOpenAIResponse(
                 },
                 finish_reason: "stop"
             }
-        ]
+        ],
+        ...(usage ? { usage } : {})
     };
 }
 
@@ -537,7 +566,14 @@ export interface GeminiStreamState {
     functionIndex: number;
     geminiToolCallCount: number;
     finishReason?: string;
-    usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+    usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+        prompt_tokens_details?: {
+            cached_tokens?: number;
+        };
+    };
     toolNameMap?: Map<string, string> | null;
     remainingCredits?: Array<{ creditType: string; creditAmount: string }> | null;
 }
@@ -724,11 +760,17 @@ export function geminiStreamToOpenAIChunks(
         const completionTokens = Number(
             usageMeta.candidatesTokenCount ?? usageMeta.candidates_tokens_count ?? 0
         );
+        const cachedTokens = Number(
+            usageMeta.cachedContentTokenCount ?? usageMeta.totalCachedTokens ?? 0
+        );
         const total = promptTokens + completionTokens;
         state.usage = {
             prompt_tokens: promptTokens,
             completion_tokens: completionTokens,
-            total_tokens: total
+            total_tokens: total,
+            ...(cachedTokens > 0
+                ? { prompt_tokens_details: { cached_tokens: cachedTokens } }
+                : {})
         };
     }
 
