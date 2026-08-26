@@ -32,7 +32,7 @@ routes/v1 → controllers → logic → services / packages/{db,executors,provid
 ## Hono practice
 
 - All gateway endpoints mount under `/v1` in `apps/api/src/index.ts`. Root-level API paths do not exist; `/health` and `/v1` discovery are the only exceptions.
-- Attach auth guards inside the feature router (`tunnelRoute.use(...)`) so protection travels with the route — mounting `app.use(...)` after the fact invites gaps.
+- Attach auth guards inside the feature router (`TunnelRouter.use(...)`) so protection travels with the route — mounting `app.use(...)` after the fact invites gaps.
 - Reads use `apiKeyAuth`, mutations use `adminAuth`. Loopback bypass only applies when `require_api_key` is off.
 - Validate request bodies with Zod (`@hono/zod-validator`) at the route; infer types with `z.infer`, never hand-write mirrored interfaces.
 - Raise errors as `HTTPException`; the global `onError` renders the `{ error: { message, type } }` envelope. Stream handlers return SSE through the shared frame utilities in `packages/executors`.

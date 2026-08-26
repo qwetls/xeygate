@@ -4,15 +4,15 @@ import { ChatController } from "@/controllers/chat.controller.js";
 import { ValidateJson } from "@/middleware/Validation.js";
 import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
-export const chatRoute = new Hono();
+export const ChatRouter = new Hono();
 
-chatRoute.post(
+ChatRouter.post(
     "/chat/completions",
     ApiKeyAuth,
     ValidateJson(ChatCompletionRequestSchema),
     ChatController.CreateCompletion
 );
-chatRoute.post(
+ChatRouter.post(
     "/chat/completion",
     ApiKeyAuth,
     ValidateJson(ChatCompletionRequestSchema),

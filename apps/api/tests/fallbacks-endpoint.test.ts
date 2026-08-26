@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { createFallbackRuleDB, deleteFallbackRuleDB, getFallbackRuleByIdDB } from "@srouter/db";
 import { Hono } from "hono";
-import { settingsRoute } from "../src/routes/v1/settings.js";
+import { SettingsRouter } from "../src/routes/v1/settings.js";
 import { ADMIN_SESSION_COOKIE, createAdminSession } from "../src/services/adminAuth.js";
 
 const createdRuleIds: string[] = [];
@@ -31,7 +31,7 @@ test("GET /settings/fallbacks returns all configured fallback rules", async () =
     createdRuleIds.push(rule.id);
 
     const app = new Hono();
-    app.route("/v1", settingsRoute);
+    app.route("/v1", SettingsRouter);
 
     const res = await app.request("/v1/settings/fallbacks", {
         method: "GET",
@@ -46,7 +46,7 @@ test("GET /settings/fallbacks returns all configured fallback rules", async () =
 
 test("POST /settings/fallbacks creates a new fallback rule", async () => {
     const app = new Hono();
-    app.route("/v1", settingsRoute);
+    app.route("/v1", SettingsRouter);
 
     const res = await app.request("/v1/settings/fallbacks", {
         method: "POST",
@@ -80,7 +80,7 @@ test("PUT and DELETE /settings/fallbacks/:id updates and removes fallback rule",
     createdRuleIds.push(rule.id);
 
     const app = new Hono();
-    app.route("/v1", settingsRoute);
+    app.route("/v1", SettingsRouter);
 
     // Update rule
     const updateRes = await app.request(`/v1/settings/fallbacks/${rule.id}`, {

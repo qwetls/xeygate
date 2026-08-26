@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { TunnelController } from "@/controllers/tunnel.controller.js";
 
-export const tunnelRoute = new Hono();
+export const TunnelRouter = new Hono();
 
-tunnelRoute.get("/tunnel/status", TunnelController.GetStatus);
-tunnelRoute.get("/tunnel/events", TunnelController.GetEvents);
-tunnelRoute.post("/tunnel/start", TunnelController.StartTunnel);
-tunnelRoute.post("/tunnel/stop", TunnelController.StopTunnel);
-tunnelRoute.put("/tunnel/config", TunnelController.UpdateConfig);
-tunnelRoute.post("/tunnel/install", TunnelController.Install);
-tunnelRoute.get("/tunnel/install", TunnelController.GetInstallStatus);
+TunnelRouter.get("/tunnel/status", TunnelController.GetStatus);
+TunnelRouter.get("/tunnel/events", TunnelController.GetEvents);
+TunnelRouter.post("/tunnel/start", TunnelController.StartTunnel);
+TunnelRouter.post("/tunnel/stop", TunnelController.StopTunnel);
+TunnelRouter.put("/tunnel/config", TunnelController.UpdateConfig);
+TunnelRouter.post("/tunnel/install", TunnelController.Install);
+TunnelRouter.get("/tunnel/install", TunnelController.GetInstallStatus);

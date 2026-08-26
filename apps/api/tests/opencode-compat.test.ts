@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Hono } from "hono";
-import { chatRoute } from "../src/routes/v1/chat.js";
-import { modelsRoute } from "../src/routes/v1/models.js";
-import { providersRoute } from "../src/routes/v1/providers.js";
+import { ChatRouter } from "../src/routes/v1/chat.js";
+import { ModelsRouter } from "../src/routes/v1/models.js";
+import { ProvidersRouter } from "../src/routes/v1/providers.js";
 import { registry } from "../src/services/registry.js";
 import type { AIProvider, ChatCompletionRequest, ChatCompletionResponse } from "@srouter/types";
 import { deleteLogsByProviderDB } from "@srouter/db";
@@ -50,12 +50,12 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
     });
 
     const app = new Hono();
-    app.route("/v1", modelsRoute);
-    app.route("/v1", chatRoute);
-    app.route("/v1", providersRoute);
-    app.route("/", chatRoute);
-    app.route("/", modelsRoute);
-    app.route("/", providersRoute);
+    app.route("/v1", ModelsRouter);
+    app.route("/v1", ChatRouter);
+    app.route("/v1", ProvidersRouter);
+    app.route("/", ChatRouter);
+    app.route("/", ModelsRouter);
+    app.route("/", ProvidersRouter);
 
     // 1. Test GET /models and /v1/models without auth
     const modelsRes = await app.fetch(

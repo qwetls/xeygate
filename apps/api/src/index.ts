@@ -7,15 +7,15 @@ import { cors } from "hono/cors";
 import { AuthRouter } from "@/routes/v1/auth.js";
 import { AuthController } from "@/controllers/auth.controller.js";
 import { adminRoute } from "@/routes/v1/admin.js";
-import { chatRoute } from "@/routes/v1/chat.js";
-import { keysRoute } from "@/routes/v1/keys.js";
-import { logsRoute } from "@/routes/v1/logs.js";
-import { messagesRoute } from "@/routes/v1/messages.js";
-import { modelsRoute } from "@/routes/v1/models.js";
-import { providersRoute } from "@/routes/v1/providers.js";
-import { quotaRoute } from "@/routes/v1/quota.js";
-import { settingsRoute } from "@/routes/v1/settings.js";
-import { tunnelRoute } from "@/routes/v1/tunnel.js";
+import { ChatRouter } from "@/routes/v1/chat.js";
+import { KeysRouter } from "@/routes/v1/keys.js";
+import { LogsRouter } from "@/routes/v1/logs.js";
+import { MessagesRouter } from "@/routes/v1/messages.js";
+import { ModelsRouter } from "@/routes/v1/models.js";
+import { ProvidersRouter } from "@/routes/v1/providers.js";
+import { QuotaRouter } from "@/routes/v1/quota.js";
+import { SettingsRouter } from "@/routes/v1/settings.js";
+import { TunnelRouter } from "@/routes/v1/tunnel.js";
 import { RequireAdmin } from "@/middleware/AdminAuth.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
@@ -129,28 +129,28 @@ app.get("/v1", (c) => {
 });
 
 // Mount OpenAI & Anthropic v1 API routes
-app.route("/v1", modelsRoute);
+app.route("/v1", ModelsRouter);
 app.route("/v1", adminRoute);
-app.route("/v1", chatRoute);
-app.route("/v1", messagesRoute);
-app.route("/v1", providersRoute);
-app.route("/v1", keysRoute);
-app.route("/v1", logsRoute);
+app.route("/v1", ChatRouter);
+app.route("/v1", MessagesRouter);
+app.route("/v1", ProvidersRouter);
+app.route("/v1", KeysRouter);
+app.route("/v1", LogsRouter);
 app.route("/v1", AuthRouter);
-app.route("/v1", quotaRoute);
-app.route("/v1", settingsRoute);
+app.route("/v1", QuotaRouter);
+app.route("/v1", SettingsRouter);
 
 // Cloudflare Tunnel management (admin-only; status readable via API key too)
-app.route("/v1", tunnelRoute);
+app.route("/v1", TunnelRouter);
 app.use("/v1/tunnel/start", RequireAdmin);
 app.use("/v1/tunnel/stop", RequireAdmin);
 app.use("/v1/tunnel/config", RequireAdmin);
 app.use("/v1/tunnel/install", RequireAdmin);
 
 // Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
-app.route("/v1/v1", messagesRoute);
-app.route("/v1/v1", chatRoute);
-app.route("/v1/v1", modelsRoute);
+app.route("/v1/v1", MessagesRouter);
+app.route("/v1/v1", ChatRouter);
+app.route("/v1/v1", ModelsRouter);
 
 // Serve Web Dashboard in production if built dist exists
 const webDistPath = resolveWebDistPath();
@@ -199,9 +199,9 @@ oauthApp.get("/auth/claude/callback", (c) => AuthController.Claude.Callback(c));
 oauthApp.post("/auth/claude/callback", (c) => AuthController.Claude.Callback(c));
 oauthApp.get("/auth/qoder/callback", (c) => AuthController.Qoder.Callback(c));
 oauthApp.post("/auth/qoder/callback", (c) => AuthController.Qoder.Callback(c));
-oauthApp.route("/v1", messagesRoute);
-oauthApp.route("/v1", chatRoute);
-oauthApp.route("/v1", modelsRoute);
+oauthApp.route("/v1", MessagesRouter);
+oauthApp.route("/v1", ChatRouter);
+oauthApp.route("/v1", ModelsRouter);
 
 const oauthPort = Number(process.env.OAUTH_PORT) || 1455;
 const oauthHost = process.env.OAUTH_HOST || "127.0.0.1";

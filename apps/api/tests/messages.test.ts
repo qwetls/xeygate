@@ -15,11 +15,11 @@ import type {
     ChatCompletionResponse,
     ProviderConfig
 } from "@srouter/types";
-import { messagesRoute } from "../src/routes/v1/messages.js";
+import { MessagesRouter } from "../src/routes/v1/messages.js";
 
 const app = new Hono();
-app.route("/v1", messagesRoute);
-app.route("/", messagesRoute);
+app.route("/v1", MessagesRouter);
+app.route("/", MessagesRouter);
 
 const createdKeyIds: string[] = [];
 const createdProviderIds: string[] = [];

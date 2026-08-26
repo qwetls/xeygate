@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { LogsController } from "@/controllers/logs.controller.js";
 import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
-export const logsRoute = new Hono();
+export const LogsRouter = new Hono();
 
-logsRoute.get("/logs", ApiKeyAuth, LogsController.ListLogs);
-logsRoute.get("/logs/stats", ApiKeyAuth, LogsController.GetStats);
+LogsRouter.get("/logs", ApiKeyAuth, LogsController.ListLogs);
+LogsRouter.get("/logs/stats", ApiKeyAuth, LogsController.GetStats);

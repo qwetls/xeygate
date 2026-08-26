@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { Hono } from "hono";
 import type { AIProvider } from "@srouter/types";
-import { modelsRoute } from "../src/routes/v1/models.js";
+import { ModelsRouter } from "../src/routes/v1/models.js";
 import { registry } from "../src/services/registry.js";
 import { ModelsLogic } from "../src/logic/models.logic.js";
 
 const app = new Hono();
-app.route("/v1", modelsRoute);
+app.route("/v1", ModelsRouter);
 
 const mockProviderId = "mock";
 let fetchCount = 0;

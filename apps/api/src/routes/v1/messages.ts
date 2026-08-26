@@ -2,6 +2,6 @@ import { Hono } from "hono";
 import { MessagesController } from "@/controllers/messages.controller.js";
 import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
-export const messagesRoute = new Hono();
+export const MessagesRouter = new Hono();
 
-messagesRoute.post("/messages", ApiKeyAuth, MessagesController.CreateMessage);
+MessagesRouter.post("/messages", ApiKeyAuth, MessagesController.CreateMessage);

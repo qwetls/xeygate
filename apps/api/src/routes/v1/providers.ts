@@ -3,24 +3,24 @@ import { ProvidersController } from "@/controllers/providers.controller.js";
 import { RequireAdmin } from "@/middleware/AdminAuth.js";
 import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
-export const providersRoute = new Hono();
+export const ProvidersRouter = new Hono();
 
-providersRoute.get("/providers", ApiKeyAuth, ProvidersController.ListProviders);
-providersRoute.get("/providers/catalog", ApiKeyAuth, ProvidersController.GetCatalog);
-providersRoute.get("/providers/:providerId", ApiKeyAuth, ProvidersController.GetProvider);
+ProvidersRouter.get("/providers", ApiKeyAuth, ProvidersController.ListProviders);
+ProvidersRouter.get("/providers/catalog", ApiKeyAuth, ProvidersController.GetCatalog);
+ProvidersRouter.get("/providers/:providerId", ApiKeyAuth, ProvidersController.GetProvider);
 
 // Mutation endpoints require Admin Auth
-providersRoute.post("/providers/verify", RequireAdmin, ProvidersController.VerifyProvider);
-providersRoute.post("/providers", RequireAdmin, ProvidersController.AddProvider);
-providersRoute.delete("/providers/:id", RequireAdmin, ProvidersController.DeleteProvider);
+ProvidersRouter.post("/providers/verify", RequireAdmin, ProvidersController.VerifyProvider);
+ProvidersRouter.post("/providers", RequireAdmin, ProvidersController.AddProvider);
+ProvidersRouter.delete("/providers/:id", RequireAdmin, ProvidersController.DeleteProvider);
 
 // Custom (user-added) models per provider driver
-providersRoute.post(
+ProvidersRouter.post(
     "/providers/:providerId/models",
     RequireAdmin,
     ProvidersController.AddCustomModel
 );
-providersRoute.delete(
+ProvidersRouter.delete(
     "/providers/:providerId/models/:modelId{.+}",
     RequireAdmin,
     ProvidersController.DeleteCustomModel

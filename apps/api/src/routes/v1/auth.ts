@@ -3,7 +3,6 @@ import { AuthController } from "@/controllers/auth.controller.js";
 import { RequireAdmin } from "@/middleware/AdminAuth.js";
 
 export const AuthRouter = new Hono();
-export const authRoute = AuthRouter;
 
 AuthRouter.get("/auth/openai/login", RequireAdmin, AuthController.OpenAI.OAuth);
 AuthRouter.get("/auth/openai/callback", AuthController.OpenAI.Callback);
