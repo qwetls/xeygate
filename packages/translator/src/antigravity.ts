@@ -1,18 +1,37 @@
 import type {
     ChatCompletionChunk,
     ChatCompletionRequest,
-    ChatCompletionResponse
+    ChatCompletionResponse,
+    JSONObject,
+    JSONValue
 } from "@srouter/types";
 import crypto from "node:crypto";
 
+export interface GeminiFunctionCall {
+    name: string;
+    args?: JSONObject;
+    thoughtSignature?: string;
+    thought_signature?: string;
+}
+
+export interface GeminiFunctionResponse {
+    name: string;
+    response?: JSONObject;
+}
+
+export interface GeminiInlineData {
+    mimeType?: string;
+    data?: string;
+}
+
 export interface GeminiContentPart {
     text?: string;
-    functionCall?: { name: string; args?: Record<string, unknown> };
-    functionResponse?: { name: string; response?: Record<string, unknown> };
+    functionCall?: GeminiFunctionCall;
+    functionResponse?: GeminiFunctionResponse;
     thought?: boolean;
     thoughtSignature?: string;
     thought_signature?: string;
-    inlineData?: { mimeType?: string; data?: string };
+    inlineData?: GeminiInlineData;
 }
 
 export interface GeminiContent {
@@ -50,7 +69,6 @@ export function buildGeminiContents(req: ChatCompletionRequest): GeminiContent[]
     }));
 }
 
-// CloudCode (ya29 OAuth) uses { model, request: { contents } }; Gemini native uses bare { contents }.
 export function buildGeminiBody(
     contents: GeminiContent[],
     modelName: string,
@@ -71,37 +89,32 @@ export function buildGeminiUrl(baseUrl: string, modelName: string, token: string
     return url;
 }
 
+export interface GeminiCandidatePart {
+    text?: string;
+}
+
+export interface GeminiCandidate {
+    content?: {
+        parts?: GeminiCandidatePart[];
+        role?: string;
+    };
+    finishReason?: string;
+}
+
+export interface GeminiUsageMetadata {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    candidates_tokens_count?: number;
+    totalTokenCount?: number;
+    cachedContentTokenCount?: number;
+    totalCachedTokens?: number;
+}
+
 export interface GeminiRawResponse {
-    candidates?: Array<{
-        content?: {
-            parts?: Array<{ text?: string }>;
-            role?: string;
-        };
-        finishReason?: string;
-    }>;
-    responses?: Array<{
-        candidates?: Array<{
-            content?: {
-                parts?: Array<{ text?: string }>;
-                role?: string;
-            };
-        }>;
-    }>;
-    response?: {
-        candidates?: Array<{
-            content?: {
-                parts?: Array<{ text?: string }>;
-                role?: string;
-            };
-        }>;
-    };
-    usageMetadata?: {
-        promptTokenCount?: number;
-        candidatesTokenCount?: number;
-        candidates_tokens_count?: number;
-        totalTokenCount?: number;
-        cachedContentTokenCount?: number;
-    };
+    candidates?: GeminiCandidate[];
+    responses?: Array<{ candidates?: GeminiCandidate[] }>;
+    response?: { candidates?: GeminiCandidate[] };
+    usageMetadata?: GeminiUsageMetadata;
 }
 
 export function parseGeminiResponse(data: GeminiRawResponse): string {
@@ -924,8 +937,8 @@ export function getAntigravityModelFallbacks(modelName: string): string[] {
  * Parse textual markdown tool calls: `[Tool call: ...] \nArguments: ...`
  */
 export function parseAntigravityTextualToolCall(
-    text: unknown
-): { name: string; args: unknown } | null {
+    text: string
+): { name: string; args: JSONObject } | null {
     if (typeof text !== "string") return null;
     const normalized = text.replace(/[\u200B-\u200D\uFEFF]/g, "");
     const match = normalized.match(
@@ -936,7 +949,7 @@ export function parseAntigravityTextualToolCall(
     const rawArgs = match[2]?.trim();
     if (!name || !rawArgs) return null;
     try {
-        return { name, args: stripZeroWidth(JSON.parse(rawArgs)) };
+        return { name, args: stripZeroWidth(JSON.parse(rawArgs) as JSONObject) };
     } catch {
         return null;
     }
@@ -1014,11 +1027,11 @@ export function buildAntigravityContents(req: ChatCompletionRequest): GeminiCont
             }
 
             for (const tc of m.tool_calls) {
-                let args: Record<string, unknown> = {};
+                let args: JSONObject = {};
                 try {
-                    args = stripZeroWidth(JSON.parse(tc.function.arguments || "{}"));
+                    args = stripZeroWidth(JSON.parse(tc.function.arguments || "{}") as JSONObject);
                 } catch {
-                    args = { raw: tc.function.arguments };
+                    args = { raw: tc.function.arguments || "" };
                 }
                 const name = sanitizeFunctionName(tc.function.name);
                 const rawTc = tc as unknown as Record<string, unknown>;
@@ -1052,11 +1065,13 @@ export function buildAntigravityContents(req: ChatCompletionRequest): GeminiCont
                 text = stripCompetitiveAgentPrompts(stripZeroWidth(text));
                 if (text) parts.push({ text });
             }
-            let args: Record<string, unknown> = {};
+            let args: JSONObject = {};
             try {
-                args = stripZeroWidth(JSON.parse(legacyFunctionCall.arguments || "{}"));
+                args = stripZeroWidth(
+                    JSON.parse(legacyFunctionCall.arguments || "{}") as JSONObject
+                );
             } catch {
-                args = { raw: legacyFunctionCall.arguments };
+                args = { raw: legacyFunctionCall.arguments || "" };
             }
             const name = sanitizeFunctionName(legacyFunctionCall.name || "");
             const thoughtSignature =
@@ -1078,16 +1093,16 @@ export function buildAntigravityContents(req: ChatCompletionRequest): GeminiCont
                 "function";
             const name = sanitizeFunctionName(rawName);
 
-            let responseObj: Record<string, unknown>;
+            let responseObj: JSONObject;
             try {
                 const parsed =
                     typeof m.content === "string"
-                        ? JSON.parse(m.content)
-                        : (m.content as unknown as Record<string, unknown>);
+                        ? (JSON.parse(m.content) as JSONObject)
+                        : (m.content as JSONValue);
                 if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-                    responseObj = stripZeroWidth(parsed) as Record<string, unknown>;
+                    responseObj = stripZeroWidth(parsed as JSONObject);
                 } else {
-                    responseObj = { output: parsed ?? "" };
+                    responseObj = { output: (parsed as JSONValue) ?? "" };
                 }
             } catch {
                 responseObj = { output: typeof m.content === "string" ? m.content : "" };

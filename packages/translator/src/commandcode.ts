@@ -4,34 +4,51 @@ import type {
     ChatCompletionChunkDelta,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ChatMessage,
+    CommandCodeRole,
     FinishReason,
-    ToolCall
+    JSONObject,
+    JSONValue,
+    ToolCall,
+    ToolFunctionParameters,
+    UsageInfo
 } from "@srouter/types";
 
 const DEFAULT_MAX_TOKENS = 4096;
 
-// --- Request translation helpers (port of 9router openai-to-commandcode.js) ---
+export interface CommandCodeToolCallOutput {
+    type: "text";
+    value: string;
+}
 
-function flattenText(content: unknown): string {
+export interface CommandCodeContentBlock {
+    type: string;
+    text?: string;
+    toolCallId?: string;
+    toolName?: string;
+    input?: JSONObject | JSONValue;
+    output?: CommandCodeToolCallOutput;
+}
+
+function flattenText(content: ChatMessage["content"]): string {
     if (content == null) return "";
     if (typeof content === "string") return content;
     if (Array.isArray(content)) {
-        const parts: string[] = [];
-        for (const p of content) {
-            if (typeof p === "string") parts.push(p);
-            else if (
-                p &&
-                typeof p === "object" &&
-                typeof (p as { text?: unknown }).text === "string"
+        return content
+            .map((p) =>
+                typeof p === "string"
+                    ? p
+                    : p && typeof p === "object" && "text" in p && typeof p.text === "string"
+                      ? p.text
+                      : ""
             )
-                parts.push((p as { text: string }).text);
-        }
-        return parts.join("\n");
+            .filter(Boolean)
+            .join("\n");
     }
     return String(content);
 }
 
-function toContentBlocks(content: unknown): Array<{ type: string; text: string }> {
+function toContentBlocks(content: ChatMessage["content"]): Array<{ type: string; text: string }> {
     if (content == null) return [{ type: "text", text: "" }];
     if (typeof content === "string") return [{ type: "text", text: content }];
     if (Array.isArray(content)) {
@@ -41,9 +58,7 @@ function toContentBlocks(content: unknown): Array<{ type: string; text: string }
                 blocks.push({ type: "text", text: part });
             } else if (part && typeof part === "object") {
                 const p = part as { type?: string; text?: string };
-                if (p.type === "text" && typeof p.text === "string") {
-                    blocks.push({ type: "text", text: p.text });
-                } else if (p.type === "image_url" || p.type === "image") {
+                if (p.type === "image_url" || p.type === "image") {
                     blocks.push({ type: "text", text: "[image omitted]" });
                 } else if (typeof p.text === "string") {
                     blocks.push({ type: "text", text: p.text });
@@ -55,26 +70,24 @@ function toContentBlocks(content: unknown): Array<{ type: string; text: string }
     return [{ type: "text", text: String(content) }];
 }
 
-function safeParseJson(s: unknown): unknown {
-    if (s == null) return {};
-    if (typeof s !== "string") return s;
+function parseJsonArguments(args?: string): Record<string, JSONValue> | JSONValue {
+    if (!args) return {};
     try {
-        return JSON.parse(s);
+        return JSON.parse(args) as Record<string, JSONValue>;
     } catch {
         return {};
     }
 }
 
 export interface CommandCodeMessage {
-    role: "user" | "assistant" | "tool";
-    content: Array<{
-        type: string;
-        text?: string;
-        toolCallId?: string;
-        toolName?: string;
-        input?: unknown;
-        output?: unknown;
-    }>;
+    role: CommandCodeRole;
+    content: CommandCodeContentBlock[];
+}
+
+export interface CommandCodeToolDefinition {
+    name: string;
+    description?: string;
+    input_schema: ToolFunctionParameters | { type: "object" };
 }
 
 export interface CommandCodeRequestBody {
@@ -84,12 +97,12 @@ export interface CommandCodeRequestBody {
         workingDir: string;
         date: string;
         environment: string;
-        structure: unknown[];
+        structure: string[];
         isGitRepo: boolean;
         currentBranch: string;
         mainBranch: string;
         gitStatus: string;
-        recentCommits: unknown[];
+        recentCommits: string[];
     };
     params: {
         model: string;
@@ -98,12 +111,49 @@ export interface CommandCodeRequestBody {
         max_tokens: number;
         temperature: number;
         system?: string;
-        tools?: Array<{ name: string; description?: string; input_schema: unknown }>;
+        tools?: CommandCodeToolDefinition[];
         top_p?: number;
     };
 }
 
-function convertMessages(messages: ChatCompletionRequest["messages"]): {
+function mapAssistantMessage(m: ChatMessage): CommandCodeMessage {
+    const blocks: CommandCodeMessage["content"] = [];
+    const text = flattenText(m.content);
+    if (text) blocks.push({ type: "text", text });
+
+    if (Array.isArray(m.tool_calls)) {
+        for (const tc of m.tool_calls) {
+            blocks.push({
+                type: "tool-call",
+                toolCallId: tc.id || "",
+                toolName: tc.function?.name || "",
+                input: parseJsonArguments(tc.function?.arguments)
+            });
+        }
+    }
+
+    return {
+        role: "assistant",
+        content: blocks.length ? blocks : [{ type: "text", text: "" }]
+    };
+}
+
+function mapToolMessage(m: ChatMessage): CommandCodeMessage {
+    const value = typeof m.content === "string" ? m.content : flattenText(m.content);
+    return {
+        role: "tool",
+        content: [
+            {
+                type: "tool-result",
+                toolCallId: m.tool_call_id || "",
+                toolName: m.name || "",
+                output: { type: "text", value }
+            }
+        ]
+    };
+}
+
+function mapMessages(messages: ChatCompletionRequest["messages"]): {
     messages: CommandCodeMessage[];
     system: string;
 } {
@@ -120,40 +170,12 @@ function convertMessages(messages: ChatCompletionRequest["messages"]): {
         }
 
         if (m.role === "tool") {
-            const value = typeof m.content === "string" ? m.content : flattenText(m.content);
-            out.push({
-                role: "tool",
-                content: [
-                    {
-                        type: "tool-result",
-                        toolCallId: m.tool_call_id || "",
-                        toolName: m.name || "",
-                        output: { type: "text", value }
-                    }
-                ]
-            });
+            out.push(mapToolMessage(m));
             continue;
         }
 
         if (m.role === "assistant") {
-            const blocks: CommandCodeMessage["content"] = [];
-            const text = flattenText(m.content);
-            if (text) blocks.push({ type: "text", text });
-            if (Array.isArray(m.tool_calls)) {
-                for (const tc of m.tool_calls) {
-                    const fn = tc.function || {};
-                    blocks.push({
-                        type: "tool-call",
-                        toolCallId: tc.id || "",
-                        toolName: fn.name || "",
-                        input: safeParseJson(fn.arguments)
-                    });
-                }
-            }
-            out.push({
-                role: "assistant",
-                content: blocks.length ? blocks : [{ type: "text", text: "" }]
-            });
+            out.push(mapAssistantMessage(m));
             continue;
         }
 
@@ -163,11 +185,9 @@ function convertMessages(messages: ChatCompletionRequest["messages"]): {
     return { messages: out, system: systemTexts.join("\n\n") };
 }
 
-function convertTools(
-    tools: ChatCompletionRequest["tools"]
-): Array<{ name: string; description?: string; input_schema: unknown }> | undefined {
+function mapTools(tools: ChatCompletionRequest["tools"]): CommandCodeToolDefinition[] | undefined {
     if (!Array.isArray(tools) || tools.length === 0) return undefined;
-    const result: Array<{ name: string; description?: string; input_schema: unknown }> = [];
+    const result: CommandCodeToolDefinition[] = [];
     for (const t of tools) {
         if (!t || t.type !== "function" || !t.function) continue;
         result.push({
@@ -180,9 +200,7 @@ function convertTools(
 }
 
 export function buildRequestBody(req: ChatCompletionRequest): CommandCodeRequestBody {
-    const { messages, system } = convertMessages(req.messages);
-    // Strip only the first (provider alias) segment: "commandcode/deepseek/deepseek-v4-pro" -> "deepseek/deepseek-v4-pro".
-    // Upstream model ids keep their own namespace (deepseek/..., moonshotai/..., zai-org/...).
+    const { messages, system } = mapMessages(req.messages);
     const model = req.model.includes("/") ? req.model.slice(req.model.indexOf("/") + 1) : req.model;
     const params: CommandCodeRequestBody["params"] = {
         model,
@@ -194,7 +212,7 @@ export function buildRequestBody(req: ChatCompletionRequest): CommandCodeRequest
 
     if (system) params.system = system;
 
-    const tools = convertTools(req.tools);
+    const tools = mapTools(req.tools);
     if (tools) params.tools = tools;
     if (req.top_p != null) params.top_p = req.top_p;
 
@@ -216,7 +234,11 @@ export function buildRequestBody(req: ChatCompletionRequest): CommandCodeRequest
     };
 }
 
-// --- Response translation helpers (port of 9router commandcode-to-openai.js) ---
+export interface CommandCodeUsage {
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+}
 
 export interface CommandCodeStreamState {
     responseId: string;
@@ -227,7 +249,7 @@ export interface CommandCodeStreamState {
     toolIndexById: Map<string, number>;
     openTools: Set<string>;
     finishReason: FinishReason | null;
-    usage: unknown;
+    usage: CommandCodeUsage | null;
 }
 
 export function createCommandCodeStreamState(): CommandCodeStreamState {
@@ -272,7 +294,7 @@ function makeChunk(
     };
 }
 
-const mapFinishReason = (reason: unknown): FinishReason => {
+function mapFinishReason(reason?: string | null): FinishReason {
     switch (reason) {
         case "stop":
             return "stop";
@@ -288,7 +310,7 @@ const mapFinishReason = (reason: unknown): FinishReason => {
         default:
             return (reason as FinishReason) || "stop";
     }
-};
+}
 
 function fallbackToolCallId(index: number): string {
     return `call_${index}_${Date.now()}`;
@@ -302,13 +324,13 @@ export interface CommandCodeEvent {
     id?: string;
     toolCallId?: string;
     toolName?: string;
-    input?: unknown;
-    finishReason?: unknown;
-    usage?: unknown;
-    totalUsage?: unknown;
+    input?: Record<string, JSONValue> | string;
+    finishReason?: string;
+    usage?: CommandCodeUsage;
+    totalUsage?: CommandCodeUsage;
     model?: string;
-    error?: unknown;
-    message?: unknown;
+    error?: string | Record<string, JSONValue>;
+    message?: string | Record<string, JSONValue>;
 }
 
 export function commandCodeEventToOpenAIChunk(
@@ -412,7 +434,7 @@ export function commandCodeEventToOpenAIChunk(
                 state.finishReason || mapFinishReason(event.finishReason || "stop");
             const finalChunk = makeChunk(state, {}, finishReason);
             const totalUsage = event.totalUsage || state.usage;
-            const usage = toOpenAIUsage(totalUsage);
+            const usage = mapOpenAIUsage(totalUsage);
             if (usage) finalChunk.usage = usage;
             out.push(finalChunk);
             break;
@@ -431,23 +453,14 @@ export function commandCodeEventToOpenAIChunk(
     return out;
 }
 
-interface UsageInfo {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
+function mapOpenAIUsage(raw?: CommandCodeUsage | null): UsageInfo | null {
+    if (!raw) return null;
+    const prompt_tokens = raw.inputTokens ?? 0;
+    const completion_tokens = raw.outputTokens ?? 0;
+    const total_tokens = raw.totalTokens ?? prompt_tokens + completion_tokens;
+    return { prompt_tokens, completion_tokens, total_tokens };
 }
 
-function toOpenAIUsage(raw: unknown): UsageInfo | null {
-    if (!raw || typeof raw !== "object") return null;
-    const r = raw as { inputTokens?: unknown; outputTokens?: unknown; totalTokens?: unknown };
-    const n = (v: unknown): number => (typeof v === "number" ? v : 0);
-    const input = n(r.inputTokens);
-    const output = n(r.outputTokens);
-    const total = typeof r.totalTokens === "number" ? r.totalTokens : input + output;
-    return { prompt_tokens: input, completion_tokens: output, total_tokens: total };
-}
-
-// Accumulate streamed OpenAI chunks into a single non-streaming ChatCompletionResponse.
 export function accumulateChunks(
     chunks: ChatCompletionChunk[],
     model: string

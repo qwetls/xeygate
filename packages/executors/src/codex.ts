@@ -8,12 +8,13 @@ import type {
 import { CODEX_BASE_URL, CODEX_MODELS_URL } from "@srouter/constants";
 import {
     accumulateChunks,
-    chatToResponsesBody,
-    createResponsesStreamState,
-    normalizeReasoningEffort,
-    normalizeResponsesInput,
-    responsesEventToChunk,
-    type ResponsesRequestBody
+    ChatToResponsesBody,
+    CreateResponsesStreamState,
+    NormalizeReasoningEffort,
+    NormalizeResponsesInput,
+    ResponsesEventToChunk,
+    type ResponsesRequestBody,
+    type ResponsesStreamEventData
 } from "@srouter/translator";
 import { parseDataLine, streamLines } from "./base.js";
 import { extractSseErrorMessage, MODEL_CAPACITY_MESSAGE } from "./sse.js";
@@ -242,7 +243,7 @@ export class CodexExecutor implements AIProvider {
      * Transform ChatCompletionRequest → Responses API body (port of 9router transformRequest).
      */
     private transformRequest(req: ChatCompletionRequest): ResponsesRequestBody {
-        let body = chatToResponsesBody(req);
+        let body = ChatToResponsesBody(req);
         const targetModel = req.model.includes("/")
             ? (req.model.split("/")[1] ?? req.model)
             : req.model;
@@ -264,7 +265,7 @@ export class CodexExecutor implements AIProvider {
         body.store = false;
 
         // Ensure input present (Codex rejects empty)
-        const normalized = normalizeResponsesInput(body.input);
+        const normalized = NormalizeResponsesInput(body.input);
         if (normalized) body.input = normalized;
 
         // Inject default instructions
@@ -273,12 +274,12 @@ export class CodexExecutor implements AIProvider {
         }
 
         // Reasoning effort — priority: explicit reasoning > model suffix > default (low)
-        const reasoningEffort = (req as unknown as { reasoning_effort?: string }).reasoning_effort;
+        const reasoningEffort = req.reasoning_effort || req.reasoning?.effort;
         if (!body.reasoning) {
-            const effort = normalizeReasoningEffort(reasoningEffort || modelEffort || "low");
+            const effort = NormalizeReasoningEffort(reasoningEffort || modelEffort || "low");
             body.reasoning = { effort, summary: "auto" };
         } else {
-            body.reasoning.effort = normalizeReasoningEffort(body.reasoning.effort);
+            body.reasoning.effort = NormalizeReasoningEffort(body.reasoning.effort);
             if (!body.reasoning.summary) body.reasoning.summary = "auto";
         }
 
@@ -481,7 +482,7 @@ export class CodexExecutor implements AIProvider {
         body: ReadableStream<Uint8Array>,
         requestedModel: string
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
-        const state = createResponsesStreamState(requestedModel);
+        const state = CreateResponsesStreamState(requestedModel);
         let pendingEvent = "";
 
         for await (const line of streamLines(body)) {
@@ -490,10 +491,10 @@ export class CodexExecutor implements AIProvider {
                 const jsonStr = parseDataLine(line);
                 if (jsonStr === null) continue;
                 try {
-                    const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
+                    const parsed = JSON.parse(jsonStr) as ResponsesStreamEventData;
                     const eventType =
                         (parsed.type as string) || pendingEvent || "response.output_text.delta";
-                    const chunk = responsesEventToChunk(eventType, parsed, state);
+                    const chunk = ResponsesEventToChunk(eventType, parsed, state);
                     if (chunk) yield chunk;
                 } catch {
                     // ignore malformed JSON
@@ -503,10 +504,10 @@ export class CodexExecutor implements AIProvider {
             } else {
                 // Raw JSON line (no data: prefix)
                 try {
-                    const parsed = JSON.parse(line) as Record<string, unknown>;
+                    const parsed = JSON.parse(line) as ResponsesStreamEventData;
                     const eventType =
                         (parsed.type as string) || pendingEvent || "response.output_text.delta";
-                    const chunk = responsesEventToChunk(eventType, parsed, state);
+                    const chunk = ResponsesEventToChunk(eventType, parsed, state);
                     if (chunk) yield chunk;
                 } catch {
                     // ignore

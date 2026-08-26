@@ -1,4 +1,4 @@
-export type ChatMessageRole = "system" | "user" | "assistant" | "tool" | "function";
+import type { ChatRole } from "./chat.js";
 
 export type FinishReason = "stop" | "length" | "tool_calls" | "content_filter" | null;
 
@@ -56,7 +56,7 @@ export interface ToolDefinition {
 }
 
 export interface ChatMessage {
-    role: ChatMessageRole;
+    role: ChatRole;
     content: string | ChatMessageContentPart[] | null;
     name?: string;
     tool_calls?: ToolCall[];
@@ -78,6 +78,8 @@ export interface ChatCompletionRequest {
     tools?: ToolDefinition[];
     tool_choice?: ToolChoiceOption;
     response_format?: { type: string };
+    reasoning_effort?: "none" | "low" | "medium" | "high" | (string & {});
+    reasoning?: { effort?: string; summary?: string };
 }
 
 export interface UsageInfo {
@@ -109,7 +111,7 @@ export interface ChatCompletionResponse {
 }
 
 export interface ChatCompletionChunkDelta {
-    role?: ChatMessageRole;
+    role?: ChatRole;
     content?: string;
     reasoning_content?: string;
     tool_calls?: ChatCompletionChunkDeltaToolCall[];
