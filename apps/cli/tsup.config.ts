@@ -7,5 +7,7 @@ export default defineConfig({
     clean: true,
     sourcemap: true,
     target: "node22",
+    noExternal: [/@srouter\/.*/],
     removeNodeProtocol: false
 });
+

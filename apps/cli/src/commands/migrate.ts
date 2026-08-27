@@ -1,21 +1,230 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import * as p from "@clack/prompts";
 import { DatabaseSync } from "node:sqlite";
-import { DEFAULT_DB_PATH, LEGACY_DB_LOCATIONS, SROUTER_DIR } from "@srouter/db";
+import { DEFAULT_DB_PATH, initDatabase, LEGACY_DB_LOCATIONS, SROUTER_DIR } from "@srouter/db";
 import { formatError, formatInfo, formatSuccess, formatWarning, pc } from "../lib/ui.js";
 
 type SqliteValue = string | number | bigint | Uint8Array | null;
 
+interface NineRouterJsonBackup {
+    settings?: Record<string, unknown>;
+    providerConnections?: Array<{
+        id: string;
+        provider: string;
+        name: string;
+        authType?: string;
+        apiKey?: string;
+        accessToken?: string;
+        access_token?: string;
+        refreshToken?: string;
+        refresh_token?: string;
+        expiresAt?: string;
+        tokenExpiresAt?: number;
+        lastRefreshAt?: string;
+        lastRefreshedAt?: number;
+        providerSpecificData?: Record<string, unknown>;
+        isActive?: boolean;
+        createdAt?: string;
+        updatedAt?: string;
+        [key: string]: unknown;
+    }>;
+    providerNodes?: Array<{
+        id: string;
+        name: string;
+        prefix?: string;
+        apiType?: string;
+        baseUrl?: string;
+        type?: string;
+        [key: string]: unknown;
+    }>;
+    apiKeys?: Array<{
+        id?: string;
+        key: string;
+        name?: string;
+        isActive?: boolean;
+        createdAt?: string;
+        [key: string]: unknown;
+    }>;
+    customModels?: Array<{
+        providerAlias?: string;
+        id: string;
+        type?: string;
+        name?: string;
+        [key: string]: unknown;
+    }>;
+    [key: string]: unknown;
+}
+
+function parseDateToTimestamp(val: unknown): number {
+    if (typeof val === "number" && Number.isFinite(val)) return val;
+    if (typeof val === "string") {
+        const parsed = Date.parse(val);
+        if (!Number.isNaN(parsed)) return parsed;
+    }
+    return Date.now();
+}
+
+function map9RouterProtocol(apiType?: string, type?: string): string {
+    if (apiType === "anthropic" || type === "anthropic" || type?.includes("anthropic")) {
+        return "anthropic";
+    }
+    return "openai";
+}
+
+function importNineRouterJson(
+    data: NineRouterJsonBackup,
+    targetDb: DatabaseSync,
+    action: "copy" | "merge" | "backup_and_replace"
+): { inserted: number; skipped: number; tablesCount: number } {
+    const nodesMap = new Map<string, NonNullable<NineRouterJsonBackup["providerNodes"]>[number]>();
+    if (Array.isArray(data.providerNodes)) {
+        for (const node of data.providerNodes) {
+            nodesMap.set(node.id, node);
+        }
+    }
+
+    if (action !== "copy") {
+        try {
+            targetDb.prepare('DELETE FROM "providers"').run();
+            targetDb.prepare('DELETE FROM "api_keys"').run();
+            targetDb.prepare('DELETE FROM "custom_models"').run();
+        } catch {
+            // Ignored if table doesn't exist
+        }
+    }
+
+    let inserted = 0;
+    let skipped = 0;
+    let tablesCount = 0;
+
+    // 1. Migrate Providers
+    if (Array.isArray(data.providerConnections) && data.providerConnections.length > 0) {
+        tablesCount++;
+        const insertProvider = targetDb.prepare(`
+            INSERT OR REPLACE INTO providers (
+                id, provider_id, name, category, protocol, base_url, api_key, access_token,
+                refresh_token, account_id, organization_id, token_expires_at, last_refreshed_at,
+                custom_headers, provider_specific_data, enabled, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const conn of data.providerConnections) {
+            try {
+                const node = nodesMap.get(conn.provider);
+                const providerId = node ? node.name.toLowerCase() : conn.provider;
+                const protocol = node ? map9RouterProtocol(node.apiType, node.type) : "openai";
+                const baseUrl = node?.baseUrl ?? (conn.providerSpecificData?.baseUrl as string) ?? null;
+                const apiKey = conn.apiKey ?? null;
+                const accessToken = conn.accessToken ?? conn.access_token ?? null;
+                const refreshToken = conn.refreshToken ?? conn.refresh_token ?? null;
+
+                const tokenExpiresAt = conn.tokenExpiresAt ?? (conn.expiresAt ? parseDateToTimestamp(conn.expiresAt) : null);
+                const lastRefreshedAt = conn.lastRefreshedAt ?? (conn.lastRefreshAt ? parseDateToTimestamp(conn.lastRefreshAt) : null);
+
+                const accountId = (conn.providerSpecificData?.chatgptAccountId as string) ?? (conn.providerSpecificData?.accountId as string) ?? null;
+                const orgId = (conn.providerSpecificData?.organizationId as string) ?? null;
+                const enabled = conn.isActive === false ? 0 : 1;
+                const createdAt = parseDateToTimestamp(conn.createdAt);
+
+                insertProvider.run(
+                    conn.id,
+                    providerId,
+                    conn.name || providerId,
+                    "general",
+                    protocol,
+                    baseUrl,
+                    apiKey,
+                    accessToken,
+                    refreshToken,
+                    accountId,
+                    orgId,
+                    tokenExpiresAt,
+                    lastRefreshedAt,
+                    null,
+                    conn.providerSpecificData ? JSON.stringify(conn.providerSpecificData) : null,
+                    enabled,
+                    createdAt
+                );
+                inserted++;
+            } catch {
+                skipped++;
+            }
+        }
+    }
+
+    // 2. Migrate API Keys
+    if (Array.isArray(data.apiKeys) && data.apiKeys.length > 0) {
+        tablesCount++;
+        const insertKey = targetDb.prepare(`
+            INSERT OR REPLACE INTO api_keys (
+                id, key, name, enabled, rate_limit, quota_limit, usage_tokens, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+
+        for (const keyItem of data.apiKeys) {
+            try {
+                insertKey.run(
+                    keyItem.id || `key_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+                    keyItem.key,
+                    keyItem.name || "Default Key",
+                    keyItem.isActive === false ? 0 : 1,
+                    0,
+                    0,
+                    0,
+                    parseDateToTimestamp(keyItem.createdAt)
+                );
+                inserted++;
+            } catch {
+                skipped++;
+            }
+        }
+    }
+
+    // 3. Migrate Custom Models
+    if (Array.isArray(data.customModels) && data.customModels.length > 0) {
+        tablesCount++;
+        const insertCustomModel = targetDb.prepare(`
+            INSERT OR IGNORE INTO custom_models (
+                provider_id, model_id, created_at
+            ) VALUES (?, ?, ?)
+        `);
+
+        for (const model of data.customModels) {
+            try {
+                insertCustomModel.run(
+                    model.providerAlias || "default",
+                    model.id || model.name || "unknown",
+                    Date.now()
+                );
+                inserted++;
+            } catch {
+                skipped++;
+            }
+        }
+    }
+
+    return { inserted, skipped, tablesCount };
+}
+
 export interface MigrateCommandOptions {
     source?: string;
     yes?: boolean;
+    action?: "copy" | "merge" | "backup_and_replace";
 }
 
 const TargetDbPath = DEFAULT_DB_PATH;
 const BackupDir = path.join(SROUTER_DIR, "backups");
 
 const NineRouterDbLocations = [
+    path.join(os.homedir(), ".9router", "srouter.db"),
+    path.join(os.homedir(), ".9router", "9router.db"),
+    path.join(os.homedir(), "9router", "srouter.db"),
+    path.join(os.homedir(), "9router", "data.db"),
+    path.join(os.homedir(), "9router", "db", "srouter.db"),
+    path.join(os.homedir(), ".config", "9router", "srouter.db"),
+    path.join(os.homedir(), ".config", "9router", "9router.db"),
     "/root/9router/srouter.db",
     "/root/project/9router/db/srouter.db",
     ...LEGACY_DB_LOCATIONS
@@ -111,24 +320,28 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
     }
 
     const existingTarget = fs.existsSync(TargetDbPath);
-    let action: "copy" | "merge" | "backup_and_replace" = "copy";
+    let action: "copy" | "merge" | "backup_and_replace" = options.action ?? "copy";
 
-    if (existingTarget) {
-        p.log.warn(`Existing SRouter database found at ${TargetDbPath} (${fileKb(TargetDbPath)})`);
-        const choice = await p.select({
-            message: "How should the existing SRouter database be handled?",
-            options: [
-                { value: "backup_and_replace", label: "Backup current, replace with 9Router data" },
-                { value: "merge", label: "Overwrite tables with 9Router data" },
-                { value: "abort", label: "Cancel migration" }
-            ]
-        });
-        if (choice === "abort" || p.isCancel(choice)) {
-            p.outro("Migration cancelled. Your 9Router installation remains intact.");
-            return;
-        }
-        if (choice === "merge" || choice === "backup_and_replace") {
-            action = choice;
+    if (existingTarget && !options.action) {
+        if (options.yes) {
+            action = "merge";
+        } else {
+            p.log.warn(`Existing SRouter database found at ${TargetDbPath} (${fileKb(TargetDbPath)})`);
+            const choice = await p.select({
+                message: "How should the existing SRouter database be handled?",
+                options: [
+                    { value: "backup_and_replace", label: "Backup current, replace with 9Router data" },
+                    { value: "merge", label: "Overwrite tables with 9Router data" },
+                    { value: "abort", label: "Cancel migration" }
+                ]
+            });
+            if (choice === "abort" || p.isCancel(choice)) {
+                p.outro("Migration cancelled. Your 9Router installation remains intact.");
+                return;
+            }
+            if (choice === "merge" || choice === "backup_and_replace") {
+                action = choice;
+            }
         }
     }
 
@@ -149,64 +362,111 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
 
     const s = p.spinner();
     try {
-        s.start("Opening databases");
-        const sourceDb = new DatabaseSync(source);
-        const targetDb = new DatabaseSync(TargetDbPath);
-        s.message("Reading source tables");
+        s.start("Preparing target database");
+        initDatabase();
 
-        const tables = (
-            sourceDb
-                .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-                .all() as Array<{ name: string }>
-        ).map((t) => t.name);
+        const targetDb = new DatabaseSync(TargetDbPath);
+        targetDb.exec("PRAGMA foreign_keys = OFF;");
 
         let inserted = 0;
         let skipped = 0;
+        let tablesCount = 0;
 
-        for (const table of tables) {
-            const rows = sourceDb.prepare(`SELECT * FROM "${table}"`).all() as Record<
-                string,
-                SqliteValue
-            >[];
-            if (rows.length === 0) continue;
+        const isJson = source.endsWith(".json");
+        if (isJson) {
+            s.message("Reading 9Router JSON backup");
+            const raw = fs.readFileSync(source, "utf-8");
+            const parsed = JSON.parse(raw) as NineRouterJsonBackup;
+            const res = importNineRouterJson(parsed, targetDb, action);
+            inserted = res.inserted;
+            skipped = res.skipped;
+            tablesCount = res.tablesCount;
+        } else {
+            const sourceDb = new DatabaseSync(source);
+            s.message("Reading source SQLite tables");
 
-            if (action !== "copy") {
-                try {
-                    targetDb.prepare(`DELETE FROM "${table}"`).run();
-                } catch {
-                    p.log.warn(`Could not clear table ${table}, rows will be appended`);
-                }
-            }
+            const sourceTables = (
+                sourceDb
+                    .prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+                    .all() as Array<{ name: string }>
+            )
+                .map((t) => t.name)
+                .filter((name) => !name.startsWith("sqlite_"));
 
-            const columns = (
-                sourceDb.prepare(`PRAGMA table_info("${table}")`).all() as Array<{
-                    name: string;
-                }>
-            ).map((col) => col.name);
-            const placeholders = columns.map(() => "?").join(", ");
-            const insert = targetDb.prepare(
-                `INSERT INTO "${table}" (${columns.join(", ")}) VALUES (${placeholders})`
+            const targetTables = new Set(
+                (
+                    targetDb
+                        .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+                        .all() as Array<{ name: string }>
+                ).map((t) => t.name)
             );
 
-            for (const row of rows) {
-                try {
-                    insert.run(...columns.map((col) => row[col]));
-                    inserted++;
-                } catch {
-                    skipped++;
+            for (const table of sourceTables) {
+                if (!targetTables.has(table)) {
+                    p.log.warn(`Skipping table ${table} (not recognized by SRouter)`);
+                    continue;
                 }
+
+                const rows = sourceDb.prepare(`SELECT * FROM "${table}"`).all() as Record<
+                    string,
+                    SqliteValue
+                >[];
+                if (rows.length === 0) continue;
+
+                if (action !== "copy") {
+                    try {
+                        targetDb.prepare(`DELETE FROM "${table}"`).run();
+                    } catch {
+                        p.log.warn(`Could not clear table ${table}, rows will be appended`);
+                    }
+                }
+
+                const sourceColumns = new Set(
+                    (
+                        sourceDb.prepare(`PRAGMA table_info("${table}")`).all() as Array<{
+                            name: string;
+                        }>
+                    ).map((col) => col.name)
+                );
+
+                const targetColumns = (
+                    targetDb.prepare(`PRAGMA table_info("${table}")`).all() as Array<{
+                        name: string;
+                    }>
+                )
+                    .map((col) => col.name)
+                    .filter((col) => sourceColumns.has(col));
+
+                if (targetColumns.length === 0) continue;
+
+                const placeholders = targetColumns.map(() => "?").join(", ");
+                const insert = targetDb.prepare(
+                    `INSERT OR REPLACE INTO "${table}" (${targetColumns.map((c) => `"${c}"`).join(", ")}) VALUES (${placeholders})`
+                );
+
+                for (const row of rows) {
+                    try {
+                        insert.run(...targetColumns.map((col) => row[col] ?? null));
+                        inserted++;
+                    } catch {
+                        skipped++;
+                    }
+                }
+                tablesCount++;
             }
+
+            sourceDb.close();
         }
 
-        sourceDb.close();
+        targetDb.exec("PRAGMA foreign_keys = ON;");
         targetDb.close();
         s.stop("Migration complete");
 
         p.log.message(
             [
-                `Tables migrated: ${tables.length}`,
-                `Rows inserted: ${inserted}`,
-                `Rows skipped: ${skipped}`,
+                `Tables/Categories migrated: ${tablesCount}`,
+                `Rows/Items inserted: ${inserted}`,
+                `Rows/Items skipped: ${skipped}`,
                 `Source: ${source}`,
                 `Target: ${TargetDbPath}`
             ].join("\n")

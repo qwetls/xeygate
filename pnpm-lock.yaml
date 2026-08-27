@@ -275,6 +275,13 @@ importers:
       '@clack/prompts':
         specifier: ^0.9.1
         version: 0.9.1
+      commander:
+        specifier: ^13.1.0
+        version: 13.1.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+    devDependencies:
       '@srouter/constants':
         specifier: workspace:*
         version: link:../../packages/constants
@@ -284,13 +291,6 @@ importers:
       '@srouter/types':
         specifier: workspace:*
         version: link:../../packages/types
-      commander:
-        specifier: ^13.1.0
-        version: 13.1.0
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
-    devDependencies:
       '@types/node':
         specifier: ^26.1.1
         version: 26.2.0

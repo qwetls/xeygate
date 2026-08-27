@@ -147,6 +147,7 @@ export function createCli(): Command {
         .description("Migrate databases (targets: db = legacy location, 9router = 9Router import)")
         .option("--source <path>", "Explicit path to the source SQLite database")
         .option("-y, --yes", "Skip confirmation prompts")
+        .option("-a, --action <action>", "Migration conflict resolution (copy, merge, backup_and_replace)")
         .action(async (target, opts) => {
             await migrateCommand(target, opts);
         });
