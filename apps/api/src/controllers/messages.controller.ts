@@ -8,6 +8,7 @@ import {
 import { AnthropicMessageRequestSchema, type AnthropicMessageRequest } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
 import { AnthropicErr, FormatAnthropicErrorPayload, Ok } from "@/utils/response.js";
+import { GetApiKeyRow, IsModelAllowed } from "@/middleware/ModelAccess.js";
 
 export class MessagesController {
     public static async CreateMessage(c: Context): Promise<Response> {
@@ -23,6 +24,19 @@ export class MessagesController {
         }
 
         const body = parsed.data as AnthropicMessageRequest;
+
+        const ApiKeyRow = GetApiKeyRow(c);
+        const AllowedModels = ApiKeyRow?.allowed_models;
+        if (!IsModelAllowed(AllowedModels, body.model)) {
+            return AnthropicErr(
+                c,
+                `Model '${body.model}' is not allowed for this API key`,
+                403,
+                "permission_error"
+            );
+        }
+
+        const ApiKeyId = ApiKeyRow?.id;
         const OpenAIReq = AnthropicToOpenAIRequest(body);
         const isThinkingEnabled = Boolean(body.thinking?.type === "enabled");
 
@@ -35,7 +49,9 @@ export class MessagesController {
                 try {
                     const chunkGenerator = ChatLogic.ProcessStreamingCompletion(
                         OpenAIReq,
-                        startTime
+                        startTime,
+                        0,
+                        ApiKeyId
                     );
                     const AnthropicStream = OpenAIToAnthropicStream(chunkGenerator, body.model, {
                         allowThinking: isThinkingEnabled
@@ -59,7 +75,12 @@ export class MessagesController {
         }
 
         try {
-            const OpenAIRes = await ChatLogic.ProcessNonStreamingCompletion(OpenAIReq, startTime);
+            const OpenAIRes = await ChatLogic.ProcessNonStreamingCompletion(
+                OpenAIReq,
+                startTime,
+                0,
+                ApiKeyId
+            );
             const AnthropicRes = OpenAIToAnthropicResponse(OpenAIRes, body.model, {
                 allowThinking: isThinkingEnabled
             });

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
-import type { ChatCompletionRequest } from "@srouter/types";
+import type { ChatCompletionRequest, DBAPIKey } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
 import { Err, FormatErrorPayload, Ok } from "@/utils/response.js";
 
@@ -17,11 +17,18 @@ export class ChatController {
         const Body = NormalizeDeveloperRole(
             c.req.valid("json" as never) as ChatCompletionRequest
         );
+        const ApiKeyRow = c.get("apiKeyRow") as DBAPIKey | undefined;
+        const ApiKeyId = ApiKeyRow?.id;
 
         if (Body.stream) {
             return streamSSE(c, async (stream) => {
                 try {
-                    const Generator = ChatLogic.ProcessStreamingCompletion(Body, StartTime);
+                    const Generator = ChatLogic.ProcessStreamingCompletion(
+                        Body,
+                        StartTime,
+                        0,
+                        ApiKeyId
+                    );
                     for await (const Chunk of Generator) {
                         await stream.writeSSE({
                             data: JSON.stringify(Chunk)
@@ -41,7 +48,12 @@ export class ChatController {
         }
 
         try {
-            const ResponseData = await ChatLogic.ProcessNonStreamingCompletion(Body, StartTime);
+            const ResponseData = await ChatLogic.ProcessNonStreamingCompletion(
+                Body,
+                StartTime,
+                0,
+                ApiKeyId
+            );
             return Ok(c, ResponseData);
         } catch (error) {
             const ErrorMessage = error instanceof Error ? error.message : "Internal server error";
