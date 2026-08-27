@@ -41,13 +41,44 @@ function ResolveRedirectUri(handler: AuthProviderHandler, params: OAuthLoginPara
     return params.redirectUri || handler.defaultRedirectUri || "";
 }
 
+function ExtractEmailFromToken(token?: string): string | undefined {
+    if (!token || typeof token !== "string" || !token.startsWith("eyJ")) return undefined;
+    try {
+        const parts = token.split(".");
+        if (parts.length < 2) return undefined;
+        const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+        const decoded = JSON.parse(Buffer.from(payloadBase64, "base64").toString("utf-8"));
+        if (typeof decoded.email === "string" && decoded.email.includes("@")) {
+            return decoded.email;
+        }
+        if (typeof decoded["https://api.openai.com/profile"]?.email === "string") {
+            return decoded["https://api.openai.com/profile"].email;
+        }
+        if (typeof decoded.user_metadata?.email === "string") {
+            return decoded.user_metadata.email;
+        }
+        if (typeof decoded.preferred_username === "string" && decoded.preferred_username.includes("@")) {
+            return decoded.preferred_username;
+        }
+        if (typeof decoded.unique_name === "string" && decoded.unique_name.includes("@")) {
+            return decoded.unique_name;
+        }
+    } catch {
+        return undefined;
+    }
+    return undefined;
+}
+
 function BuildAccountIdentity(
     handler: AuthProviderHandler,
-    now: number
+    now: number,
+    tokens?: { accessToken?: string; idToken?: string }
 ): { accountId: string; accountName: string } {
+    const email = ExtractEmailFromToken(tokens?.idToken) || ExtractEmailFromToken(tokens?.accessToken);
+    const accountName = email || `${handler.displayName} (Account #${now.toString().slice(-4)})`;
     return {
         accountId: `${handler.idPrefix}_${now}`,
-        accountName: `${handler.displayName} (Account #${now.toString().slice(-4)})`
+        accountName
     };
 }
 
@@ -105,7 +136,10 @@ async function ProcessOAuthCallbackFor(
     };
 
     const timestamp = Date.now();
-    const { accountId, accountName } = BuildAccountIdentity(handler, timestamp);
+    const { accountId, accountName } = BuildAccountIdentity(handler, timestamp, {
+        accessToken: tokens.accessToken,
+        idToken: (rawTokens as any).idToken || (rawTokens as any).id_token
+    });
 
     const baseUrl = handler.baseUrl ? handler.baseUrl() : undefined;
 
@@ -146,8 +180,9 @@ function ProcessTokenImportFor(
 ): ProviderConfig {
     const timestamp = Date.now();
     const accountId = params.id || `${handler.idPrefix}_${timestamp}`;
+    const email = ExtractEmailFromToken(params.accessToken) || ExtractEmailFromToken(params.idToken);
     const providerName =
-        params.name || `${handler.displayName} (Account #${timestamp.toString().slice(-4)})`;
+        params.name || email || `${handler.displayName} (Account #${timestamp.toString().slice(-4)})`;
     const mapping = handler.mapImportTokens?.(params) ?? {
         accessToken: params.accessToken,
         refreshToken: params.refreshToken,

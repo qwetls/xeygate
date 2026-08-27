@@ -37,7 +37,10 @@ const ICON_MAPPING: Record<string, string> = {
     cohere: "/icons/providers/cohere.png",
     replicate: "/icons/providers/replicate.png",
     together: "/icons/providers/together.png",
-    siliconflow: "/icons/providers/siliconflow.png"
+    siliconflow: "/icons/providers/siliconflow.png",
+    opencode: "/icons/providers/opencode.png",
+    opencode_zen: "/icons/providers/opencode.png",
+    "opencode-zen": "/icons/providers/opencode.png"
 };
 
 export function ProviderIcon({
@@ -49,6 +52,21 @@ export function ProviderIcon({
 }) {
     const [hasError, setHasError] = useState(false);
     const id = providerId.toLowerCase().trim();
+
+    if (id === "opencode" || id === "opencode_zen" || id === "opencode-zen" || id.includes("opencode")) {
+        return (
+            <svg
+                fill="currentColor"
+                fillRule="evenodd"
+                viewBox="0 0 24 24"
+                className={`${className} shrink-0 text-foreground`}
+                xmlns="http://www.w3.org/2000/svg"
+            >
+                <title>OpenCode Zen</title>
+                <path d="M16 6H8v12h8V6zm4 16H4V2h16v20z" />
+            </svg>
+        );
+    }
 
     if (hasError) {
         const initial = providerId.trim().charAt(0).toUpperCase() || "P";

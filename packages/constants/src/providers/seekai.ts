@@ -5,7 +5,7 @@ export const SEEKAI_BASE_URL = "https://seekai.cc/v1";
 export const SEEKAI_PROVIDER: ProviderMetadata = {
     id: "seekai",
     name: "SeekAI",
-    category: "api_key",
+    category: "free_tier",
     protocol: "openai",
     base_url: SEEKAI_BASE_URL,
     web_url: "https://seekai.cc/sign-up?aff=UU0C",

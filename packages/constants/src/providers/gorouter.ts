@@ -5,7 +5,7 @@ export const GOROUTER_BASE_URL = "https://gorouter.app/v1";
 export const GOROUTER_PROVIDER: ProviderMetadata = {
     id: "gorouter",
     name: "GoRouter",
-    category: "api_key",
+    category: "free_tier",
     protocol: "openai",
     base_url: GOROUTER_BASE_URL,
     web_url: "https://gorouter.app/sign-up?aff=cJJn",

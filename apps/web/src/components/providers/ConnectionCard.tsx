@@ -18,6 +18,36 @@ interface ConnectionCardProps {
     onDelete: (connectionId: string) => void;
 }
 
+function getConnectionDisplayTitle(connection: ProviderConfig): string {
+    if (connection.name && connection.name.includes("@")) {
+        return connection.name;
+    }
+    const token = connection.accessToken || connection.apiKey;
+    if (token && token.startsWith("eyJ")) {
+        try {
+            const parts = token.split(".");
+            if (parts.length >= 2) {
+                const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+                const payload = JSON.parse(atob(payloadBase64));
+                const email =
+                    payload.email ||
+                    payload["https://api.openai.com/profile"]?.email ||
+                    payload.user_metadata?.email ||
+                    (typeof payload.preferred_username === "string" && payload.preferred_username.includes("@")
+                        ? payload.preferred_username
+                        : undefined) ||
+                    (typeof payload.unique_name === "string" && payload.unique_name.includes("@")
+                        ? payload.unique_name
+                        : undefined);
+                if (email) {
+                    return email;
+                }
+            }
+        } catch {}
+    }
+    return connection.name;
+}
+
 export function ConnectionCard({
     providerName,
     connections,
@@ -178,7 +208,7 @@ export function ConnectionCard({
                                         <div className="flex flex-col gap-1 min-w-0 flex-1">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="font-semibold text-foreground text-xs">
-                                                    {connection.name}
+                                                    {getConnectionDisplayTitle(connection)}
                                                 </span>
 
                                                 <span
@@ -203,33 +233,6 @@ export function ConnectionCard({
                                                 <span className="rounded-[4px] border border-border/60 bg-secondary/60 px-1.5 py-0.5 text-[9.5px] font-semibold text-muted-foreground">
                                                     Slot #{index + 1}
                                                 </span>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
-                                                {maskedKey && (
-                                                    <div className="inline-flex items-center gap-1 rounded-[4px] border border-border/60 bg-background/80 px-2 py-0.5 text-[10.5px]">
-                                                        <span>Key:</span>
-                                                        <code className="text-foreground font-mono">
-                                                            {maskedKey}
-                                                        </code>
-                                                        {connection.apiKey && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    void copy(connection.apiKey!)
-                                                                }
-                                                                className="ml-0.5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                                                                title="Copy API key"
-                                                            >
-                                                                {copied === connection.apiKey ? (
-                                                                    <Check className="size-3 text-emerald-500" />
-                                                                ) : (
-                                                                    <Copy className="size-3" />
-                                                                )}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
