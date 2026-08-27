@@ -276,26 +276,12 @@ function ProviderDetailPage() {
                                     {provider.name}
                                 </h1>
                             )}
-                            <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                                    activeConnectionsCount > 0
-                                        ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                        : "border border-border/60 bg-secondary/50 text-muted-foreground"
-                                }`}
-                            >
-                                <span
-                                    className={`size-1.5 rounded-full ${
-                                        activeConnectionsCount > 0
-                                            ? "bg-emerald-500 animate-pulse"
-                                            : "bg-muted-foreground"
-                                    }`}
-                                />
-                                <span>
-                                    {activeConnectionsCount > 0
-                                        ? `${activeConnectionsCount} Connected`
-                                        : "Not Connected"}
+                            {activeConnectionsCount > 0 && (
+                                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span>{activeConnectionsCount} Connected</span>
                                 </span>
-                            </span>
+                            )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                             Driver ID: <span className="text-foreground">{provider.id}</span> ·{" "}

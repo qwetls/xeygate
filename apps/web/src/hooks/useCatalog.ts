@@ -22,9 +22,9 @@ const STATIC_DEFAULT_PROVIDERS: ProviderDefinition[] = KNOWN_PROVIDERS.map((kp) 
     requires_oauth: kp.requires_oauth,
     supports_custom_url: kp.supports_custom_url ?? true,
     status: {
-        state: "no_connections",
+        state: !kp.requires_api_key && !kp.requires_oauth ? "connected" : "no_connections",
         message: kp.status_message,
-        connectedCount: 0
+        connectedCount: !kp.requires_api_key && !kp.requires_oauth ? 1 : 0
     },
     models: [],
     connections: []
@@ -63,6 +63,8 @@ export function useCatalog() {
                             category: existing.category,
                             protocol: existing.protocol
                         });
+                    } else {
+                        providerMap.set(live.id, live);
                     }
                 }
             }

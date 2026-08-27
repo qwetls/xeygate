@@ -37,7 +37,10 @@ const ICON_MAPPING: Record<string, string> = {
     cohere: "/icons/providers/cohere.png",
     replicate: "/icons/providers/replicate.png",
     together: "/icons/providers/together.png",
-    siliconflow: "/icons/providers/siliconflow.png"
+    siliconflow: "/icons/providers/siliconflow.png",
+    opencode: "/icons/providers/opencode.png",
+    opencode_zen: "/icons/providers/opencode.png",
+    "opencode-zen": "/icons/providers/opencode.png"
 };
 
 export function ProviderIcon({

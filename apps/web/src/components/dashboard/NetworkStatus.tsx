@@ -67,9 +67,6 @@ export function NetworkStatus() {
                             </p>
                         </div>
                     </div>
-                    <span className="shrink-0 rounded-full border border-border/60 bg-secondary/40 px-2 py-0.5 font-mono text-[9px] text-muted-foreground font-medium">
-                        OpenAI & Anthropic
-                    </span>
                 </header>
 
                 {/* Base URL (Integrated direct display - no inner card) */}
