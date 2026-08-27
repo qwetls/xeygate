@@ -59,26 +59,6 @@ export function ProviderCard({ provider }: { provider: ProviderDefinition }) {
                     )}
                 </div>
 
-                {/* Metadata tags */}
-                <div className="mt-3.5 flex flex-wrap items-center gap-1.5 text-[10px]">
-                    <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-secondary/40 px-2 py-0.5 text-foreground/80 font-medium">
-                        <Cpu className="size-2.5 text-muted-foreground/70" />
-                        <span>
-                            {CATEGORY_LABELS[provider.category as keyof typeof CATEGORY_LABELS] ??
-                                provider.category}
-                        </span>
-                    </span>
-                    <span className="rounded-md border border-border/60 bg-secondary/40 px-2 py-0.5 text-muted-foreground">
-                        {protocolLabels[provider.protocol] ?? provider.protocol}
-                    </span>
-                    <span className="rounded-md border border-border/60 bg-secondary/40 px-2 py-0.5 text-muted-foreground">
-                        {provider.requires_oauth
-                            ? "OAuth 2.0"
-                            : provider.requires_api_key
-                              ? "API Key"
-                              : "Public Access"}
-                    </span>
-                </div>
             </div>
 
             {/* Bottom: Action & Model Telemetry */}
