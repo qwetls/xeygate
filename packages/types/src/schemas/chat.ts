@@ -23,9 +23,9 @@ export const ToolCallSchema = z.object({
 });
 
 export const ChatMessageSchema = z.object({
-    role: z.enum(["system", "user", "assistant", "tool", "function"], {
+    role: z.enum(["system", "user", "assistant", "tool", "function", "developer"], {
         required_error:
-            "Role is required and must be 'system', 'user', 'assistant', 'tool', or 'function'"
+            "Role is required and must be 'system', 'user', 'assistant', 'tool', 'function', or 'developer'"
     }),
     content: z.union([z.string(), z.array(ContentPartSchema), z.null()], {
         required_error: "Content is required"

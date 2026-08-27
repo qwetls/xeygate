@@ -4,10 +4,19 @@ import type { ChatCompletionRequest } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
 import { Err, FormatErrorPayload, Ok } from "@/utils/response.js";
 
+function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequest {
+    for (const msg of Body.messages) {
+        if (msg.role === "developer") msg.role = "system";
+    }
+    return Body;
+}
+
 export class ChatController {
     public static async CreateCompletion(c: Context): Promise<Response> {
         const StartTime = Date.now();
-        const Body = c.req.valid("json" as never) as ChatCompletionRequest;
+        const Body = NormalizeDeveloperRole(
+            c.req.valid("json" as never) as ChatCompletionRequest
+        );
 
         if (Body.stream) {
             return streamSSE(c, async (stream) => {
