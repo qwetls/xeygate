@@ -1,5 +1,5 @@
 import type { ModelObject } from "@srouter/types";
-import { getAllCustomModelsDB } from "@srouter/db";
+import { getAllCustomModelsDB, getAllFallbackRulesDB } from "@srouter/db";
 import { providerAlias, providerBaseId } from "@srouter/constants";
 import { registry } from "@/services/registry.js";
 
@@ -9,7 +9,45 @@ export class ModelsLogic {
         ForceRefresh = false
     ): Promise<ModelObject[]> {
         const Models = await registry.listAllModels(Provider, ForceRefresh);
-        return this.MergeCustomModels(Models, Provider);
+        return this.MergeComboModels(this.MergeCustomModels(Models, Provider));
+    }
+
+    private static MergeComboModels(Models: ModelObject[]): ModelObject[] {
+        const Rules = getAllFallbackRulesDB().filter((Rule) => Rule.enabled);
+        if (Rules.length === 0) return Models;
+
+        const Merged = new Map<string, ModelObject>();
+
+        for (const Model of Models) {
+            Merged.set(Model.id.toLowerCase(), Model);
+        }
+
+        const ComboModels = new Set<string>();
+
+        for (const Rule of Rules) {
+            const SourceModel = Rule.sourceModel.trim();
+
+            if (!SourceModel || SourceModel === "*" || SourceModel.endsWith("/*")) {
+                continue;
+            }
+
+            ComboModels.add(SourceModel);
+        }
+
+        for (const ComboModel of ComboModels) {
+            const VirtualModelId = ComboModel.startsWith("srouter/")
+                ? ComboModel
+                : `srouter/${ComboModel}`;
+
+            Merged.set(ComboModel.toLowerCase(), {
+                id: VirtualModelId,
+                object: "model",
+                owned_by: "srouter",
+                custom: true
+            });
+        }
+
+        return Array.from(Merged.values());
     }
 
     private static MergeCustomModels(
