@@ -155,11 +155,20 @@ export function createCli(): Command {
     return program;
 }
 
-if (
-    process.argv[1]?.endsWith("srouter.js") ||
-    process.argv[1]?.endsWith("index.ts") ||
-    process.argv[1]?.endsWith("index.js")
-) {
-    const program = createCli();
-    program.parse(process.argv);
+function runCli(): void {
+    const isEntrypoint =
+        process.argv[1]?.endsWith("srouter.js") ||
+        process.argv[1]?.endsWith("index.js") ||
+        process.argv[1]?.endsWith("index.ts") ||
+        process.argv[1]?.includes("/.bin/srouter") ||
+        process.argv[1]?.includes("/bin/srouter");
+
+    if (isEntrypoint) {
+        const program = createCli();
+        program.parse(process.argv);
+    }
 }
+
+runCli();
+
+
