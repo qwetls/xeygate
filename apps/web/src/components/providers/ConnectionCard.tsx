@@ -234,33 +234,6 @@ export function ConnectionCard({
                                                     Slot #{index + 1}
                                                 </span>
                                             </div>
-
-                                            <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
-                                                {maskedKey && (
-                                                    <div className="inline-flex items-center gap-1 rounded-[4px] border border-border/60 bg-background/80 px-2 py-0.5 text-[10.5px]">
-                                                        <span>Key:</span>
-                                                        <code className="text-foreground font-mono">
-                                                            {maskedKey}
-                                                        </code>
-                                                        {connection.apiKey && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    void copy(connection.apiKey!)
-                                                                }
-                                                                className="ml-0.5 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                                                                title="Copy API key"
-                                                            >
-                                                                {copied === connection.apiKey ? (
-                                                                    <Check className="size-3 text-emerald-500" />
-                                                                ) : (
-                                                                    <Copy className="size-3" />
-                                                                )}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
                                         </div>
                                     </div>
 
