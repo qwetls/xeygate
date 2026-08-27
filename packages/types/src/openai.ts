@@ -1,4 +1,4 @@
-import type { ChatRole } from "./chat.js";
+import type { ChatRole, JSONValue } from "./chat.js";
 
 export type FinishReason = "stop" | "length" | "tool_calls" | "content_filter" | null;
 
@@ -77,7 +77,13 @@ export interface ChatCompletionRequest {
     user?: string;
     tools?: ToolDefinition[];
     tool_choice?: ToolChoiceOption;
-    response_format?: { type: string };
+    response_format?: {
+        type: string;
+        json_schema?: JSONValue;
+        name?: string;
+        strict?: boolean;
+        [key: string]: JSONValue | undefined;
+    };
     reasoning_effort?: "none" | "low" | "medium" | "high" | (string & {});
     reasoning?: { effort?: string; summary?: string };
 }

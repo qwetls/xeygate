@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { JSONValue } from "../chat.js";
+
 export const ContentPartSchema = z.object({
     type: z.enum(["text", "image_url"]),
     text: z.string().optional(),
@@ -35,7 +37,7 @@ export const ChatMessageSchema = z.object({
     tool_call_id: z.string().optional()
 });
 
-export const JSONSchemaValue: z.ZodType<unknown> = z.lazy(() =>
+export const JSONSchemaValue: z.ZodType<JSONValue> = z.lazy(() =>
     z.union([
         z.string(),
         z.number(),
@@ -93,7 +95,15 @@ export const ChatCompletionRequestSchema = z.object({
     user: z.string().optional(),
     tools: z.array(ToolDefinitionSchema).optional(),
     tool_choice: ToolChoiceSchema.optional(),
-    response_format: z.object({ type: z.string() }).optional()
+    response_format: z
+        .object({
+            type: z.string(),
+            json_schema: JSONSchemaValue.optional(),
+            name: z.string().optional(),
+            strict: z.boolean().optional()
+        })
+        .passthrough()
+        .optional()
 });
 
 export type ChatCompletionRequestZod = z.infer<typeof ChatCompletionRequestSchema>;
