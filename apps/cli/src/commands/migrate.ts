@@ -247,6 +247,73 @@ function backupDb(source: string, label: string): string {
     return backupPath;
 }
 
+function getDownloadDirs(): string[] {
+    const home = os.homedir();
+    const dirs = [
+        path.join(home, "Downloads"),
+        path.join(home, "download"),
+        path.join(home, "downloads"),
+        path.join(home, "Desktop")
+    ];
+
+    if (process.platform === "win32") {
+        if (process.env.USERPROFILE) {
+            dirs.push(path.join(process.env.USERPROFILE, "Downloads"));
+            dirs.push(path.join(process.env.USERPROFILE, "Desktop"));
+        }
+    }
+
+    return Array.from(new Set(dirs.filter((d) => fs.existsSync(d))));
+}
+
+export function scanFor9RouterFiles(): Array<{ path: string; label: string; mtime: number }> {
+    const results: Array<{ path: string; label: string; mtime: number }> = [];
+    const seen = new Set<string>();
+
+    const addFile = (filePath: string, label: string) => {
+        const resolved = path.resolve(filePath);
+        if (!seen.has(resolved) && fs.existsSync(resolved)) {
+            try {
+                const stat = fs.statSync(resolved);
+                if (stat.isFile()) {
+                    seen.add(resolved);
+                    results.push({ path: resolved, label, mtime: stat.mtimeMs });
+                }
+            } catch {
+                // Ignore inaccessible files
+            }
+        }
+    };
+
+    // 1. Scan default App/DB locations
+    for (const loc of NineRouterDbLocations) {
+        addFile(loc, "Installed Database");
+    }
+
+    // 2. Scan Downloads and Desktop folders for 9router backup JSON and DB files
+    for (const downloadDir of getDownloadDirs()) {
+        try {
+            const files = fs.readdirSync(downloadDir);
+            for (const file of files) {
+                const lower = file.toLowerCase();
+                const fullPath = path.join(downloadDir, file);
+                if (
+                    lower.includes("9router") ||
+                    lower.includes("srouter-backup") ||
+                    lower.endsWith(".db") ||
+                    (lower.endsWith(".json") && lower.includes("backup"))
+                ) {
+                    addFile(fullPath, path.basename(downloadDir));
+                }
+            }
+        } catch {
+            // Ignore unreadable directory
+        }
+    }
+
+    return results.sort((a, b) => b.mtime - a.mtime);
+}
+
 function findDatabase(candidates: string[], label: string): string | null {
     for (const candidate of candidates) {
         const fullPath = path.resolve(candidate);
@@ -305,15 +372,61 @@ async function migrateDb(options: MigrateCommandOptions): Promise<void> {
 async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> {
     p.intro("9Router → SRouter Database Migration");
 
-    const source =
-        options.source && fs.existsSync(options.source)
-            ? path.resolve(options.source)
-            : findDatabase(NineRouterDbLocations, "9Router");
+    let source = options.source && fs.existsSync(options.source) ? path.resolve(options.source) : null;
 
     if (!source) {
-        p.log.error("No 9Router database found.");
+        const foundFiles = scanFor9RouterFiles();
+
+        if (foundFiles.length === 1) {
+            source = foundFiles[0].path;
+            p.log.info(`Found 9Router file: ${pc.bold(source)} (${fileKb(source)}) [${foundFiles[0].label}]`);
+        } else if (foundFiles.length > 1) {
+            if (options.yes) {
+                source = foundFiles[0].path;
+                p.log.info(`Auto-selected latest 9Router file: ${pc.bold(source)} (${fileKb(source)})`);
+            } else {
+                const choice = await p.select({
+                    message: "Multiple 9Router database/backup files found. Select one to migrate:",
+                    options: [
+                        ...foundFiles.map((f) => ({
+                            value: f.path,
+                            label: `${path.basename(f.path)} (${fileKb(f.path)})`,
+                            hint: `${f.label} • ${f.path}`
+                        })),
+                        { value: "custom", label: "Enter custom path manually..." }
+                    ]
+                });
+
+                if (p.isCancel(choice)) {
+                    p.outro("Migration cancelled.");
+                    return;
+                }
+
+                if (choice === "custom") {
+                    const customPath = await p.text({
+                        message: "Enter path to 9Router .db or .json backup file:",
+                        validate: (val) => {
+                            if (!val || !fs.existsSync(path.resolve(val))) {
+                                return "File does not exist. Please check the path.";
+                            }
+                        }
+                    });
+                    if (p.isCancel(customPath) || !customPath) {
+                        p.outro("Migration cancelled.");
+                        return;
+                    }
+                    source = path.resolve(customPath);
+                } else {
+                    source = choice as string;
+                }
+            }
+        }
+    }
+
+    if (!source) {
+        p.log.error("No 9Router database or backup file found.");
         p.outro(
-            "Pass the location explicitly: srouter migrate 9router --source /path/to/9router.db"
+            "Pass the location explicitly: srouter migrate 9router --source /path/to/9router-backup.json"
         );
         process.exitCode = 1;
         return;
