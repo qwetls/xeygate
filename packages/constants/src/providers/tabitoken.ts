@@ -5,7 +5,7 @@ export const TABITOKEN_BASE_URL = "https://tabitoken.com/v1";
 export const TABITOKEN_PROVIDER: ProviderMetadata = {
     id: "tabitoken",
     name: "TabiToken",
-    category: "api_key",
+    category: "free_tier",
     protocol: "openai",
     base_url: TABITOKEN_BASE_URL,
     web_url: "https://tabitoken.com/sign-up?aff=h5iN",
