@@ -18,6 +18,36 @@ interface ConnectionCardProps {
     onDelete: (connectionId: string) => void;
 }
 
+function getConnectionDisplayTitle(connection: ProviderConfig): string {
+    if (connection.name && connection.name.includes("@")) {
+        return connection.name;
+    }
+    const token = connection.accessToken || connection.apiKey;
+    if (token && token.startsWith("eyJ")) {
+        try {
+            const parts = token.split(".");
+            if (parts.length >= 2) {
+                const payloadBase64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+                const payload = JSON.parse(atob(payloadBase64));
+                const email =
+                    payload.email ||
+                    payload["https://api.openai.com/profile"]?.email ||
+                    payload.user_metadata?.email ||
+                    (typeof payload.preferred_username === "string" && payload.preferred_username.includes("@")
+                        ? payload.preferred_username
+                        : undefined) ||
+                    (typeof payload.unique_name === "string" && payload.unique_name.includes("@")
+                        ? payload.unique_name
+                        : undefined);
+                if (email) {
+                    return email;
+                }
+            }
+        } catch {}
+    }
+    return connection.name;
+}
+
 export function ConnectionCard({
     providerName,
     connections,
@@ -178,7 +208,7 @@ export function ConnectionCard({
                                         <div className="flex flex-col gap-1 min-w-0 flex-1">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span className="font-semibold text-foreground text-xs">
-                                                    {connection.name}
+                                                    {getConnectionDisplayTitle(connection)}
                                                 </span>
 
                                                 <span
