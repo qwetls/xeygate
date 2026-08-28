@@ -188,3 +188,79 @@ Recommended agent troubleshooting order:
 3. **Tests**:
     - Run tests via `cd apps/cli && pnpm test`.
     - Never run `pnpm test` across the whole monorepo directly.
+
+## Additional Engineering Rules
+
+### Commander Structure
+
+- `src/index.ts` only wires commands/options.
+- Business logic belongs in `commands/*`.
+- Reusable filesystem/platform logic belongs in `lib/*`.
+- Tool-specific integration belongs in `adapters/*`.
+
+Keep Commander handlers thin:
+
+```ts
+.action(async (opts) => {
+    await setupCommand(opts);
+});
+```
+
+### Interactive UX
+
+Use `@clack/prompts` for:
+
+- select
+- confirm
+- spinner
+- text input
+
+Prefer guided flows over raw stdin prompts.
+
+### Adapter Expectations
+
+Current adapters:
+
+- `claude.ts`
+- `opencode.ts`
+
+New adapters should:
+
+1. Reuse shared adapter contracts.
+2. Support backup/restore.
+3. Support dry-run mode.
+4. Keep tool-specific filesystem logic isolated.
+
+### Shell Environment Consistency
+
+`env` and `run` must stay aligned.
+
+Supported shells:
+
+- bash
+- zsh
+- fish
+- powershell
+- cmd
+
+When introducing new environment variables:
+
+1. Update all shell serializers.
+2. Add/update tests.
+3. Keep quoting shell-safe.
+
+### Regression Coverage
+
+Prioritize regression tests for:
+
+- adapter linking
+- env serialization
+- migrations
+- backup restore
+- filesystem writes
+
+Prefer targeted test execution during iteration:
+
+```bash
+cd apps/cli && pnpm exec tsx --test tests/claudeAdapter.test.ts
+```
