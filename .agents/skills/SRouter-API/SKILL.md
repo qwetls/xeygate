@@ -1,72 +1,102 @@
 ---
 name: srouter-api
 description: |
-    Development skill for SRouter API server and backend packages (@srouter/db, @srouter/executors, @srouter/providers, @srouter/translator, @srouter/pricing, @srouter/constants, @srouter/types). Use when working on apps/api, routing (/v1/chat/completions, /v1/messages, /v1/models), authentication (adminAuth, apiKeyAuth), OAuth PKCE flows, token sweeper, tool interception, or provider drivers.
+    Development skill for SRouter API server and backend packages (@srouter/db, @srouter/executors, @srouter/providers, @srouter/translator, @srouter/pricing, @srouter/constants, @srouter/types). Use when working on apps/api routes, Hono middleware, authentication, OAuth flows, provider drivers, translators, streaming APIs, database access, or backend package architecture.
 ---
 
 # ⚡ SRouter — API & Backend Skill
 
-Comprehensive guide for the SRouter REST API server (`apps/api`) and internal backend packages.
+Development guide for `apps/api` and backend packages.
 
-## Overview & Architecture
+## When To Read References
 
-Layered architecture:
-`Routes (Hono) → Controllers → Logic → Services / Database / Executors`
+| Reference | Use When |
+| --- | --- |
+| `references/architecture.md` | Working on routing, layering, lifecycle, Hono structure |
+| `references/auth.md` | Working on auth, API keys, admin sessions, OAuth |
+| `references/providers.md` | Working on executors, translators, providers, constants |
+| `references/conventions.md` | Working on naming, Zod, response helpers, typing |
+| `references/testing.md` | Running tests, smoke checks, validating streams |
 
-### Key Paths & Packages:
+## Core Stack
 
-- `apps/api/src/index.ts`: Dual-server entrypoint (Port 3000 for API/Dashboard, Port 1455 for OAuth callbacks).
-- `apps/api/src/routes/v1/`: Endpoint definitions (`chat.ts`, `messages.ts`, `models.ts`, `providers.ts`, `keys.ts`, `admin.ts`, `settings.ts`, `tunnel.ts`, `quota.ts`, `logs.ts`).
-- `apps/api/src/middleware/`: Security headers (`X-Version`, `X-Powered-By`), CORS, `apiKeyAuth` (loopback/virtual key), `adminAuth` (session cookie).
-- `apps/api/src/logic/`: Core logic (`chat.logic.ts` cascade/failover/intercept, `models.logic.ts`, `auth.logic.ts`).
-- `packages/executors/`: Upstream drivers (Antigravity, OpenAI Codex, Anthropic, Qoder, CodeBuddy, Kiro, etc.).
-- `packages/translator/`: OpenAI ↔ Anthropic payload, stream, and tool translation.
-- `packages/db/`: SQLite WAL layer via native `node:sqlite`.
-- `packages/constants/`: Version definitions (`version.ts`), provider catalogs, seed data.
+- Hono 4
+- Node.js 22+
+- SQLite (`node:sqlite`)
+- Zod
+- SSE streaming
+- tsup ESM builds
 
-## Server Ports & Lifecycle
+## Core Rules
 
-- **Port 3000**: API routes (`/v1/*`), health (`/health`), and static dashboard serving.
-- **Port 1455**: Secondary server for OAuth callbacks (`/auth/*/callback`) & CLI fallback listener.
-- **Startup**: Database migrations/seeding → Token refresh sweeper daemon (`startTokenRefreshSweeper()`) → Model registry cache warming → Tunnel autostart.
+- All APIs mount under `/v1`
+- Routes stay thin
+- Logic owns orchestration
+- Translators stay pure
+- Executors isolate upstream behavior
+- Never use `any`
+- Use PascalCase helpers/controllers/routers
+- Prefer Zod-derived types
+- Avoid speculative abstractions
 
-## Security & Auth Rules
+## Main Areas
 
-1. **Loopback Detection**: Local requests (`127.0.0.1`, `::1`) bypass API key if `require_api_key` is off in settings. Remote requests **must** provide a valid virtual key (`sr-live-*`).
-2. **Admin Auth Middleware**: Guard named `RequireAdmin` (PascalCase). Use in routes: `AuthRouter.get(..., RequireAdmin, ...)`. Scrypt password hashing with session cookie `srouter_admin_session`. Remote setup requires `SROUTER_SETUP_TOKEN`.
-3. **SSRF Guard**: Target URLs in provider verification block `169.254.*`, `127.*`, `localhost`, and internal metadata hostnames.
+```text
+apps/api/src/
+├── controllers/
+├── logic/
+├── middleware/
+├── routes/v1/
+├── services/
+└── utils/
+```
 
-## Code Standards & Conventions
+Backend packages:
 
-- **PascalCase Enforcement**:
-    - **Controllers**: Controller methods must strictly use PascalCase (e.g. `KeysController.CreateKey`, `ProvidersController.ListProviders`, `FallbacksController.GetFallbacks`, `ChatController.CreateCompletion`, `ModelsController.ListModels`, `ModelsController.GetModelById`). Do not create lowercase alias methods.
-    - **Logic & Services**: Internal helper functions, logic methods, and transformers use PascalCase (e.g. `ExtractState`, `OAuthFor`, `CallbackFor`, `ImportTokenFor`, `ResolveCandidates`, `LogCompletion`, `AnthropicToOpenAIRequest`, `OpenAIToAnthropicResponse`, `OpenAIToAnthropicStream`).
-    - **Variables & Constants**: Domain objects, request/response models, and variables created in controllers/logic must follow PascalCase (e.g. `const OpenAIReq = ...`, `const AnthropicStream = ...`, `const OpenAIRes = ...`, `const AnthropicRes = ...`, `const Model = ...`, `const Response = ...`).
-    - **Guards & Middleware**: Middleware instances use PascalCase (e.g. `RequireAdmin`).
-    - **Routers**: Hono router instances use PascalCase (e.g. `AuthRouter`, `ChatRouter`).
-- **Response Helpers**:
-    - Always use PascalCase response helpers from `@/utils/response.js` (`Err`, `Ok`, `AnthropicErr`, `FormatErrorPayload`, `FormatAnthropicErrorPayload`, `GetErrorTypeFromStatus`).
-    - Error types auto-resolve from HTTP status codes (`400/404/409/422` -> `invalid_request_error`, `401` -> `authentication_error`, `403` -> `permission_error`, `429` -> `rate_limit_error`, default `api_error`). Avoid passing `{ type: "invalid_request_error" }` manually.
-- **Zod Schema Validation**:
-    - Validate request bodies at controller/route edge using Zod schemas (`safeParse`).
-    - Derive types strictly with `z.infer<typeof Schema>`. Avoid manual JSON type assertions (`as never`, manual `typeof` checks).
-    - Modularize domain schemas under `packages/types/src/schemas/` (`chat.ts`, `auth.ts`, `apiKeys.ts`, `providers.ts`, `anthropic.ts`).
-- **No Inline Comments & Strict Typing**:
-    - Never leave inline comments inside code touched during refactors.
-    - Enforce strict typing — never use `any` or loose `unknown` where a concrete type/union exists.
-- **Auth Handlers**: Individual handlers grouped under `AuthHandlers.<Provider>` (e.g. `AuthHandlers.Antigravity`, `AuthHandlers.OpenAI`) in `apps/api/src/services/authHandlers.ts`.
-- **Controllers Pattern**: Actions organized by namespace objects rather than flat methods:
-    - `AuthController.<Provider>.OAuth`
-    - `AuthController.<Provider>.Callback`
-    - `AuthController.<Provider>.Poll`
-    - `AuthController.<Provider>.ImportToken`
-- **Routers**: Use PascalCase for Hono route instances (e.g. `AuthRouter`).
-- **OAuth Callback Handlers**: Export callback handlers using canonical naming `<Provider>OAuthCallback` (e.g. `CodexOAuthCallback`, `AntigravityOAuthCallback`, `ClaudeOAuthCallback`, `QoderOAuthCallback`).
-- **Interfaces & Types**: Shared contracts live in `@srouter/types` (e.g. `@srouter/types/src/auth.ts`). No `any` in client options; use strict typing like `OAuthClientOptions`.
-- **Pure JSON Responses**: Endpoints render JSON only (no HTML server-side rendering in API layer).
-- **Clean Code**: No dangling comments or speculative dead code (strict YAGNI). Return types like `Promise<ProviderConfig>` must be explicit without `unknown` or unsafe casts.
+```text
+packages/
+├── constants/
+├── db/
+├── executors/
+├── translator/
+└── types/
+```
 
-## Testing & Validation
+## Important Patterns
 
-- **Targeted Test Execution**: Always run `cd apps/api && pnpm test` or `pnpm test tests/<filename>.test.ts`. Never run full monorepo tests at once.
-- **Build**: `cd apps/api && pnpm run build` (tsup node20 ESM).
+### Routing
+
+```text
+routes → controllers → logic → services/packages
+```
+
+### Auth
+
+- `ApiKeyAuth` for API access
+- `RequireAdmin` for mutations/admin
+- OAuth handlers grouped under `AuthController.<Provider>`
+
+### Responses
+
+Use response helpers from:
+
+```text
+@/utils/response.js
+```
+
+### Providers
+
+Provider metadata belongs in:
+
+```text
+packages/constants/src/providers/
+```
+
+## Verification Gate
+
+```bash
+cd apps/api && pnpm run build
+cd apps/api && pnpm test
+```
+
+Prefer targeted tests while iterating.
