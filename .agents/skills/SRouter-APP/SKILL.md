@@ -27,16 +27,26 @@ apps/web/src/
 ├── routes/               # File-based routes
 │   ├── __root.tsx         # Layout shell (AppSidebar, Topbar, AdminAuthGate)
 │   ├── index.tsx          # Dashboard overview & analytics
-│   ├── playground.tsx     # Chat studio with streaming/tools
-│   ├── keys.tsx           # Virtual API Keys management
-│   ├── providers/         # Provider catalog & detail configs
-│   ├── combo.tsx          # Failover & model combo rules
-│   ├── token-saver.tsx    # Prompt compression configuration
-│   ├── quota.tsx          # Quotas & limits tracking
-│   ├── logs.tsx           # Audit request inspection
-│   └── settings.tsx       # System security & Cloudflare tunnel UI
-├── components/            # Domain components (dashboard, providers, ui)
-├── hooks/                 # Custom React hooks (useSettings, useVersion, useProviders)
+│   ├── playground.tsx     # Streaming chat playground & prompt lab
+│   ├── keys.tsx           # Virtual API keys & balance management
+│   ├── providers/         # Provider catalog, OAuth, model management
+│   ├── combo.tsx          # Failover & routing combo rules
+│   ├── token-saver.tsx    # Prompt compression & optimization
+│   ├── quota.tsx          # Usage quotas & limits
+│   ├── logs.tsx           # Request/audit log inspection
+│   └── settings.tsx       # Gateway, appearance, system settings
+├── components/
+│   ├── playground/        # Streaming chat UI, markdown/code rendering
+│   ├── providers/         # Provider catalog & connection forms
+│   ├── dashboard/         # Analytics, topology & tunnel widgets
+│   ├── keys/              # Key CRUD, credits & metrics
+│   ├── combo/             # Combo architecture & rule builders
+│   ├── settings/          # Gateway/security/system settings panels
+│   ├── auth/              # Admin auth gate
+│   ├── layout/            # Sidebar & topbar shell
+│   ├── skeletons/         # Loading placeholders
+│   └── ui/                # Shared design-system primitives
+├── hooks/                 # Query-backed React hooks
 └── lib/                   # API client helpers & utilities
 ```
 

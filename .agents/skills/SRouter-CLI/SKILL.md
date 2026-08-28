@@ -17,30 +17,169 @@ apps/cli/
 ├── bin/srouter.js           # Executable entrypoint
 ├── src/
 │   ├── index.ts             # Commander program setup (.version(CLI_VERSION))
-│   ├── adapters/            # AI tool adapters
-│   │   ├── base.ts          # AbstractToolAdapter interface
-│   │   ├── claude.ts        # Claude Code adapter
-│   │   ├── opencode.ts      # OpenCode adapter
+│   ├── adapters/            # Tool integration adapters
+│   │   ├── base.ts          # AbstractToolAdapter contract
+│   │   ├── claude.ts        # Claude Code integration
+│   │   ├── opencode.ts      # OpenCode integration
 │   │   └── index.ts         # Adapter registry
-│   ├── commands/            # Command implementations
+│   ├── commands/
+│   │   ├── init.ts          # Bootstrap local SRouter config
 │   │   ├── setup.ts         # Interactive onboarding wizard
-│   │   ├── status.ts        # Health & tool diagnostic report (alias: doctor)
+│   │   ├── status.ts        # Health & diagnostics (alias: doctor)
+│   │   ├── sync.ts          # Pull remote gateway/provider config
+│   │   ├── migrate.ts       # Legacy config/database migration
 │   │   ├── link.ts          # Direct tool config linking
-│   │   ├── unlink.ts        # Restore original config from backup
+│   │   ├── unlink.ts        # Restore original config backups
 │   │   ├── run.ts           # Ephemeral process runner with proxy env
 │   │   └── env.ts           # Print shell export statements
-│   └── lib/                 # Platform, config store, API client utilities
-└── tests/                   # Node.js native test runner test suite
+│   ├── lib/                 # Config store, platform, API utilities
+│   ├── types/               # Shared CLI types
+│   └── adapters/            # Tool-specific adapters
+└── tests/                   # Node.js native test runner suite
 ```
 
 ## CLI Commands
 
-- `srouter setup` (alias `config`): Interactive prompt to connect tools to SRouter.
-- `srouter status` (alias `doctor`): System, gateway connectivity, and linked tools report.
-- `srouter link <tool>`: Direct non-interactive linking (`-u <url>`, `-k <key>`, `-m <model>`).
-- `srouter unlink <tool>`: Restores previous config from `~/.srouter/backups/`.
-- `srouter run <tool> -- <args>`: Injects proxy environment variables into a single process.
-- `srouter env <tool>`: Outputs bash/zsh `export` commands.
+### `srouter init`
+Bootstrap local SRouter workspace and config.
+
+Common usage:
+```bash
+srouter init
+srouter init --force
+```
+
+Agent notes:
+- Creates local config scaffolding.
+- Safe first command before setup/sync flows.
+- Use `--force` only when intentionally resetting config.
+
+### `srouter setup` (`srouter config`)
+Interactive onboarding wizard for connecting coding tools to SRouter Gateway.
+
+Common usage:
+```bash
+srouter setup
+srouter setup --url http://localhost:3000
+```
+
+Agent notes:
+- Preferred command for human-guided onboarding.
+- Automatically detects installed tools/adapters.
+- Writes tool configs and backup snapshots.
+- Use when user says “connect Claude/OpenCode to SRouter”.
+
+### `srouter status` (`srouter doctor`)
+System diagnostics and connectivity inspection.
+
+Common usage:
+```bash
+srouter status
+srouter doctor
+```
+
+Agent notes:
+- Safe read-only command.
+- Checks gateway reachability, config validity, linked adapters, and environment state.
+- First troubleshooting command before modifying configs.
+
+### `srouter sync`
+Pull remote provider/model configuration from gateway.
+
+Common usage:
+```bash
+srouter sync
+srouter sync --provider openai
+```
+
+Agent notes:
+- Use after gateway/provider changes.
+- Refreshes local cache/config from server state.
+- Useful when users report stale models/providers.
+
+### `srouter migrate`
+Migrate legacy SRouter configs/databases into the latest format.
+
+Common usage:
+```bash
+srouter migrate
+srouter migrate --input ~/.old-srouter/config.json
+```
+
+Agent notes:
+- Supports legacy `.db` and JSON migration flows.
+- Prefer dry inspection before destructive overwrite.
+- Preserve backups before migration.
+
+### `srouter link <tool>`
+Non-interactive adapter linking.
+
+Common usage:
+```bash
+srouter link claude -u http://localhost:3000 -k sk-xxx -m openai/gpt-5
+srouter link opencode -u https://gateway.example.com
+```
+
+Agent notes:
+- Preferred for automation/scripts.
+- Always creates config backup before writing.
+- Supported tools currently include Claude Code and OpenCode.
+
+### `srouter unlink <tool>`
+Restore original configs from backup.
+
+Common usage:
+```bash
+srouter unlink claude
+srouter unlink opencode
+```
+
+Agent notes:
+- Reverts adapter modifications.
+- Reads from `~/.srouter/backups/`.
+- Safe rollback command during troubleshooting.
+
+### `srouter run <tool> -- <args>`
+Run a process with temporary SRouter proxy environment.
+
+Common usage:
+```bash
+srouter run claude -- --dangerously-skip-permissions
+srouter run opencode -- chat
+```
+
+Agent notes:
+- Does not permanently modify shell environment.
+- Preferred for ephemeral/proxy-only execution.
+- Everything after `--` is forwarded to target tool.
+
+### `srouter env <tool>`
+Print shell export commands for manual environment setup.
+
+Common usage:
+```bash
+srouter env claude
+srouter env opencode
+```
+
+Agent notes:
+- Returns shell-compatible `export` statements.
+- Useful for CI, Docker, or manual shell injection.
+- Common pattern:
+```bash
+eval "$(srouter env claude)"
+```
+
+## Troubleshooting Workflow
+
+Recommended agent troubleshooting order:
+
+1. `srouter status`
+2. `srouter sync`
+3. `srouter link <tool>`
+4. `srouter run <tool>`
+5. `srouter unlink <tool>`
+6. `srouter migrate` (legacy configs only)
 
 ## Key Rules & Testing
 
