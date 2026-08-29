@@ -1,7 +1,7 @@
 ---
 name: srouter-cli
 description: |
-    Development skill for SRouter CLI (@srouter/cli / apps/cli). Use when working on CLI commands, adapters, shell environment generation, onboarding/setup flows, migrations, backup/restore logic, terminal UX, or Claude/OpenCode integrations.
+    Development skill for SRouter CLI (@srouter/cli / apps/cli). Use whenever modifying CLI behavior, command orchestration, adapter integrations, shell environment generation, onboarding/setup UX, migrations, backup/restore logic, terminal-facing developer tooling, or Claude/OpenCode integrations inside apps/cli. Also use when debugging Commander.js execution flow, env export behavior, adapter config mutation, or dry-run/rollback safety.
 ---
 
 # ⚡ SRouter — CLI Skill
@@ -16,6 +16,8 @@ Development guide for `apps/cli` (`@srouter/cli`).
 | `references/adapters.md` | Working on adapters, env injection, backups |
 | `references/conventions.md` | Working on Commander architecture or TS conventions |
 | `references/testing.md` | Running tests and verification workflows |
+
+Read the relevant reference before editing that subsystem. The references contain operational constraints and failure patterns that are intentionally kept out of this top-level file.
 
 ## Stack
 
@@ -61,6 +63,62 @@ apps/cli/
 - keep shell exports deterministic
 - avoid `any`
 - use PascalCase helpers/types
+
+## Development Workflow
+
+When implementing or debugging CLI behavior:
+
+1. trace command registration from `src/index.ts`
+2. inspect orchestration in `commands/*`
+3. isolate side effects inside adapters/lib
+4. verify backup creation before mutations
+5. verify dry-run paths do not mutate files
+6. run targeted tests before broad verification
+
+This separation prevents orchestration bugs from leaking into adapters and keeps destructive behavior easy to reason about.
+
+## Decision Guide
+
+Put code in:
+
+- `commands/*` → orchestration, prompts, flow control
+- `adapters/*` → tool-specific filesystem/env/config behavior
+- `lib/*` → reusable pure/shared helpers
+- `types/*` → shared contracts and option types
+
+If logic only exists for one adapter, keep it inside that adapter until a second concrete consumer appears.
+
+## Common Failure Patterns
+
+- config mutation without backup creation
+- dry-run paths still mutating filesystem state
+- shell export quoting breaking on spaces/special chars
+- duplicated adapter logic drifting across providers
+- mixing prompt UX with filesystem side effects
+- adding speculative flags/options that are never exercised
+
+Most CLI regressions come from side effects and environment serialization, not Commander wiring.
+
+## Debugging Heuristics
+
+When debugging:
+
+1. reproduce with the smallest command possible
+2. verify generated env/config output before execution
+3. compare dry-run vs real execution paths
+4. inspect backup snapshots after mutation flows
+5. trace adapter serialization before blaming shell behavior
+
+Prefer inspecting generated config artifacts over reasoning abstractly about CLI behavior.
+
+## Avoid
+
+- business logic inside `index.ts`
+- direct filesystem writes without snapshotting
+- shell-specific nondeterministic exports
+- adapter-specific logic inside shared helpers
+- premature abstractions for one-off commands
+- broad monolithic command handlers
 
 ## Supported Areas
 
