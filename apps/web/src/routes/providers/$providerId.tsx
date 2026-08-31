@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProviderIcon } from "@/components/ProviderIcon";
-import { ConnectOAuthModal } from "@/components/ui/ConnectOAuthModal";
+import { ConnectOAuthModal } from "@/components/providers/ConnectOAuthModal";
 import { useProvider, type AddConnectionPayload } from "@/hooks/useProvider";
 import { useCopy } from "@/hooks/useCopy";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -146,8 +146,8 @@ function ProviderDetailPage() {
             name: input.name?.trim() || `${provider.name} Key`,
             category: provider.category,
             protocol: provider.protocol,
-            baseUrl: input.baseUrl || provider.default_base_url || undefined,
-            apiKey: input.apiKey
+            base_url: input.base_url || input.baseUrl || provider.default_base_url || undefined,
+            api_key: input.apiKey
         };
 
         setFormError("");
