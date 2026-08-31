@@ -1,9 +1,8 @@
 name: Build & Publish Docker to GHCR
 
 on:
-    push:
-        branches: [main]
-        tags: ["v*"]
+    # Automatic push triggers disabled to avoid pushing on every commit/tag.
+    # Trigger manually from GitHub Actions UI when releasing images.
     workflow_dispatch:
 
 env:
