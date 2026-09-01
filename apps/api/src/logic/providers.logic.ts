@@ -27,6 +27,7 @@ export interface GroupedCatalog {
     oauth: ProviderDefinition[];
     free_tier: ProviderDefinition[];
     api_key: ProviderDefinition[];
+    custom_provider: ProviderDefinition[];
 }
 
 export interface CatalogSummary {
@@ -157,7 +158,8 @@ export class ProvidersLogic {
         const Categories: GroupedCatalog = {
             oauth: Catalog.filter((P) => P.category === "oauth"),
             free_tier: Catalog.filter((P) => P.category === "free_tier"),
-            api_key: Catalog.filter((P) => P.category === "api_key")
+            api_key: Catalog.filter((P) => P.category === "api_key"),
+            custom_provider: Catalog.filter((P) => P.category === "custom_provider")
         };
 
         return {
@@ -232,14 +234,21 @@ export class ProvidersLogic {
         if (!isProviderCategory(Payload.category)) throw new Error("Invalid provider category");
         if (!isProviderProtocol(Payload.protocol)) throw new Error("Invalid provider protocol");
         const RawId = Payload.id?.trim();
-        const BaseId = RawId
-            ? RawId.toLowerCase().replace(/[^a-z0-9_-]/g, "")
-            : Payload.category;
-        const Id = RawId ? BaseId : `${BaseId}_${Date.now()}`;
-        if (!Id)
-            throw new Error("Provider ID must contain letters, numbers, underscores, or hyphens");
-        if (getAllProvidersDB().some((Provider) => Provider.id === Id))
-            throw new Error(`Provider ID '${Id}' already exists`);
+        let Id: string;
+
+        if (RawId) {
+            // Explicit ID provided (OAuth flows, imports): sanitize as before
+            Id = RawId.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+            if (!Id)
+                throw new Error(
+                    "Provider ID must contain letters, numbers, underscores, or hyphens"
+                );
+            if (getAllProvidersDB().some((Provider) => Provider.id === Id))
+                throw new Error(`Provider ID '${Id}' already exists`);
+        } else {
+            // Custom provider: generate UUID v4 as immutable internal ID
+            Id = crypto.randomUUID();
+        }
         const Category = Payload.category;
         const Protocol = Payload.protocol;
         const BaseUrl = Payload.base_url?.trim();
@@ -253,8 +262,8 @@ export class ProvidersLogic {
             }
         }
         const ApiKey = Payload.api_key?.trim();
-        if (Category === "api_key" && !ApiKey)
-            throw new Error("API key is required for API key providers");
+        if ((Category === "api_key" || Category === "custom_provider") && !ApiKey)
+            throw new Error("API key is required for API key and custom providers");
 
         const Config = {
             id: Id,
