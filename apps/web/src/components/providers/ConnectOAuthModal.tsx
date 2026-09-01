@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, Copy, Check, X, Key, Globe, ExternalLink } from "lucide-react";
+import { Loader2, Copy, Check, X, Key, Globe, ExternalLink, Layers } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { AuthPollStatus, type ProviderConfig, type ProviderDefinition } from "@srouter/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -23,7 +24,8 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
     const [copied, setCopied] = useState(false);
     const [callbackUrlInput, setCallbackUrlInput] = useState("");
     const [patInput, setPatInput] = useState("");
-    const [activeTab, setActiveTab] = useState<"oauth" | "pat">("oauth");
+    const [bulkInput, setBulkInput] = useState("");
+    const [activeTab, setActiveTab] = useState<"oauth" | "pat" | "bulk">("oauth");
     const [error, setError] = useState("");
     const [authUrl, setAuthUrl] = useState("");
     const [oauthState, setOauthState] = useState("");
@@ -34,7 +36,9 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
     const authProviderId = provider?.id === "codebuddy-cn" ? "codebuddy-cn" : baseId;
     const isQoder = baseId === "qoder";
     const isCodeBuddy = baseId === "codebuddy";
+    const isCodex = baseId === "openai";
     const isPolling = isQoder || isCodeBuddy;
+    const supportsBulk = isQoder || isCodex;
 
     // Fetch backend-registered PKCE OAuth session without auto-opening popup
     useEffect(() => {
@@ -44,6 +48,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
             setError("");
             setCallbackUrlInput("");
             setPatInput("");
+            setBulkInput("");
             if (popupRef.current && !popupRef.current.closed) {
                 popupRef.current.close();
             }
@@ -178,7 +183,11 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
     const patMutation = useMutation({
         mutationFn: (payload: { accessToken: string }) => {
             const endpoint = `/v1/auth/${authProviderId}/token`;
-            return api.post(endpoint, payload);
+            // Schema requires snake_case; handler mappers read camelCase (passthrough).
+            return api.post(endpoint, {
+                access_token: payload.accessToken,
+                accessToken: payload.accessToken
+            });
         },
         onSuccess: () => {
             if (provider) {
@@ -194,6 +203,69 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
             setError(err.message || "Failed to save token");
         }
     });
+
+    const bulkMutation = useMutation({
+        mutationFn: async (rawText: string) => {
+            const Lines = rawText
+                .split(/\r?\n/)
+                .map((l) => l.trim())
+                .filter(Boolean);
+            const Results = await Promise.allSettled(
+                Lines.map((line) => {
+                    // Codex lines may carry an optional refresh token: "<access>,<refresh>"
+                    const [accessToken, refreshToken] = isCodex
+                        ? line.split(",").map((s) => s.trim())
+                        : [line];
+                    return api.post(`/v1/auth/${authProviderId}/token`, {
+                        access_token: accessToken,
+                        accessToken,
+                        ...(refreshToken
+                            ? { refresh_token: refreshToken, refreshToken }
+                            : {})
+                    });
+                })
+            );
+            const Failed = Results.filter((r) => r.status === "rejected").length;
+            return { total: Lines.length, failed: Failed };
+        },
+        onSuccess: ({ total, failed }) => {
+            if (provider) {
+                void queryClient.invalidateQueries({ queryKey: ["providers"] });
+                void queryClient.invalidateQueries({ queryKey: ["providers", provider.id] });
+                void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+            }
+            const added = total - failed;
+            if (added > 0) {
+                toast.success(
+                    `${added} account${added === 1 ? "" : "s"} added${failed ? ` · ${failed} failed` : ""}`
+                );
+            }
+            if (failed === 0) {
+                onOpenChange(false);
+                setBulkInput("");
+                setError("");
+            } else if (added === 0) {
+                setError(`All ${failed} token${failed === 1 ? "" : "s"} failed to import.`);
+            }
+        },
+        onError: (err: Error) => {
+            setError(err.message || "Bulk import failed");
+        }
+    });
+
+    const handleBulkSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const lines = bulkInput
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter(Boolean);
+        if (lines.length === 0) {
+            setError("Paste at least one token, one per line.");
+            return;
+        }
+        setError("");
+        bulkMutation.mutate(bulkInput);
+    };
 
     const handleCopy = async () => {
         if (!authUrl) return;
@@ -258,7 +330,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                 </div>
 
                 {/* Optional Tab Switcher for Qoder or CodeBuddy */}
-                {(isQoder || isCodeBuddy) && (
+                {(isQoder || isCodeBuddy || supportsBulk) && (
                     <div className="flex border-b border-border/60 text-xs font-mono">
                         <button
                             type="button"
@@ -286,6 +358,20 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                                 {isCodeBuddy ? "Access Token" : "Personal Access Token (PAT)"}
                             </span>
                         </button>
+                        {supportsBulk && (
+                            <button
+                                type="button"
+                                onClick={() => setActiveTab("bulk")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 border-b-2 transition-colors cursor-pointer ${
+                                    activeTab === "bulk"
+                                        ? "border-foreground text-foreground font-semibold"
+                                        : "border-transparent text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                                <Layers className="size-3.5" />
+                                <span>Bulk Add</span>
+                            </button>
+                        )}
                     </div>
                 )}
 
@@ -295,7 +381,69 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                     </div>
                 )}
 
-                {activeTab === "oauth" ? (
+                {activeTab === "bulk" ? (
+                    /* Bulk Add Tab */
+                    <form onSubmit={handleBulkSubmit} className="space-y-4 text-xs font-mono">
+                        <div className="space-y-1.5">
+                            <label className="font-semibold text-foreground block font-sans text-xs">
+                                Bulk {isCodex ? "Access Tokens" : "PATs"} — one per line
+                            </label>
+                            <p className="text-[11px] text-muted-foreground font-sans">
+                                {isCodex ? (
+                                    <>
+                                        Paste one Codex access token per line. Need refresh
+                                        support? Use{" "}
+                                        <code className="rounded bg-secondary px-1 py-0.5 text-[10px]">
+                                            access_token,refresh_token
+                                        </code>{" "}
+                                        per line.
+                                    </>
+                                ) : (
+                                    <>
+                                        Paste multiple Qoder PATs (`pt-...`) from{" "}
+                                        <a
+                                            href="https://qoder.com/account/integrations"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="underline text-foreground"
+                                        >
+                                            qoder.com/account/integrations
+                                        </a>
+                                        , one per line.
+                                    </>
+                                )}
+                            </p>
+                            <textarea
+                                rows={6}
+                                placeholder={isCodex ? "eyJhbGciOi...\neyJhbGciOi..." : "pt-xxx...\npt-yyy..."}
+                                value={bulkInput}
+                                onChange={(e) => setBulkInput(e.target.value)}
+                                className="w-full resize-y rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            />
+                            <p className="text-[11px] text-muted-foreground font-sans">
+                                {bulkInput.split(/\r?\n/).filter((l) => l.trim()).length > 0 &&
+                                    `${bulkInput.split(/\r?\n/).filter((l) => l.trim()).length} token(s) detected`}
+                            </p>
+                        </div>
+
+                        <div className="pt-3 border-t border-border/60 flex items-center justify-end gap-3 font-sans">
+                            <button
+                                type="button"
+                                onClick={() => onOpenChange(false)}
+                                className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={bulkMutation.isPending}
+                                className="rounded-lg bg-secondary hover:bg-foreground hover:text-background border border-border/60 text-foreground px-5 py-2 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                                {bulkMutation.isPending ? "Importing…" : "Import Accounts"}
+                            </button>
+                        </div>
+                    </form>
+                ) : activeTab === "oauth" ? (
                     <>
                         {/* Waiting State Banner */}
                         <div className="flex items-center gap-3 rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs font-mono text-foreground">
@@ -392,11 +540,15 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                             <label className="font-semibold text-foreground block font-sans text-xs">
                                 {isCodeBuddy
                                     ? "CodeBuddy Access Token"
-                                    : "Personal Access Token (PAT)"}
+                                    : isCodex
+                                      ? "Codex Access Token"
+                                      : "Personal Access Token (PAT)"}
                             </label>
                             <p className="text-[11px] text-muted-foreground font-sans">
                                 {isCodeBuddy ? (
                                     "Masukkan Access Token / Bearer Token dari akun CodeBuddy Anda."
+                                ) : isCodex ? (
+                                    "Paste an OpenAI Codex access token (from ~/.codex/auth.json)."
                                 ) : (
                                     <>
                                         Generate your PAT (`pt-...`) from{" "}
@@ -413,7 +565,9 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
                             </p>
                             <input
                                 type="password"
-                                placeholder={isCodeBuddy ? "eyJhbGciOi..." : "pt-..."}
+                                placeholder={
+                                    isCodeBuddy || isCodex ? "eyJhbGciOi..." : "pt-..."
+                                }
                                 value={patInput}
                                 onChange={(e) => setPatInput(e.target.value)}
                                 className="w-full rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
