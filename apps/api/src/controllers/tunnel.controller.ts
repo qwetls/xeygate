@@ -14,6 +14,10 @@ import {
     stopTunnel
 } from "@/services/cloudflareTunnel.js";
 
+/** Cap concurrent SSE tunnel-event streams so one session cannot exhaust workers. */
+const MAX_EVENT_STREAMS = 8;
+let ActiveEventStreams = 0;
+
 export class TunnelController {
     public static GetStatus(c: Context): Response {
         const Status = getTunnelStatus();
@@ -21,9 +25,24 @@ export class TunnelController {
     }
 
     public static GetEvents(c: Context): Response {
+        if (ActiveEventStreams >= MAX_EVENT_STREAMS) {
+            return Err(c, "Too many concurrent tunnel event streams", 429, {
+                code: "too_many_streams"
+            });
+        }
+        ActiveEventStreams += 1;
+
         const Encoder = new TextEncoder();
         let Unsubscribe: (() => void) | null = null;
         let Heartbeat: ReturnType<typeof setInterval> | null = null;
+
+        const Release = () => {
+            if (Heartbeat) clearInterval(Heartbeat);
+            if (Unsubscribe) Unsubscribe();
+            Unsubscribe = null;
+            Heartbeat = null;
+            ActiveEventStreams -= 1;
+        };
 
         const Stream = new ReadableStream<Uint8Array>({
             start(controller) {
@@ -33,23 +52,25 @@ export class TunnelController {
                     } catch {}
                 };
 
-                Send({ ...getTunnelStatus(), tokenConfigured: Boolean(getTunnelToken()) });
+                try {
+                    Send({ ...getTunnelStatus(), tokenConfigured: Boolean(getTunnelToken()) });
 
-                Unsubscribe = onTunnelUpdate((Status) => {
-                    Send({ ...Status, tokenConfigured: Boolean(getTunnelToken()) });
-                });
+                    Unsubscribe = onTunnelUpdate((Status) => {
+                        Send({ ...Status, tokenConfigured: Boolean(getTunnelToken()) });
+                    });
 
-                Heartbeat = setInterval(() => {
-                    try {
-                        controller.enqueue(Encoder.encode(`: ping\n\n`));
-                    } catch {}
-                }, 25_000);
+                    Heartbeat = setInterval(() => {
+                        try {
+                            controller.enqueue(Encoder.encode(`: ping\n\n`));
+                        } catch {}
+                    }, 25_000);
+                } catch (SetupError) {
+                    Release();
+                    throw SetupError;
+                }
             },
             cancel() {
-                if (Heartbeat) clearInterval(Heartbeat);
-                if (Unsubscribe) Unsubscribe();
-                Unsubscribe = null;
-                Heartbeat = null;
+                Release();
             }
         });
 
