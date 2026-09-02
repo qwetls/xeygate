@@ -105,14 +105,14 @@ export async function getRecentLogsDB(limit = 50): Promise<RequestLogEntry[]> {
 export async function getUsageSummaryDB(): Promise<UsageSummary> {
     const Result = (await db.prepare(`
         SELECT 
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(total_tokens), 0) as totalTokens,
-            COALESCE(SUM(prompt_tokens), 0) as totalPromptTokens,
-            COALESCE(SUM(completion_tokens), 0) as totalCompletionTokens,
-            COALESCE(SUM(cached_tokens), 0) as totalCachedTokens,
-            COALESCE(SUM(cache_creation_tokens), 0) as totalCacheCreationTokens,
-            COALESCE(SUM(reasoning_tokens), 0) as totalReasoningTokens,
-            COALESCE(SUM(estimated_cost), 0) as totalEstimatedCost
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(total_tokens), 0) as "totalTokens",
+            COALESCE(SUM(prompt_tokens), 0) as "totalPromptTokens",
+            COALESCE(SUM(completion_tokens), 0) as "totalCompletionTokens",
+            COALESCE(SUM(cached_tokens), 0) as "totalCachedTokens",
+            COALESCE(SUM(cache_creation_tokens), 0) as "totalCacheCreationTokens",
+            COALESCE(SUM(reasoning_tokens), 0) as "totalReasoningTokens",
+            COALESCE(SUM(estimated_cost), 0) as "totalEstimatedCost"
         FROM request_logs
     `).get()) as unknown as UsageSummaryRow | undefined;
 
@@ -133,14 +133,14 @@ export async function getUsageSummaryDB(): Promise<UsageSummary> {
 export async function getProviderUsageSummaryDB(providerId: string): Promise<UsageSummary> {
     const Result = (await db.prepare(`
         SELECT 
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(total_tokens), 0) as totalTokens,
-            COALESCE(SUM(prompt_tokens), 0) as totalPromptTokens,
-            COALESCE(SUM(completion_tokens), 0) as totalCompletionTokens,
-            COALESCE(SUM(cached_tokens), 0) as totalCachedTokens,
-            COALESCE(SUM(cache_creation_tokens), 0) as totalCacheCreationTokens,
-            COALESCE(SUM(reasoning_tokens), 0) as totalReasoningTokens,
-            COALESCE(SUM(estimated_cost), 0) as totalEstimatedCost
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(total_tokens), 0) as "totalTokens",
+            COALESCE(SUM(prompt_tokens), 0) as "totalPromptTokens",
+            COALESCE(SUM(completion_tokens), 0) as "totalCompletionTokens",
+            COALESCE(SUM(cached_tokens), 0) as "totalCachedTokens",
+            COALESCE(SUM(cache_creation_tokens), 0) as "totalCacheCreationTokens",
+            COALESCE(SUM(reasoning_tokens), 0) as "totalReasoningTokens",
+            COALESCE(SUM(estimated_cost), 0) as "totalEstimatedCost"
         FROM request_logs
         WHERE provider_id = ?
     `).get(providerId)) as unknown as UsageSummaryRow | undefined;
@@ -163,17 +163,17 @@ export async function getProviderModelUsageDB(providerId: string): Promise<Model
     const Rows = (await db.prepare(`
         SELECT 
             model,
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(total_tokens), 0) as totalTokens,
-            COALESCE(SUM(prompt_tokens), 0) as promptTokens,
-            COALESCE(SUM(completion_tokens), 0) as completionTokens,
-            COALESCE(SUM(cached_tokens), 0) as cachedTokens,
-            COALESCE(SUM(estimated_cost), 0) as estimatedCost,
-            MAX(created_at) as lastUsedAt
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(total_tokens), 0) as "totalTokens",
+            COALESCE(SUM(prompt_tokens), 0) as "promptTokens",
+            COALESCE(SUM(completion_tokens), 0) as "completionTokens",
+            COALESCE(SUM(cached_tokens), 0) as "cachedTokens",
+            COALESCE(SUM(estimated_cost), 0) as "estimatedCost",
+            MAX(created_at) as "lastUsedAt"
         FROM request_logs
         WHERE provider_id = ?
         GROUP BY model
-        ORDER BY lastUsedAt DESC
+        ORDER BY "lastUsedAt" DESC
     `).all(providerId)) as unknown as ModelUsageDBShape[];
 
     return Rows.map((row) => ({
@@ -192,14 +192,14 @@ export async function getUsageByModelDB(): Promise<UsageByModelRow[]> {
     const Rows = (await db.prepare(`
         SELECT 
             model,
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(prompt_tokens), 0) as totalInputTokens,
-            COALESCE(SUM(completion_tokens), 0) as totalOutputTokens,
-            COALESCE(SUM(cached_tokens), 0) as totalCachedTokens,
-            COALESCE(SUM(estimated_cost), 0) as estCost
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(prompt_tokens), 0) as "totalInputTokens",
+            COALESCE(SUM(completion_tokens), 0) as "totalOutputTokens",
+            COALESCE(SUM(cached_tokens), 0) as "totalCachedTokens",
+            COALESCE(SUM(estimated_cost), 0) as "estCost"
         FROM request_logs
         GROUP BY model
-        ORDER BY totalRequests DESC
+        ORDER BY "totalRequests" DESC
     `).all()) as unknown as UsageByModelDBShape[];
 
     return Rows.map((row) => ({
@@ -314,33 +314,33 @@ export async function getAnalyticsDB(window: AnalyticsWindow): Promise<Analytics
     // (bucketIndex * bucketSize) easily exceeds INT (2.1B) for 24h+ windows.
     const BucketsSql = `
         SELECT
-            CAST(created_at / ? AS BIGINT) * ? AS bucket,
-            COUNT(*)                                             AS totalRequests,
-            SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) AS successRequests,
-            SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END)  AS errorRequests,
-            AVG(latency_ms)                                      AS avgLatencyMs,
-            SUM(total_tokens)                                    AS totalTokens,
-            SUM(prompt_tokens)                                   AS promptTokens,
-            SUM(completion_tokens)                               AS completionTokens,
-            SUM(cached_tokens)                                   AS cachedTokens
+            CAST(created_at / ? AS BIGINT) * ? AS "bucket",
+            COUNT(*)                                             AS "totalRequests",
+            SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) AS "successRequests",
+            SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END)  AS "errorRequests",
+            AVG(latency_ms)                                      AS "avgLatencyMs",
+            SUM(total_tokens)                                    AS "totalTokens",
+            SUM(prompt_tokens)                                   AS "promptTokens",
+            SUM(completion_tokens)                               AS "completionTokens",
+            SUM(cached_tokens)                                   AS "cachedTokens"
         FROM request_logs
         WHERE created_at >= ?
-        GROUP BY bucket ORDER BY bucket ASC
+        GROUP BY "bucket" ORDER BY "bucket" ASC
     `;
     const Buckets = (await db.prepare(BucketsSql).all(BucketSizeMs, BucketSizeMs, Since)) as unknown as AnalyticsBucketRow[];
 
     const ModelsSql = `
-        SELECT model, COUNT(*) AS totalRequests, SUM(total_tokens) AS totalTokens,
-               SUM(estimated_cost) AS estCost
+        SELECT model, COUNT(*) AS "totalRequests", SUM(total_tokens) AS "totalTokens",
+               SUM(estimated_cost) AS "estCost"
         FROM request_logs WHERE created_at >= ?
-        GROUP BY model ORDER BY totalRequests DESC LIMIT 10
+        GROUP BY model ORDER BY "totalRequests" DESC LIMIT 10
     `;
     const TopModels = (await db.prepare(ModelsSql).all(Since)) as unknown as AnalyticsTopModelRow[];
 
     const ProviderSql = `
-        SELECT provider_id AS providerId, COUNT(*) AS totalRequests
+        SELECT provider_id AS "providerId", COUNT(*) AS "totalRequests"
         FROM request_logs WHERE created_at >= ?
-        GROUP BY providerId ORDER BY totalRequests DESC
+        GROUP BY "providerId" ORDER BY "totalRequests" DESC
     `;
     const Providers = (await db.prepare(ProviderSql).all(Since)) as unknown as AnalyticsProviderRow[];
 
