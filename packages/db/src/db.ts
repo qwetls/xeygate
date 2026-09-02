@@ -241,20 +241,23 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_custom_models_provider ON custom_models(provider_id, created_at ASC);" }
 ];
 
-const ADMIN_TABLES = `
+const ADMIN_TABLES = (pg: boolean) => {
+    const integer = pg ? "BIGINT" : "INTEGER";
+    return `
     CREATE TABLE IF NOT EXISTS admin_account (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
+        id ${integer} PRIMARY KEY CHECK (id = 1),
         password_hash TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL
+        created_at ${integer} NOT NULL,
+        updated_at ${integer} NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS admin_sessions (
         token_hash TEXT PRIMARY KEY,
-        created_at INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL
+        created_at ${integer} NOT NULL,
+        expires_at ${integer} NOT NULL
     );
 `;
+};
 
 /**
  * Adds columns to a table if they do not already exist.
@@ -297,7 +300,7 @@ function initSqliteSchemaSync(): void {
     for (const index of INDEXES) {
         raw.exec(index.sql);
     }
-    raw.exec(ADMIN_TABLES);
+    raw.exec(ADMIN_TABLES(false));
 
     const ensureSync = (table: string, columns: ColumnDef[]): void => {
         const existing = new Set(
@@ -352,7 +355,7 @@ async function initPostgresSchema(): Promise<void> {
     for (const index of INDEXES) {
         await client.exec(index.sql);
     }
-    await client.exec(ADMIN_TABLES);
+    await client.exec(ADMIN_TABLES(true));
     await ensureColumns("providers", [
         { name: "refresh_token", definition: "refresh_token TEXT" },
         { name: "account_id", definition: "account_id TEXT" },

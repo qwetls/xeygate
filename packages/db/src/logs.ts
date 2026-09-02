@@ -310,9 +310,11 @@ export async function getAnalyticsDB(window: AnalyticsWindow): Promise<Analytics
 
     // Time buckets. SQLite binds numbers as REAL; CAST truncates to bucket start.
     // Postgres uses BIGINT timestamps, so division is integer-safe.
+    // Use BIGINT cast for the bucket calculation — the multiplication
+    // (bucketIndex * bucketSize) easily exceeds INT (2.1B) for 24h+ windows.
     const BucketsSql = `
         SELECT
-            CAST(created_at / ? AS INTEGER) * ? AS bucket,
+            CAST(created_at / ? AS BIGINT) * ? AS bucket,
             COUNT(*)                                             AS totalRequests,
             SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) AS successRequests,
             SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END)  AS errorRequests,
@@ -342,16 +344,12 @@ export async function getAnalyticsDB(window: AnalyticsWindow): Promise<Analytics
     `;
     const Providers = (await db.prepare(ProviderSql).all(Since)) as unknown as AnalyticsProviderRow[];
 
-    // p95 latency
-    const P95Sql = isPostgres()
-        ? `SELECT latency_ms FROM request_logs
+    // p95 latency. COUNT(*) is BIGINT; scale to INT only when the result
+    // is guaranteed small (we cap at the table size). Use BIGINT to be safe.
+    const P95Sql = `SELECT latency_ms FROM request_logs
            WHERE created_at >= ?
            ORDER BY latency_ms
-           LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.95 AS INTEGER) - 1 FROM request_logs WHERE created_at >= ?)`
-        : `SELECT latency_ms FROM request_logs
-           WHERE created_at >= ?
-           ORDER BY latency_ms
-           LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.95 AS INTEGER) - 1 FROM request_logs WHERE created_at >= ?)`;
+           LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.95 AS BIGINT) - 1 FROM request_logs WHERE created_at >= ?)`;
     const P95Row = (await db.prepare(P95Sql).get(Since, Since)) as { latency_ms: number } | undefined;
     const P95LatencyMs = P95Row ? num(P95Row.latency_ms) : 0;
 
