@@ -379,4 +379,7 @@ async function initPostgresSchema(): Promise<void> {
 }
 
 // Schema init: synchronous for SQLite (legacy), async for Postgres (fired and awaited by boot).
-initDatabase();
+// For Postgres, boot code must explicitly await initDatabase() before serving.
+if (!isPostgres()) {
+    initDatabase();
+}

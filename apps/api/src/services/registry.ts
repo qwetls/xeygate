@@ -357,4 +357,8 @@ export function warmModelRegistry(): void {
 }
 
 // Seed built-in driver rows, then auto load saved DB providers
-void seedDefaultProviders().then(() => loadSavedProvidersFromDB());
+// Deferred to boot() — must run after PG schema init.
+// Called from index.ts boot() via warmModelRegistry().
+export function startProviderRegistry(): Promise<void> {
+    return seedDefaultProviders().then(() => loadSavedProvidersFromDB());
+}

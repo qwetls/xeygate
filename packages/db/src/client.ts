@@ -84,6 +84,40 @@ function toPg(sql: string): string {
     return sql.replace(/\?/g, () => `$${++i}`);
 }
 
+/** Split a SQL script into individual statements on top-level semicolons (ignores quotes/strings). */
+function splitStatements(sql: string): string[] {
+    const statements: string[] = [];
+    let current = "";
+    let inSingle = false;
+    let inDouble = false;
+    let inDollar = false;
+    for (let i = 0; i < sql.length; i++) {
+        const ch = sql[i];
+        const next = sql[i + 1];
+        if (!inDollar && !inSingle && !inDouble && ch === "'") {
+            inSingle = true;
+        } else if (inSingle && ch === "'" && next !== "'") {
+            inSingle = false;
+        } else if (!inDollar && !inSingle && !inDouble && ch === '"') {
+            inDouble = true;
+        } else if (inDouble && ch === '"' && next !== '"') {
+            inDouble = false;
+        } else if (!inSingle && !inDouble && ch === "$" && /^[a-zA-Z_0-9]*\$/.test(sql.slice(i, i + 40))) {
+            inDollar = true;
+        } else if (inDollar && ch === "$" && next !== "$") {
+            // crude dollar-quote end detection: only terminates if same tag — acceptable for our DDL
+            inDollar = false;
+        } else if (!inSingle && !inDouble && !inDollar && ch === ";") {
+            if (current.trim()) statements.push(current.trim());
+            current = "";
+            continue;
+        }
+        current += ch;
+    }
+    if (current.trim()) statements.push(current.trim());
+    return statements;
+}
+
 export class PgClient implements DbClient {
     /** Normalize undefined → null (pg rejects undefined params). */
     private normalizeParams(params: unknown[]): unknown[] {
@@ -113,7 +147,12 @@ export class PgClient implements DbClient {
         if (trimmed.startsWith("PRAGMA")) return;
 
         const pool = await getPool();
-        await pool.query(sql);
+        // pg driver rejects multiple statements in a single query() call.
+        // Split on top-level semicolons and execute each separately.
+        const statements = splitStatements(sql);
+        for (const stmt of statements) {
+            await pool.query(stmt);
+        }
     }
 
     async tableColumns(table: string): Promise<string[]> {

@@ -1,4 +1,4 @@
-import { db } from "./db.js";
+import { db, isPostgres } from "./db.js";
 import { num, str } from "./row-utils.js";
 
 export interface CustomModelRow {
@@ -29,10 +29,13 @@ export async function getCustomModelsByProviderDB(providerId: string): Promise<C
 
 export async function addCustomModelDB(providerId: string, modelId: string): Promise<CustomModelRow> {
     const CreatedAt = Date.now();
-    await db.prepare(
-        `INSERT OR IGNORE INTO custom_models (provider_id, model_id, created_at)
-         VALUES (?, ?, ?)`
-    ).run(providerId, modelId, CreatedAt);
+    const UpsertSql = isPostgres()
+        ? `INSERT INTO custom_models (provider_id, model_id, created_at)
+           VALUES (?, ?, ?)
+           ON CONFLICT (provider_id, model_id) DO NOTHING`
+        : `INSERT OR IGNORE INTO custom_models (provider_id, model_id, created_at)
+           VALUES (?, ?, ?)`;
+    await db.prepare(UpsertSql).run(providerId, modelId, CreatedAt);
     return { providerId, modelId, createdAt: CreatedAt };
 }
 

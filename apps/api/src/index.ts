@@ -20,10 +20,10 @@ import { CreateCsrfOriginGuard } from "@/middleware/CsrfOrigin.js";
 import { CreateBodyLimitMiddleware } from "@/middleware/BodyLimit.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
-import { warmModelRegistry } from "@/services/registry.js";
+import { warmModelRegistry, startProviderRegistry } from "@/services/registry.js";
 import { bootstrapAdminAccountFromEnv } from "@/services/adminAuth.js";
 import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
-import { adminAuthStore } from "@srouter/db";
+import { adminAuthStore, initDatabase, isPostgres } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
 import { API_VERSION } from "@srouter/constants";
@@ -53,10 +53,10 @@ app.use("/v1/*", CreateBodyLimitMiddleware());
 
 // Bootstrap the admin account only when SROUTER_ADMIN_PASSWORD is set.
 // Otherwise first-run setup happens through the dashboard.
-void bootstrapAdminAccountFromEnv(adminAuthStore);
+// (Moved into boot() — must run after PG schema init.)
 
 // Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
-void autostartTunnelIfEnabled();
+// (Moved into boot() — queries DB, must run after PG schema init.)
 
 const apiInfo = () => ({
     name: "SRouter API",
@@ -155,24 +155,6 @@ if (hasWebDist) {
 
 const port = Number(process.env.PORT) || 3000;
 
-serve(
-    {
-        fetch: app.fetch,
-        port
-    },
-    (info) => {
-        console.log(`🚀 SRouter Server running at http://localhost:${info.port}`);
-        if (hasWebDist) {
-            console.log(`🌐 Web Dashboard & API live at http://localhost:${info.port}`);
-        } else {
-            console.log(
-                `ℹ️ Web dist not found. Running in API-only mode at http://localhost:${info.port}`
-            );
-        }
-        warmModelRegistry();
-    }
-);
-
 // Secondary listener on Port 1455 for OAuth callbacks and local Anthropic proxy
 const oauthApp = new Hono();
 oauthApp.onError(errorHandler("OAuth API Route"));
@@ -191,24 +173,62 @@ oauthApp.route("/v1", ModelsRouter);
 const oauthPort = Number(process.env.OAUTH_PORT) || 1455;
 const oauthHost = process.env.OAUTH_HOST || "127.0.0.1";
 
-try {
+async function boot(): Promise<void> {
+    // Postgres schema init is async — await it before serving any request
+    // so the first query never hits a missing table. SQLite is already
+    // initialized synchronously at module import.
+    if (isPostgres()) {
+        await initDatabase();
+    }
+
+    // Bootstrap admin account & tunnel autostart: query DB, so must run
+    // after schema init (especially for Postgres).
+    void bootstrapAdminAccountFromEnv(adminAuthStore);
+    void autostartTunnelIfEnabled();
+
+    // Seed default provider rows + load saved providers (must run after DB schema init).
+    await startProviderRegistry();
+
     serve(
         {
-            fetch: oauthApp.fetch,
-            port: oauthPort,
-            hostname: oauthHost
+            fetch: app.fetch,
+            port
         },
         (info) => {
-            console.log(
-                `🔑 OAuth Callback Server running at http://${info.address}:${info.port}/auth/callback & /auth/antigravity/callback & /auth/claude/callback`
-            );
+            console.log(`🚀 SRouter Server running at http://localhost:${info.port}`);
+            if (hasWebDist) {
+                console.log(`🌐 Web Dashboard & API live at http://localhost:${info.port}`);
+            } else {
+                console.log(
+                    `ℹ️ Web dist not found. Running in API-only mode at http://localhost:${info.port}`
+                );
+            }
+            warmModelRegistry();
         }
     );
-} catch (err) {
-    console.warn(`Could not start OAuth server on port ${oauthPort}:`, err);
+
+    // Secondary listener on Port 1455 for OAuth callbacks and local Anthropic proxy
+    try {
+        serve(
+            {
+                fetch: oauthApp.fetch,
+                port: oauthPort,
+                hostname: oauthHost
+            },
+            (info) => {
+                console.log(
+                    `🔑 OAuth Callback Server running at http://${info.address}:${info.port}/auth/callback & /auth/antigravity/callback & /auth/claude/callback`
+                );
+            }
+        );
+    } catch (err) {
+        console.warn(`Could not start OAuth server on port ${oauthPort}:`, err);
+    }
+
+    // Start background OAuth token refresh sweeper
+    startTokenRefreshSweeper();
 }
 
-// Start background OAuth token refresh sweeper
-startTokenRefreshSweeper();
+void boot();
 
 export default app;
