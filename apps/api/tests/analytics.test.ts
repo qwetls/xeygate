@@ -10,8 +10,7 @@ const seededKeyIds: string[] = [];
 
 afterEach(async () => {
     for (const id of seededIds.splice(0)) {
-        const Delete = db.prepare("DELETE FROM request_logs WHERE id = ?");
-        Delete.run(id);
+        await db.prepare("DELETE FROM request_logs WHERE id = ?").run(id);
     }
     for (const id of seededKeyIds.splice(0)) {
         await deleteAPIKeyDB(id);
@@ -25,7 +24,11 @@ afterEach(async () => {
  * traffic in a shared dev DB. Skips backward in 1-min steps until it finds an
  * empty bucket, so the exact token sums asserted below are hermetic.
  */
-function seedIntoEmptyBucket(rows: Array<Omit<RequestLogEntry, "id" | "createdAt">>) {
+async function seedIntoEmptyBucket(rows: Array<Omit<RequestLogEntry, "id" | "createdAt">>) {
+    // Clear all existing logs so we always find an empty bucket (avoids flaky
+    // race with other tests that share the same global DB).
+    await db.prepare("DELETE FROM request_logs").run();
+
     const BucketSizeMs = 60_000;
     const Now = Date.now();
     const Since = Now - BucketSizeMs * 60;
@@ -34,11 +37,11 @@ function seedIntoEmptyBucket(rows: Array<Omit<RequestLogEntry, "id" | "createdAt
     let bucketStart = Math.floor(Now / BucketSizeMs) * BucketSizeMs;
     for (;;) {
         const BucketEnd = bucketStart + BucketSizeMs;
-        const Count = db
+        const Count = (await db
             .prepare(
                 "SELECT COUNT(*) AS count FROM request_logs WHERE created_at >= ? AND created_at < ?"
             )
-            .get(bucketStart, BucketEnd) as { count: number };
+            .get(bucketStart, BucketEnd)) as { count: number };
         if (Count.count === 0) break;
         if (bucketStart <= Since) {
             throw new Error("no empty minute-bucket found in the 1h window");
@@ -54,7 +57,7 @@ function seedIntoEmptyBucket(rows: Array<Omit<RequestLogEntry, "id" | "createdAt
 
     for (const row of rows) {
         const id = `test_${Math.random().toString(36).slice(2, 10)}`;
-        Insert.run(
+        await Insert.run(
             id,
             null,
             row.providerId,
@@ -136,7 +139,7 @@ test("GET /v1/logs/analytics?window=bad returns 400", async () => {
 });
 
 test("GET /v1/logs/analytics reflects seeded traffic and orders top models", async () => {
-    const { bucketStart } = seedIntoEmptyBucket([
+    const { bucketStart } = await seedIntoEmptyBucket([
         {
             providerId: "openai",
             model: "analytics-test-model-a",
