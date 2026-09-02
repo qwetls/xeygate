@@ -31,7 +31,9 @@ type OAuthClient = {
 function getOAuthClient(providerType: string): OAuthClient | null {
     const handler = authProviderHandlers[providerType];
     if (!handler?.oauthClass) return null;
-    return new handler.oauthClass();
+    const instance = new handler.oauthClass();
+    // oauthClass may return an instance without refreshTokens — guard at runtime
+    return instance.refreshTokens ? (instance as OAuthClient) : null;
 }
 
 /**
@@ -69,7 +71,7 @@ export async function refreshProviderToken(providerId: string): Promise<RefreshR
 }
 
 async function refreshProviderTokenOnce(providerId: string): Promise<RefreshResult> {
-    const provider = getProviderByIdDB(providerId);
+    const provider = await getProviderByIdDB(providerId);
     if (!provider) {
         return { success: false, error: `Provider ${providerId} not found` };
     }
@@ -91,7 +93,7 @@ async function refreshProviderTokenOnce(providerId: string): Promise<RefreshResu
         const expiresAt = tokens.expiresIn ? refreshedAt + tokens.expiresIn * 1000 : undefined;
         const nextRefreshToken = tokens.refreshToken ?? provider.refreshToken;
 
-        updateProviderTokensDB({
+        await updateProviderTokensDB({
             id: providerId,
             accessToken: tokens.accessToken,
             refreshToken: nextRefreshToken,
@@ -117,7 +119,7 @@ async function refreshProviderTokenOnce(providerId: string): Promise<RefreshResu
  * Runs on an interval; also callable manually (e.g. after startup).
  */
 export async function sweepExpiredTokens(): Promise<RefreshResult[]> {
-    const providers = getAllProvidersDB().filter((p) => p.enabled && p.refreshToken);
+    const providers = (await getAllProvidersDB()).filter((p) => p.enabled && p.refreshToken);
     const results: RefreshResult[] = [];
 
     for (const provider of providers) {
@@ -180,7 +182,7 @@ export async function ensureFreshToken(alias: string): Promise<void> {
     const providerType = providerTypeForAlias(alias);
     if (!providerType) return;
 
-    const due = getAllProvidersDB().filter(
+    const due = (await getAllProvidersDB()).filter(
         (provider) =>
             provider.enabled && provider.providerId === providerType && isDueForRefresh(provider)
     );

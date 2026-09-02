@@ -77,7 +77,7 @@ function scheduleTunnelRestart(): void {
             running: false,
             error: "Tunnel stopped after multiple restart attempts."
         };
-        setSettingDB(SETTING_TUNNEL_AUTOSTART, "false");
+        void setSettingDB(SETTING_TUNNEL_AUTOSTART, "false");
         emitTunnelUpdate(true);
         return;
     }
@@ -85,17 +85,19 @@ function scheduleTunnelRestart(): void {
     const delay = Math.min(1000 * 2 ** (restartAttempts - 1), 30_000);
     restartTimer = setTimeout(() => {
         if (!tunnelDesired || tunnelStopping) return;
-        const result = startTunnel({
-            port: lastTunnelPort,
-            token: getTunnelToken() || undefined,
-            domain: getTunnelDomain() || undefined
-        });
-        if (!result.success) {
-            // e.g. binary missing — stop retrying rather than loop forever.
-            tunnelDesired = false;
-            setSettingDB(SETTING_TUNNEL_AUTOSTART, "false");
-            emitTunnelUpdate(true);
-        }
+        void (async () => {
+            const result = await startTunnel({
+                port: lastTunnelPort,
+                token: (await getTunnelToken()) || undefined,
+                domain: (await getTunnelDomain()) || undefined
+            });
+            if (!result.success) {
+                // e.g. binary missing — stop retrying rather than loop forever.
+                tunnelDesired = false;
+                await setSettingDB(SETTING_TUNNEL_AUTOSTART, "false");
+                emitTunnelUpdate(true);
+            }
+        })();
     }, delay);
 }
 
@@ -103,8 +105,8 @@ function scheduleTunnelRestart(): void {
  * Resolve the cloudflared binary. Checks PATH first, then common install
  * locations and any previously installed/saved path.
  */
-function resolveCloudflared(): string | null {
-    const saved = getSettingDB(SETTING_CLOUDFLARED_PATH);
+async function resolveCloudflared(): Promise<string | null> {
+    const saved = await getSettingDB(SETTING_CLOUDFLARED_PATH);
     const candidates = [
         process.env.CLOUDFLARED_PATH,
         saved,
@@ -318,7 +320,7 @@ export function installCloudflared(): InstallResult {
             if (process.platform !== "win32") {
                 fs.chmodSync(dest, 0o755);
             }
-            setSettingDB(SETTING_CLOUDFLARED_PATH, dest);
+            await setSettingDB(SETTING_CLOUDFLARED_PATH, dest);
             installState = { ...installState, inProgress: false, done: true, target: dest };
             emitTunnelUpdate(true);
         } catch (err) {
@@ -340,7 +342,7 @@ export function installCloudflared(): InstallResult {
     };
 }
 
-export function getInstallStatus() {
+export async function getInstallStatus() {
     return {
         inProgress: installState.inProgress,
         done: installState.done,
@@ -350,24 +352,24 @@ export function getInstallStatus() {
         target: installState.target,
         downloadedBytes: installState.downloadedBytes,
         totalBytes: installState.totalBytes,
-        cloudflaredAvailable: resolveCloudflared() !== null
+        cloudflaredAvailable: (await resolveCloudflared()) !== null
     };
 }
 
-export function getTunnelToken(): string {
+export async function getTunnelToken(): Promise<string> {
     return getSettingDB(SETTING_TUNNEL_TOKEN);
 }
 
-export function setTunnelToken(token: string): void {
-    setSettingDB(SETTING_TUNNEL_TOKEN, token.trim());
+export async function setTunnelToken(token: string): Promise<void> {
+    await setSettingDB(SETTING_TUNNEL_TOKEN, token.trim());
 }
 
-export function getTunnelDomain(): string {
+export async function getTunnelDomain(): Promise<string> {
     return getSettingDB(SETTING_TUNNEL_DOMAIN);
 }
 
-export function setTunnelDomain(domain: string): void {
-    setSettingDB(
+export async function setTunnelDomain(domain: string): Promise<void> {
+    await setSettingDB(
         SETTING_TUNNEL_DOMAIN,
         domain
             .trim()
@@ -376,45 +378,40 @@ export function setTunnelDomain(domain: string): void {
     );
 }
 
-export function getTunnelStatus() {
+export async function getTunnelStatus() {
     return {
-        running: tunnelProcess !== null && tunnelProcess.exitCode === null,
-        pid: tunnelProcess?.pid,
+        running: lastStatus.running,
         startedAt: lastStatus.startedAt,
         error: lastStatus.error,
-        domain: lastStatus.domain || getTunnelDomain() || undefined,
-        cloudflaredAvailable: resolveCloudflared() !== null,
-        install: getInstallStatus()
+        domain: lastStatus.domain,
+        desired: tunnelDesired,
+        restartAttempts,
+        maxRestartAttempts: MAX_RESTART_ATTEMPTS,
+        autostart: (await getSettingDB(SETTING_TUNNEL_AUTOSTART, "false")) === "true",
+        mode: lastStatus.domain ? ("named" as const) : ("quick" as const)
     };
 }
 
 /**
- * Start a Cloudflare Tunnel.
- *
- * Two modes:
- *  - Quick tunnel (no token): `cloudflared tunnel --url http://localhost:PORT`
- *    gives a random *.trycloudflare.com URL. No token or Cloudflare account needed.
- *  - Named tunnel (token + optional custom domain): `cloudflared tunnel run --token …`
- *    uses a Tunnel Token created in Cloudflare Zero Trust; the ingress
- *    (custom hostname → http://localhost:PORT) is configured remotely there.
+ * Start a Cloudflare tunnel for the gateway (and the OAuth callback listener).
  *
  * The token and custom domain are ONLY required for the named-tunnel / custom-domain
  * mode. A quick tunnel works with zero configuration.
  */
-export function startTunnel(options: { port?: number; token?: string; domain?: string } = {}): {
+export async function startTunnel(options: { port?: number; token?: string; domain?: string } = {}): Promise<{
     success: boolean;
     message: string;
     domain?: string;
     mode: "quick" | "named";
-} {
+}> {
     if (tunnelProcess && tunnelProcess.exitCode === null) {
         return { success: false, message: "Tunnel is already running", mode: "named" };
     }
 
-    const token = (options.token ?? getTunnelToken()).trim();
+    const token = (options.token ?? (await getTunnelToken())).trim();
     const port = options.port ?? 3000;
 
-    const cloudflared = resolveCloudflared();
+    const cloudflared = await resolveCloudflared();
     if (!cloudflared) {
         return {
             success: false,
@@ -425,7 +422,7 @@ export function startTunnel(options: { port?: number; token?: string; domain?: s
     }
 
     const quick = !token;
-    if (!quick && options.domain) setTunnelDomain(options.domain);
+    if (!quick && options.domain) await setTunnelDomain(options.domain);
 
     // Mark the tunnel as desired so it auto-restarts on crash and survives reboots.
     tunnelDesired = true;
@@ -433,7 +430,7 @@ export function startTunnel(options: { port?: number; token?: string; domain?: s
     restartAttempts = 0;
     lastTunnelPort = port;
     clearRestartTimer();
-    setSettingDB(SETTING_TUNNEL_AUTOSTART, "true");
+    await setSettingDB(SETTING_TUNNEL_AUTOSTART, "true");
 
     const args = quick
         ? ["tunnel", "--url", `http://localhost:${port}`]
@@ -447,7 +444,7 @@ export function startTunnel(options: { port?: number; token?: string; domain?: s
     lastStatus = {
         running: true,
         startedAt: Date.now(),
-        domain: quick ? undefined : getTunnelDomain() || undefined
+        domain: quick ? undefined : ((await getTunnelDomain()) || undefined)
     };
 
     // Rolling tail of combined output so URLs split across chunks still match.
@@ -478,51 +475,58 @@ export function startTunnel(options: { port?: number; token?: string; domain?: s
     child.stdout?.on("data", handleOutput);
     child.stderr?.on("data", handleOutput);
 
-    child.on("exit", (code) => {
+    child.on("close", (code) => {
+        tunnelProcess = null;
         lastStatus = {
             ...lastStatus,
             running: false,
-            error:
-                code !== null && code !== 0
-                    ? lastStatus.error || `cloudflared exited with code ${code}`
-                    : undefined
+            ...(code !== 0 ? { error: `cloudflared exited with code ${code ?? "unknown"}` } : {})
         };
-        tunnelProcess = null;
         emitTunnelUpdate(true);
-        // Auto-restart unless this was an intentional stop.
-        if (tunnelDesired && !tunnelStopping) scheduleTunnelRestart();
+        scheduleTunnelRestart();
     });
+
     child.on("error", (err) => {
-        lastStatus = { ...lastStatus, running: false, error: err.message };
         tunnelProcess = null;
+        lastStatus = {
+            ...lastStatus,
+            running: false,
+            error: err.message
+        };
         emitTunnelUpdate(true);
-        if (tunnelDesired && !tunnelStopping) scheduleTunnelRestart();
+        scheduleTunnelRestart();
     });
 
     emitTunnelUpdate(true);
-
     return {
         success: true,
         message: quick
-            ? `Cloudflare quick Tunnel started (pid ${child.pid})`
-            : `Cloudflare Tunnel started (pid ${child.pid})`,
-        domain: lastStatus.domain,
+            ? "Quick tunnel started — waiting for assigned URL…"
+            : "Named tunnel started",
         mode: quick ? "quick" : "named"
     };
 }
 
-export function stopTunnel(): { success: boolean; message: string } {
-    if (!tunnelProcess || tunnelProcess.exitCode !== null) {
-        return { success: false, message: "Tunnel is not running" };
-    }
-    // Intentional stop: don't auto-restart.
+export async function stopTunnel(): Promise<{ success: boolean; message: string }> {
     tunnelDesired = false;
     tunnelStopping = true;
     clearRestartTimer();
-    setSettingDB(SETTING_TUNNEL_AUTOSTART, "false");
-    tunnelProcess.kill("SIGTERM");
+
+    if (tunnelProcess && tunnelProcess.exitCode === null) {
+        tunnelProcess.kill("SIGTERM");
+        await new Promise<void>((resolve) => {
+            const timer = setTimeout(resolve, 5000);
+            tunnelProcess?.once("close", () => {
+                clearTimeout(timer);
+                resolve();
+            });
+        });
+    }
+
     tunnelProcess = null;
+    tunnelStopping = false;
     lastStatus = { running: false };
+    await setSettingDB(SETTING_TUNNEL_AUTOSTART, "false");
     emitTunnelUpdate(true);
     return { success: true, message: "Cloudflare Tunnel stopped" };
 }
@@ -532,12 +536,12 @@ export function stopTunnel(): { success: boolean; message: string } {
  * Reads the persisted autostart flag; uses the stored token/domain (quick tunnel
  * if no token is configured). No-op if cloudflared isn't installed yet.
  */
-export function autostartTunnelIfEnabled(): void {
-    if (getSettingDB(SETTING_TUNNEL_AUTOSTART) !== "true") return;
+export async function autostartTunnelIfEnabled(): Promise<void> {
+    if ((await getSettingDB(SETTING_TUNNEL_AUTOSTART, "false")) !== "true") return;
     if (tunnelProcess && tunnelProcess.exitCode === null) return;
-    startTunnel({
+    await startTunnel({
         port: lastTunnelPort,
-        token: getTunnelToken() || undefined,
-        domain: getTunnelDomain() || undefined
+        token: (await getTunnelToken()) || undefined,
+        domain: (await getTunnelDomain()) || undefined
     });
 }

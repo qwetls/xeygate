@@ -7,15 +7,15 @@ import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
 
 export class ProvidersController {
-    public static ListProviders(c: Context): Response {
+    public static async ListProviders(c: Context): Promise<Response> {
         return Ok(c, {
             object: "list",
-            data: ProvidersLogic.ListProviders()
+            data: await ProvidersLogic.ListProviders()
         });
     }
 
-    public static GetCatalog(c: Context): Response {
-        return Ok(c, ProvidersLogic.GetCatalog());
+    public static async GetCatalog(c: Context): Promise<Response> {
+        return Ok(c, await ProvidersLogic.GetCatalog());
     }
 
     public static async GetProvider(c: Context): Promise<Response> {
@@ -37,22 +37,22 @@ export class ProvidersController {
         }
 
         try {
-            const Created = ProvidersLogic.AddProvider(Parsed.data as CreateProviderPayload);
+            const Created = await ProvidersLogic.AddProvider(Parsed.data as CreateProviderPayload);
             return Ok(c, Created);
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Invalid provider payload", 400);
         }
     }
 
-    public static DeleteProvider(c: Context): Response {
+    public static async DeleteProvider(c: Context): Promise<Response> {
         const Id = c.req.param("id");
         if (!Id) return Err(c, "Connection ID is required", 400);
-        if (!deleteProviderDB(Id)) {
+        if (!(await deleteProviderDB(Id))) {
             return Err(c, `Connection '${Id}' not found`, 404);
         }
 
         registry.unregisterProvider(Id);
-        loadSavedProvidersFromDB();
+        await loadSavedProvidersFromDB();
         return Ok(c, { message: "Connection deleted" });
     }
 
@@ -78,14 +78,14 @@ export class ProvidersController {
         }
 
         try {
-            const Model = ProvidersLogic.AddCustomModel(ProviderId, Parsed.data.model_id);
+            const Model = await ProvidersLogic.AddCustomModel(ProviderId, Parsed.data.model_id);
             return Ok(c, Model, 201);
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Invalid model payload", 400);
         }
     }
 
-    public static DeleteCustomModel(c: Context): Response {
+    public static async DeleteCustomModel(c: Context): Promise<Response> {
         const ProviderId = c.req.param("providerId");
         const ModelId = c.req.param("modelId");
         if (!ProviderId || !ModelId) {
@@ -93,7 +93,7 @@ export class ProvidersController {
         }
 
         try {
-            ProvidersLogic.DeleteCustomModel(ProviderId, decodeURIComponent(ModelId));
+            await ProvidersLogic.DeleteCustomModel(ProviderId, decodeURIComponent(ModelId));
             return Ok(c, { message: "Custom model deleted" });
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Failed to delete model", 404);

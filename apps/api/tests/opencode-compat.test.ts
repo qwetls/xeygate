@@ -44,8 +44,8 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
 
     registry.registerProvider(mockProvider);
 
-    t.after(() => {
-        deleteLogsByProviderDB(mockProviderId);
+    t.after(async () => {
+        await deleteLogsByProviderDB(mockProviderId);
         registry.unregisterProvider(mockProviderId);
     });
 

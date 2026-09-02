@@ -28,19 +28,18 @@ function ParseAllowedModels(value: string | null): string[] | null {
     return null;
 }
 
-export function getAllAPIKeysDB(): APIKeyZod[] {
-    const Query = db.prepare("SELECT * FROM api_keys ORDER BY created_at DESC");
-    const Rows = Query.all() as unknown as APIKeyRow[];
-
+export async function getAllAPIKeysDB(): Promise<APIKeyZod[]> {
+    const Rows = (await db
+        .prepare("SELECT * FROM api_keys ORDER BY created_at DESC")
+        .all()) as unknown as APIKeyRow[];
     return Rows.map(mapAPIKeyRow);
 }
 
-export function getAPIKeyByKeyDB(key: string): APIKeyZod | null {
-    const Query = db.prepare("SELECT * FROM api_keys WHERE key = ? AND enabled = 1");
-    const Row = Query.get(key) as unknown as APIKeyRow | undefined;
-
+export async function getAPIKeyByKeyDB(key: string): Promise<APIKeyZod | null> {
+    const Row = (await db
+        .prepare("SELECT * FROM api_keys WHERE key = ? AND enabled = 1")
+        .get(key)) as unknown as APIKeyRow | undefined;
     if (!Row) return null;
-
     return mapAPIKeyRow(Row);
 }
 
@@ -60,7 +59,7 @@ function mapAPIKeyRow(row: APIKeyRow): APIKeyZod {
     };
 }
 
-export function createAPIKeyDB(data: {
+export async function createAPIKeyDB(data: {
     name: string;
     enabled?: boolean;
     rate_limit?: number;
@@ -70,7 +69,7 @@ export function createAPIKeyDB(data: {
     quotaLimit?: number;
     creditLimit?: number;
     allowed_models?: string[] | null;
-}): APIKeyZod {
+}): Promise<APIKeyZod> {
     const Id = generateId("key");
     const RandomHex = randomUUID().replace(/-/g, "").slice(0, 16);
     const Key = `sr-live-${RandomHex}`;
@@ -83,12 +82,10 @@ export function createAPIKeyDB(data: {
     const CreditLimit = data.credit_limit ?? data.creditLimit ?? 0;
     const Enabled = data.enabled !== undefined ? (data.enabled ? 1 : 0) : 1;
 
-    const Query = db.prepare(`
+    await db.prepare(`
         INSERT INTO api_keys (id, key, name, enabled, rate_limit, quota_limit, usage_tokens, credit_limit, usage_cost, allowed_models, created_at)
         VALUES (?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?)
-    `);
-
-    Query.run(
+    `).run(
         Id,
         Key,
         data.name,
@@ -115,26 +112,23 @@ export function createAPIKeyDB(data: {
     };
 }
 
-export function incrementAPIKeyUsageDB(keyId: string, tokens: number, cost = 0): void {
-    const Query = db.prepare(
+export async function incrementAPIKeyUsageDB(keyId: string, tokens: number, cost = 0): Promise<void> {
+    await db.prepare(
         "UPDATE api_keys SET usage_tokens = usage_tokens + ?, usage_cost = usage_cost + ? WHERE id = ?"
-    );
-    Query.run(tokens, cost, keyId);
+    ).run(tokens, cost, keyId);
 }
 
-export function addCreditAPIKeyDB(id: string, amount: number): APIKeyZod | null {
-    const UpdateQuery = db.prepare(
-        "UPDATE api_keys SET credit_limit = credit_limit + ? WHERE id = ?"
-    );
-    UpdateQuery.run(amount, id);
+export async function addCreditAPIKeyDB(id: string, amount: number): Promise<APIKeyZod | null> {
+    await db.prepare("UPDATE api_keys SET credit_limit = credit_limit + ? WHERE id = ?").run(amount, id);
 
-    const SelectQuery = db.prepare("SELECT * FROM api_keys WHERE id = ?");
-    const Row = SelectQuery.get(id) as unknown as APIKeyRow | undefined;
+    const Row = (await db.prepare("SELECT * FROM api_keys WHERE id = ?").get(id)) as unknown as
+        | APIKeyRow
+        | undefined;
     if (!Row) return null;
     return mapAPIKeyRow(Row);
 }
 
-export function updateAPIKeyDB(
+export async function updateAPIKeyDB(
     id: string,
     data: {
         name?: string;
@@ -147,9 +141,10 @@ export function updateAPIKeyDB(
         creditLimit?: number;
         allowed_models?: string[] | null;
     }
-): APIKeyZod | null {
-    const SelectQuery = db.prepare("SELECT * FROM api_keys WHERE id = ?");
-    const existing = SelectQuery.get(id) as unknown as APIKeyRow | undefined;
+): Promise<APIKeyZod | null> {
+    const existing = (await db.prepare("SELECT * FROM api_keys WHERE id = ?").get(id)) as unknown as
+        | APIKeyRow
+        | undefined;
     if (!existing) return null;
 
     const fields: string[] = [];
@@ -189,16 +184,16 @@ export function updateAPIKeyDB(
 
     if (fields.length > 0) {
         values.push(id);
-        const UpdateQuery = db.prepare(`UPDATE api_keys SET ${fields.join(", ")} WHERE id = ?`);
-        UpdateQuery.run(...values);
+        await db.prepare(`UPDATE api_keys SET ${fields.join(", ")} WHERE id = ?`).run(...values);
     }
 
-    const updatedRow = SelectQuery.get(id) as unknown as APIKeyRow | undefined;
+    const updatedRow = (await db.prepare("SELECT * FROM api_keys WHERE id = ?").get(id)) as unknown as
+        | APIKeyRow
+        | undefined;
     return updatedRow ? mapAPIKeyRow(updatedRow) : null;
 }
 
-export function deleteAPIKeyDB(id: string): boolean {
-    const Query = db.prepare("DELETE FROM api_keys WHERE id = ?");
-    const Result = Query.run(id);
+export async function deleteAPIKeyDB(id: string): Promise<boolean> {
+    const Result = await db.prepare("DELETE FROM api_keys WHERE id = ?").run(id);
     return num(Result.changes) > 0;
 }

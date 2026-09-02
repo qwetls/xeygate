@@ -6,24 +6,23 @@ interface SettingRow {
     value: string;
 }
 
-export function getSettingDB(key: string, defaultValue = ""): string {
-    const Stmt = db.prepare("SELECT value FROM system_settings WHERE key = ?");
-    const Row = Stmt.get(key) as unknown as SettingRow | undefined;
+export async function getSettingDB(key: string, defaultValue = ""): Promise<string> {
+    const Row = (await db
+        .prepare("SELECT value FROM system_settings WHERE key = ?")
+        .get(key)) as unknown as SettingRow | undefined;
     return Row ? Row.value : defaultValue;
 }
 
-export function setSettingDB(key: string, value: string): void {
-    const Stmt = db.prepare(`
-        INSERT INTO system_settings (key, value)
-        VALUES (?, ?)
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value
-    `);
-    Stmt.run(key, value);
+export async function setSettingDB(key: string, value: string): Promise<void> {
+    await db.prepare(
+        `INSERT INTO system_settings (key, value)
+         VALUES (?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    ).run(key, value);
 }
 
-export function getAllSettingsDB(): Record<string, string> {
-    const Stmt = db.prepare("SELECT key, value FROM system_settings");
-    const Rows = Stmt.all() as unknown as SettingRow[];
+export async function getAllSettingsDB(): Promise<Record<string, string>> {
+    const Rows = (await db.prepare("SELECT key, value FROM system_settings").all()) as unknown as SettingRow[];
     const Result: Record<string, string> = {};
     for (const r of Rows) {
         Result[r.key] = r.value;
@@ -31,19 +30,19 @@ export function getAllSettingsDB(): Record<string, string> {
     return Result;
 }
 
-export function getRequireApiKeyDB(): boolean {
-    const Val = getSettingDB("require_api_key", "false");
+export async function getRequireApiKeyDB(): Promise<boolean> {
+    const Val = await getSettingDB("require_api_key", "false");
     return Val === "true" || Val === "1";
 }
 
-export function setRequireApiKeyDB(required: boolean): void {
-    setSettingDB("require_api_key", required ? "true" : "false");
+export async function setRequireApiKeyDB(required: boolean): Promise<void> {
+    await setSettingDB("require_api_key", required ? "true" : "false");
 }
 
-export function getRoundRobinDB(providerId: string): boolean {
-    return getSettingDB(`round_robin_${providerId}`, "false") === "true";
+export async function getRoundRobinDB(providerId: string): Promise<boolean> {
+    return (await getSettingDB(`round_robin_${providerId}`, "false")) === "true";
 }
 
-export function setRoundRobinDB(providerId: string, enabled: boolean): void {
-    setSettingDB(`round_robin_${providerId}`, enabled ? "true" : "false");
+export async function setRoundRobinDB(providerId: string, enabled: boolean): Promise<void> {
+    await setSettingDB(`round_robin_${providerId}`, enabled ? "true" : "false");
 }

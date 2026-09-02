@@ -12,7 +12,7 @@ afterEach(async () => {
     globalThis.fetch = originalFetch;
     const { registry } = await import("../src/services/registry.js");
     for (const id of createdIds.splice(0)) {
-        deleteProviderDB(id);
+        await deleteProviderDB(id);
         registry.unregisterProvider(id);
     }
 });
@@ -32,10 +32,10 @@ test("saved Qoder connections initialize QoderExecutor on startup", async () => 
         enabled: true,
         createdAt: Date.now()
     };
-    upsertProviderDB(config);
+    await await upsertProviderDB(config);
 
     const { loadSavedProvidersFromDB, registry } = await import("../src/services/registry.js");
-    loadSavedProvidersFromDB();
+    await await loadSavedProvidersFromDB();
 
     const provider = registry.getProvider(id);
     assert.ok(provider);
@@ -44,7 +44,7 @@ test("saved Qoder connections initialize QoderExecutor on startup", async () => 
 });
 
 test("processQoderTokenImport stores Qoder provider and registers in registry", async () => {
-    const config = AuthLogic.processQoderTokenImport({
+    const config = await AuthLogic.processQoderTokenImport({
         accessToken: "pt-my-pat-token",
         name: "My Qoder Account"
     });
@@ -56,7 +56,7 @@ test("processQoderTokenImport stores Qoder provider and registers in registry", 
     assert.equal(config.protocol, "openai");
     assert.equal(config.accessToken, "pt-my-pat-token");
 
-    const saved = getProviderByIdDB(config.id);
+    const saved = await getProviderByIdDB(config.id);
     assert.equal(saved?.accessToken, "pt-my-pat-token");
 
     const { registry } = await import("../src/services/registry.js");
@@ -64,8 +64,8 @@ test("processQoderTokenImport stores Qoder provider and registers in registry", 
     assert.ok(instance);
 });
 
-test("initiateQoderOAuthPKCE generates valid Qoder authorization parameters", () => {
-    const { authorizeUrl, state, codeVerifier } = AuthLogic.initiateQoderOAuthPKCE({});
+test("initiateQoderOAuthPKCE generates valid Qoder authorization parameters", async () => {
+    const { authorizeUrl, state, codeVerifier } = await AuthLogic.initiateQoderOAuthPKCE({});
 
     assert.ok(authorizeUrl.startsWith("https://qoder.com/device/selectAccounts"));
     assert.ok(authorizeUrl.includes("challenge_method=S256"));
@@ -75,7 +75,7 @@ test("initiateQoderOAuthPKCE generates valid Qoder authorization parameters", ()
 });
 
 test("pollQoderDeviceToken polls upstream and creates provider when user authorizes", async () => {
-    const { state } = AuthLogic.initiateQoderOAuthPKCE({});
+    const { state } = await AuthLogic.initiateQoderOAuthPKCE({});
 
     globalThis.fetch = async (input) => {
         const urlStr = String(input);

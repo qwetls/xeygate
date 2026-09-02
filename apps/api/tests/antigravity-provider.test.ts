@@ -7,15 +7,15 @@ import { AuthLogic } from "../src/logic/auth.logic.js";
 
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdIds.splice(0)) {
-        deleteProviderDB(id);
+        await await deleteProviderDB(id);
         registry.unregisterProvider(id);
     }
 });
 
 test("saved Antigravity connections initialize AntigravityExecutor and list models", async () => {
-    const config = AuthLogic.processAntigravityTokenImport({
+    const config = await AuthLogic.processAntigravityTokenImport({
         accessToken: "ya29.test_antigravity_token",
         refreshToken: "1//test_refresh_token"
     });
@@ -28,7 +28,7 @@ test("saved Antigravity connections initialize AntigravityExecutor and list mode
     assert.equal(config.accessToken, "ya29.test_antigravity_token");
     assert.equal(config.refreshToken, "1//test_refresh_token");
 
-    const saved = getProviderByIdDB(config.id);
+    const saved = await await getProviderByIdDB(config.id);
     assert.equal(saved?.accessToken, "ya29.test_antigravity_token");
     assert.equal(saved?.refreshToken, "1//test_refresh_token");
 
@@ -39,9 +39,9 @@ test("saved Antigravity connections initialize AntigravityExecutor and list mode
     assert.ok(models.some((m) => m.id === "gemini-3.7-flash-high"));
 });
 
-test("initiateAntigravityOAuth generates valid Antigravity authorization parameters", () => {
+test("initiateAntigravityOAuth generates valid Antigravity authorization parameters", async () => {
     const { authorizeUrl, state, codeVerifier, redirectUri } =
-        AuthLogic.initiateAntigravityOAuthPKCE({});
+        await AuthLogic.initiateAntigravityOAuthPKCE({});
 
     assert.ok(authorizeUrl.startsWith("https://accounts.google.com/o/oauth2/v2/auth"));
     assert.ok(authorizeUrl.includes("code_challenge_method=S256"));

@@ -22,26 +22,26 @@ interface ProviderRow {
     created_at: number;
 }
 
-export function getAllProvidersDB(): ProviderConfig[] {
-    const Query = db.prepare("SELECT * FROM providers ORDER BY created_at DESC");
-    const Rows = Query.all() as unknown as ProviderRow[];
-
+export async function getAllProvidersDB(): Promise<ProviderConfig[]> {
+    const Rows = (await db
+        .prepare("SELECT * FROM providers ORDER BY created_at DESC")
+        .all()) as unknown as ProviderRow[];
     return Rows.map(mapProviderRow);
 }
 
-export function getProviderByIdDB(id: string): ProviderConfig | null {
-    const Query = db.prepare("SELECT * FROM providers WHERE id = ?");
-    const Row = Query.get(id) as unknown as ProviderRow | undefined;
+export async function getProviderByIdDB(id: string): Promise<ProviderConfig | null> {
+    const Row = (await db
+        .prepare("SELECT * FROM providers WHERE id = ?")
+        .get(id)) as unknown as ProviderRow | undefined;
 
     if (!Row) return null;
-
     return mapProviderRow(Row);
 }
 
-export function upsertProviderDB(
+export async function upsertProviderDB(
     config: ProviderConfig & { category: string; protocol: string }
-): ProviderConfig {
-    const Query = db.prepare(`
+): Promise<ProviderConfig> {
+    await db.prepare(`
         INSERT INTO providers (
             id, provider_id, name, category, protocol, base_url, api_key,
             access_token, refresh_token, account_id, organization_id,
@@ -66,9 +66,7 @@ export function upsertProviderDB(
             provider_specific_data = excluded.provider_specific_data,
             enabled = excluded.enabled,
             created_at = excluded.created_at;
-    `);
-
-    Query.run(
+    `).run(
         config.id,
         config.providerId,
         config.name,
@@ -93,13 +91,12 @@ export function upsertProviderDB(
 
 export function createProviderDB(
     config: ProviderConfig & { category: string; protocol: string }
-): ProviderConfig {
+): Promise<ProviderConfig> {
     return upsertProviderDB(config);
 }
 
-export function deleteProviderDB(id: string): boolean {
-    const Query = db.prepare("DELETE FROM providers WHERE id = ?");
-    const Result = Query.run(id);
+export async function deleteProviderDB(id: string): Promise<boolean> {
+    const Result = await db.prepare("DELETE FROM providers WHERE id = ?").run(id);
     return num(Result.changes) > 0;
 }
 
@@ -111,8 +108,8 @@ export interface UpdateProviderTokensInput {
     lastRefreshedAt?: number;
 }
 
-export function updateProviderTokensDB(input: UpdateProviderTokensInput): void {
-    db.prepare(
+export async function updateProviderTokensDB(input: UpdateProviderTokensInput): Promise<void> {
+    await db.prepare(
         `UPDATE providers SET
             access_token = ?,
             refresh_token = ?,
@@ -128,13 +125,11 @@ export function updateProviderTokensDB(input: UpdateProviderTokensInput): void {
     );
 }
 
-export function getConnectionsByProviderIdDB(providerId: string): ProviderConfig[] {
+export async function getConnectionsByProviderIdDB(providerId: string): Promise<ProviderConfig[]> {
     const PId = providerId.toLowerCase();
-    const Query = db.prepare(
-        "SELECT * FROM providers WHERE LOWER(provider_id) = ? OR LOWER(id) = ? ORDER BY created_at DESC"
-    );
-    const Rows = Query.all(PId, PId) as unknown as ProviderRow[];
-
+    const Rows = (await db
+        .prepare("SELECT * FROM providers WHERE LOWER(provider_id) = ? OR LOWER(id) = ? ORDER BY created_at DESC")
+        .all(PId, PId)) as unknown as ProviderRow[];
     return Rows.map(mapProviderRow);
 }
 

@@ -16,9 +16,9 @@ import { ProvidersLogic } from "../src/logic/providers.logic.js";
 const createdIds: string[] = [];
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+afterEach(async () => {
     globalThis.fetch = originalFetch;
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+    for (const id of createdIds.splice(0)) await await deleteProviderDB(id);
 });
 
 test("saved CodeBuddy connections instantiate CodeBuddyExecutor and list models", async () => {
@@ -36,10 +36,10 @@ test("saved CodeBuddy connections instantiate CodeBuddyExecutor and list models"
         enabled: true,
         createdAt: Date.now()
     };
-    upsertProviderDB(config);
+    await await upsertProviderDB(config);
 
     const { loadSavedProvidersFromDB, registry } = await import("../src/services/registry.js");
-    loadSavedProvidersFromDB();
+    await await loadSavedProvidersFromDB();
     const provider = registry.getProvider(id);
     assert.ok(provider);
     const models = await provider.listModels();
@@ -50,8 +50,8 @@ test("saved CodeBuddy connections instantiate CodeBuddyExecutor and list models"
     registry.unregisterProvider(id);
 });
 
-test("processCodeBuddyTokenImport creates and registers CodeBuddy provider config", () => {
-    const config = AuthLogic.processCodeBuddyTokenImport({
+test("processCodeBuddyTokenImport creates and registers CodeBuddy provider config", async () => {
+    const config = await AuthLogic.processCodeBuddyTokenImport({
         accessToken: "test-codebuddy-key",
         name: "My CodeBuddy Account"
     });
@@ -62,7 +62,7 @@ test("processCodeBuddyTokenImport creates and registers CodeBuddy provider confi
     assert.equal(config.name, "My CodeBuddy Account");
     assert.equal(config.category, "oauth");
     assert.equal(config.protocol, "openai");
-    assert.equal(config.baseUrl, "https://www.codebuddy.ai/v2/chat/completions");
+    assert.equal(config.base_url, "https://www.codebuddy.ai/v2/chat/completions");
     assert.equal(config.accessToken, "test-codebuddy-key");
     assert.equal(config.enabled, true);
     assert.equal(
@@ -71,7 +71,7 @@ test("processCodeBuddyTokenImport creates and registers CodeBuddy provider confi
     );
 });
 
-test("CodeBuddy CN is registered as a connectable OAuth provider", () => {
+test("CodeBuddy CN is registered as a connectable OAuth provider", async () => {
     const provider = providerById("codebuddy-cn");
 
     assert.ok(provider);
@@ -81,8 +81,8 @@ test("CodeBuddy CN is registered as a connectable OAuth provider", () => {
     assert.equal(provider?.requires_oauth, true);
 });
 
-test("CodeBuddy CN token import creates a CN provider connection", () => {
-    const config = AuthLogic.processProviderTokenImport("codebuddy-cn", {
+test("CodeBuddy CN token import creates a CN provider connection", async () => {
+    const config = await AuthLogic.processProviderTokenImport("codebuddy-cn", {
         accessToken: "test-codebuddy-cn-token",
         name: "My CodeBuddy CN Account"
     });
@@ -92,7 +92,7 @@ test("CodeBuddy CN token import creates a CN provider connection", () => {
     assert.match(config.id, /^codebuddy-cn_\d+$/);
     assert.equal(config.providerId, "codebuddy-cn");
     assert.equal(config.name, "My CodeBuddy CN Account");
-    assert.equal(config.baseUrl, CODEBUDDY_CN_BASE_URL);
+    assert.equal(config.base_url, CODEBUDDY_CN_BASE_URL);
     assert.equal(config.accessToken, "test-codebuddy-cn-token");
     assert.equal(
         AuthHandlers.CodeBuddyCN.tokenImportMessage,
@@ -100,19 +100,19 @@ test("CodeBuddy CN token import creates a CN provider connection", () => {
     );
 });
 
-test("CodeBuddy CN connections stay grouped under the CN catalog entry", () => {
-    const before = ProvidersLogic.ListProviders();
+test("CodeBuddy CN connections stay grouped under the CN catalog entry", async () => {
+    const before = await await ProvidersLogic.ListProviders();
     const cnBefore =
         before.find((provider) => provider.id === "codebuddy-cn")?.status.connectedCount ?? 0;
     const globalBefore =
         before.find((provider) => provider.id === "codebuddy")?.status.connectedCount ?? 0;
 
-    const config = AuthLogic.processProviderTokenImport("codebuddy-cn", {
+    const config = await AuthLogic.processProviderTokenImport("codebuddy-cn", {
         accessToken: "test-codebuddy-cn-catalog-token"
     });
     createdIds.push(config.id);
 
-    const catalog = ProvidersLogic.ListProviders();
+    const catalog = await await ProvidersLogic.ListProviders();
     const global = catalog.find((provider) => provider.id === "codebuddy");
     const cn = catalog.find((provider) => provider.id === "codebuddy-cn");
 
@@ -229,7 +229,7 @@ test("pollCodeBuddyDeviceToken polls upstream and creates provider when user aut
     };
 
     const state = "cb-test-state-auth";
-    saveOAuthSessionDB({
+    await await saveOAuthSessionDB({
         state,
         codeVerifier: "",
         clientId: "",
@@ -266,7 +266,7 @@ test("pollCodeBuddyCNDeviceToken creates a CN connection after browser authoriza
     };
 
     const state = "cb-cn-test-state-auth";
-    saveOAuthSessionDB({
+    await await saveOAuthSessionDB({
         state,
         codeVerifier: "",
         clientId: "",
@@ -278,7 +278,7 @@ test("pollCodeBuddyCNDeviceToken creates a CN connection after browser authoriza
     assert.equal(requestedUrl, `https://copilot.tencent.com/v2/plugin/auth/token?state=${state}`);
     assert.equal(result.status, "ok");
     assert.equal(result.provider?.providerId, "codebuddy-cn");
-    assert.equal(result.provider?.baseUrl, CODEBUDDY_CN_BASE_URL);
+    assert.equal(result.provider?.base_url, CODEBUDDY_CN_BASE_URL);
     if (result.provider) createdIds.push(result.provider.id);
 });
 test("CodeBuddy CN live quota splits refill and bonus packs", async () => {
@@ -319,7 +319,7 @@ test("CodeBuddy CN live quota splits refill and bonus packs", async () => {
         );
     };
 
-    const account = await fetchCodeBuddyCNLiveQuota("codebuddy-cn_1", "CN Account", "cn-token");
+    const account = await await fetchCodeBuddyCNLiveQuota("codebuddy-cn_1", "CN Account", "cn-token");
 
     assert.equal(capturedHeaders?.get("authorization"), "Bearer cn-token");
     assert.equal(capturedHeaders?.get("x-ide-type"), "CLI");

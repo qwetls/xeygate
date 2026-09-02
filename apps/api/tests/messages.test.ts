@@ -25,19 +25,19 @@ const createdKeyIds: string[] = [];
 const createdProviderIds: string[] = [];
 
 afterEach(async () => {
-    setRequireApiKeyDB(false);
+    await setRequireApiKeyDB(false);
     for (const id of createdKeyIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
     const { registry } = await import("../src/services/registry.js");
     for (const id of createdProviderIds.splice(0)) {
-        deleteLogsByProviderDB(id);
-        deleteProviderDB(id);
+        await deleteLogsByProviderDB(id);
+        await deleteProviderDB(id);
         registry.unregisterProvider(id);
     }
-    deleteLogsByProviderDB("anthropic_test");
-    deleteLogsByProviderDB("mock-auth-provider");
-    deleteLogsByProviderDB("mock-model");
+    await deleteLogsByProviderDB("anthropic_test");
+    await deleteLogsByProviderDB("mock-auth-provider");
+    await deleteLogsByProviderDB("mock-model");
 });
 
 test("POST /v1/messages returns Anthropic message response for non-streaming request", async () => {
@@ -110,8 +110,8 @@ test("POST /v1/messages returns Anthropic message response for non-streaming req
 });
 
 test("POST /v1/messages authenticates with x-api-key header when require_api_key is true", async () => {
-    setRequireApiKeyDB(true);
-    const keyRecord = createAPIKeyDB({ name: "Claude Code Key" });
+    await setRequireApiKeyDB(true);
+    const keyRecord = await createAPIKeyDB({ name: "Claude Code Key" });
     createdKeyIds.push(keyRecord.id);
 
     const { registry } = await import("../src/services/registry.js");

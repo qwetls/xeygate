@@ -8,9 +8,9 @@ import { AuthHandlers } from "../src/services/authHandlers.js";
 const createdIds: string[] = [];
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+afterEach(async () => {
     globalThis.fetch = originalFetch;
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+    for (const id of createdIds.splice(0)) await await deleteProviderDB(id);
 });
 
 test("saved SeekAI connections use the official URL and bearer auth", async () => {
@@ -28,7 +28,7 @@ test("saved SeekAI connections use the official URL and bearer auth", async () =
         enabled: true,
         createdAt: Date.now()
     };
-    upsertProviderDB(config);
+    await await upsertProviderDB(config);
 
     let requestUrl = "";
     let authorization = "";
@@ -39,7 +39,7 @@ test("saved SeekAI connections use the official URL and bearer auth", async () =
     };
 
     const { loadSavedProvidersFromDB, registry } = await import("../src/services/registry.js");
-    loadSavedProvidersFromDB();
+    await await loadSavedProvidersFromDB();
     const provider = registry.getProvider(id);
     assert.ok(provider);
     await provider.listModels();
@@ -51,8 +51,8 @@ test("saved SeekAI connections use the official URL and bearer auth", async () =
     registry.unregisterProvider(id);
 });
 
-test("processSeekAITokenImport creates and registers SeekAI provider config", () => {
-    const config = AuthLogic.processSeekAITokenImport({
+test("processSeekAITokenImport creates and registers SeekAI provider config", async () => {
+    const config = await AuthLogic.processSeekAITokenImport({
         accessToken: "test-seekai-key",
         name: "My SeekAI Account"
     });
@@ -63,7 +63,7 @@ test("processSeekAITokenImport creates and registers SeekAI provider config", ()
     assert.equal(config.name, "My SeekAI Account");
     assert.equal(config.category, "api_key");
     assert.equal(config.protocol, "openai");
-    assert.equal(config.baseUrl, "https://seekai.cc/v1");
+    assert.equal(config.base_url, "https://seekai.cc/v1");
     assert.equal(config.apiKey, "test-seekai-key");
     assert.equal(config.enabled, true);
     assert.equal(

@@ -25,8 +25,8 @@ export const DEFAULT_TOKEN_SAVER_SETTINGS: TokenSaverSettings = {
 
 const SETTINGS_KEY = "token_saver_config";
 
-export function getTokenSaverSettingsDB(): TokenSaverSettings {
-    const Raw = getSettingDB(SETTINGS_KEY, "");
+export async function getTokenSaverSettingsDB(): Promise<TokenSaverSettings> {
+    const Raw = await getSettingDB(SETTINGS_KEY, "");
     if (!Raw) {
         return { ...DEFAULT_TOKEN_SAVER_SETTINGS };
     }
@@ -52,8 +52,8 @@ export function getTokenSaverSettingsDB(): TokenSaverSettings {
     }
 }
 
-export function setTokenSaverSettingsDB(settings: Partial<TokenSaverSettings>): TokenSaverSettings {
-    const Current = getTokenSaverSettingsDB();
+export async function setTokenSaverSettingsDB(settings: Partial<TokenSaverSettings>): Promise<TokenSaverSettings> {
+    const Current = await getTokenSaverSettingsDB();
     const Updated: TokenSaverSettings = {
         enabled: typeof settings.enabled === "boolean" ? settings.enabled : Current.enabled,
         compressToolOutput: {
@@ -69,6 +69,6 @@ export function setTokenSaverSettingsDB(settings: Partial<TokenSaverSettings>): 
             ...(settings.compressLlmOutput ?? {})
         }
     };
-    setSettingDB(SETTINGS_KEY, JSON.stringify(Updated));
+    await setSettingDB(SETTINGS_KEY, JSON.stringify(Updated));
     return Updated;
 }

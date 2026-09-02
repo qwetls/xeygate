@@ -19,12 +19,12 @@ const MAX_EVENT_STREAMS = 8;
 let ActiveEventStreams = 0;
 
 export class TunnelController {
-    public static GetStatus(c: Context): Response {
-        const Status = getTunnelStatus();
-        return Ok(c, { ...Status, tokenConfigured: Boolean(getTunnelToken()) });
+    public static async GetStatus(c: Context): Promise<Response> {
+        const Status = await getTunnelStatus();
+        return Ok(c, { ...Status, tokenConfigured: Boolean(await getTunnelToken()) });
     }
 
-    public static GetEvents(c: Context): Response {
+    public static async GetEvents(c: Context): Promise<Response> {
         if (ActiveEventStreams >= MAX_EVENT_STREAMS) {
             return Err(c, "Too many concurrent tunnel event streams", 429, {
                 code: "too_many_streams"
@@ -52,22 +52,25 @@ export class TunnelController {
                     } catch {}
                 };
 
-                try {
-                    Send({ ...getTunnelStatus(), tokenConfigured: Boolean(getTunnelToken()) });
+                void (async () => {
+                    try {
+                        const Status = await getTunnelStatus();
+                        Send({ ...Status, tokenConfigured: Boolean(await getTunnelToken()) });
 
-                    Unsubscribe = onTunnelUpdate((Status) => {
-                        Send({ ...Status, tokenConfigured: Boolean(getTunnelToken()) });
-                    });
+                        Unsubscribe = onTunnelUpdate((Status) => {
+                            Send({ ...Status, tokenConfigured: Boolean(getTunnelToken()) });
+                        });
 
-                    Heartbeat = setInterval(() => {
-                        try {
-                            controller.enqueue(Encoder.encode(`: ping\n\n`));
-                        } catch {}
-                    }, 25_000);
-                } catch (SetupError) {
-                    Release();
-                    throw SetupError;
-                }
+                        Heartbeat = setInterval(() => {
+                            try {
+                                controller.enqueue(Encoder.encode(`: ping\n\n`));
+                            } catch {}
+                        }, 25_000);
+                    } catch (SetupError) {
+                        Release();
+                        throw SetupError;
+                    }
+                })();
             },
             cancel() {
                 Release();
@@ -87,15 +90,15 @@ export class TunnelController {
         const Parsed = TunnelConfigSchema.safeParse(RawBody);
         const Data = Parsed.success ? Parsed.data : {};
 
-        if (Data.token) setTunnelToken(Data.token);
-        if (Data.domain) setTunnelDomain(Data.domain);
+        if (Data.token) await setTunnelToken(Data.token);
+        if (Data.domain) await setTunnelDomain(Data.domain);
 
-        const Result = startTunnel();
+        const Result = await startTunnel();
         return Result.success ? Ok(c, Result) : Err(c, Result.message, 400);
     }
 
-    public static StopTunnel(c: Context): Response {
-        const Result = stopTunnel();
+    public static async StopTunnel(c: Context): Promise<Response> {
+        const Result = await stopTunnel();
         return Result.success ? Ok(c, Result) : Err(c, Result.message, 400);
     }
 
@@ -106,12 +109,12 @@ export class TunnelController {
             return Err(c, "Provide 'token' and/or 'domain'", 400);
         }
 
-        if (Parsed.data.token) setTunnelToken(Parsed.data.token);
-        if (Parsed.data.domain) setTunnelDomain(Parsed.data.domain);
+        if (Parsed.data.token) await setTunnelToken(Parsed.data.token);
+        if (Parsed.data.domain) await setTunnelDomain(Parsed.data.domain);
 
         return Ok(c, {
             message: "Tunnel configuration updated",
-            domain: getTunnelDomain() || undefined
+            domain: (await getTunnelDomain()) || undefined
         });
     }
 
@@ -120,7 +123,7 @@ export class TunnelController {
         return Result.success ? Ok(c, Result) : Err(c, Result.message, 400);
     }
 
-    public static GetInstallStatus(c: Context): Response {
-        return Ok(c, getInstallStatus());
+    public static async GetInstallStatus(c: Context): Promise<Response> {
+        return Ok(c, await getInstallStatus());
     }
 }

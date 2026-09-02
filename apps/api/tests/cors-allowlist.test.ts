@@ -11,7 +11,7 @@ function createTestApp(Allowlist = new Set<string>()) {
     return app;
 }
 
-test("origin allowlist parsing trims and drops empties", () => {
+test("origin allowlist parsing trims and drops empties", async () => {
     const Set = ParseAllowedOrigins(" https://dash.example.com , http://localhost:5173,, ");
     assert.deepEqual([...Set], ["https://dash.example.com", "http://localhost:5173"]);
     assert.equal(ParseAllowedOrigins(undefined).size, 0);

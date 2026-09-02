@@ -38,7 +38,7 @@ const mockProvider: AIProvider = {
     }
 };
 
-beforeEach(() => {
+beforeEach(async () => {
     fetchCount = 0;
     slowRefresh = false;
     for (const providerId of registry.getAllProviders().keys()) {
@@ -50,7 +50,7 @@ beforeEach(() => {
     ModelsLogic.ClearCache();
 });
 
-afterEach(() => {
+afterEach(async () => {
     registry.unregisterProvider(mockProviderId);
     ModelsLogic.ClearCache();
 });
@@ -129,7 +129,7 @@ test("GET /v1/models/:model returns single model or 404", async () => {
 });
 
 test("GET /v1/models exposes combo source models", async () => {
-    createFallbackRuleDB({
+    await createFallbackRuleDB({
         sourceModel: "smart-route",
         targetModel: `${mockProviderId}/gpt-5-turbo`,
         priority: 1,

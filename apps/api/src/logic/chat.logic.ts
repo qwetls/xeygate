@@ -11,6 +11,7 @@ import type {
     ChatCompletionResponse,
     ChatMessage,
     FallbackRule,
+    JSONValue,
     ToolCall,
     UsageInfo
 } from "@srouter/types";
@@ -74,8 +75,8 @@ function ShouldTriggerFallback(
     return status === undefined;
 }
 
-function ResolveCandidates(originalModel: string): CandidateModel[] {
-    const matchingRules = findMatchingFallbackRulesDB(originalModel);
+async function ResolveCandidates(originalModel: string): Promise<CandidateModel[]> {
+    const matchingRules = await findMatchingFallbackRulesDB(originalModel);
     const candidates: CandidateModel[] = [{ model: originalModel }];
     const visitedModels = new Set<string>([originalModel]);
 
@@ -88,7 +89,7 @@ function ResolveCandidates(originalModel: string): CandidateModel[] {
     return candidates;
 }
 
-function LogCompletion(
+async function LogCompletion(
     providerId: string,
     model: string,
     startTime: number,
@@ -100,8 +101,8 @@ function LogCompletion(
         fallbackReason?: string;
         apiKeyId?: string;
     }
-): void {
-    const breakdown = extractUsageBreakdown(providerId, options.usage);
+): Promise<void> {
+    const breakdown = extractUsageBreakdown(providerId, options.usage as JSONValue | undefined);
     const effectiveModel = model;
     const effectiveProvider = effectiveModel.includes("/")
         ? effectiveModel.split("/")[0]!
@@ -143,9 +144,9 @@ export class ChatLogic {
         apiKeyId?: string
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
-            depth === 0 ? applyTokenSaver(body, getTokenSaverSettingsDB()).request : body;
+            depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
-        const candidates = ResolveCandidates(originalModel);
+        const candidates = await ResolveCandidates(originalModel);
 
         let lastError: Error | ErrorWithStatus | string | null = null;
         const fallbackPath: string[] = [originalModel];
@@ -214,7 +215,7 @@ export class ChatLogic {
                     );
                 }
 
-                LogCompletion(providerId, currentModel, startTime, {
+                await LogCompletion(providerId, currentModel, startTime, {
                     statusCode: 200,
                     usage: response.usage,
                     fallbackOccurred,
@@ -257,9 +258,9 @@ export class ChatLogic {
         apiKeyId?: string
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
-            depth === 0 ? applyTokenSaver(body, getTokenSaverSettingsDB()).request : body;
+            depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
-        const candidates = ResolveCandidates(originalModel);
+        const candidates = await ResolveCandidates(originalModel);
 
         let lastError: Error | ErrorWithStatus | string | null = null;
         const fallbackPath: string[] = [originalModel];

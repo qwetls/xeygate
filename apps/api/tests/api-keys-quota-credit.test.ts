@@ -6,9 +6,9 @@ import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
 });
 
@@ -19,14 +19,14 @@ function createTestApp() {
 }
 
 test("ApiKeyAuth rejects request with 402 when credit balance is exhausted", async () => {
-    const key = createAPIKeyDB({
+    const key = await createAPIKeyDB({
         name: "Exhausted Credit Key",
         credit_limit: 5.0
     });
     createdIds.push(key.id);
 
     // Increment cost to exceed creditLimit
-    incrementAPIKeyUsageDB(key.id, 100, 5.01);
+    await incrementAPIKeyUsageDB(key.id, 100, 5.01);
 
     const app = createTestApp();
     const res = await app.request("/test", {
@@ -43,14 +43,14 @@ test("ApiKeyAuth rejects request with 402 when credit balance is exhausted", asy
 });
 
 test("ApiKeyAuth rejects request with 429 when token quota is exhausted", async () => {
-    const key = createAPIKeyDB({
+    const key = await createAPIKeyDB({
         name: "Exhausted Quota Key",
         quota_limit: 1000
     });
     createdIds.push(key.id);
 
     // Increment tokens to exceed quotaLimit
-    incrementAPIKeyUsageDB(key.id, 1005, 0);
+    await incrementAPIKeyUsageDB(key.id, 1005, 0);
 
     const app = createTestApp();
     const res = await app.request("/test", {
@@ -67,14 +67,14 @@ test("ApiKeyAuth rejects request with 429 when token quota is exhausted", async 
 });
 
 test("ApiKeyAuth allows request when within credit and quota limits", async () => {
-    const key = createAPIKeyDB({
+    const key = await createAPIKeyDB({
         name: "Valid Key",
         credit_limit: 10.0,
         quota_limit: 10000
     });
     createdIds.push(key.id);
 
-    incrementAPIKeyUsageDB(key.id, 1000, 1.0);
+    await incrementAPIKeyUsageDB(key.id, 1000, 1.0);
 
     const app = createTestApp();
     const res = await app.request("/test", {

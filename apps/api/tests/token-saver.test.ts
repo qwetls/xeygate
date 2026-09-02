@@ -9,18 +9,18 @@ import {
 import type { TokenSaverSettings } from "@srouter/types";
 import { TokenSaverController } from "../src/controllers/tokenSaver.controller.js";
 
-afterEach(() => {
+afterEach(async () => {
     // Reset to defaults
-    setTokenSaverSettingsDB(DEFAULT_TOKEN_SAVER_SETTINGS);
+    await setTokenSaverSettingsDB(DEFAULT_TOKEN_SAVER_SETTINGS);
 });
 
-test("TokenSaver DB gets defaults and updates settings cleanly", () => {
-    const initial = getTokenSaverSettingsDB();
+test("TokenSaver DB gets defaults and updates settings cleanly", async () => {
+    const initial = await getTokenSaverSettingsDB();
     assert.equal(initial.enabled, true);
     assert.equal(initial.compressToolOutput.compressGit, true);
     assert.equal(initial.lazySeniorDev.mode, "balanced");
 
-    const updated = setTokenSaverSettingsDB({
+    const updated = await setTokenSaverSettingsDB({
         enabled: false,
         compressToolOutput: {
             ...initial.compressToolOutput,
@@ -36,7 +36,7 @@ test("TokenSaver DB gets defaults and updates settings cleanly", () => {
     assert.equal(updated.compressToolOutput.compressGit, false);
     assert.equal(updated.lazySeniorDev.mode, "strict");
 
-    const retrieved = getTokenSaverSettingsDB();
+    const retrieved = await getTokenSaverSettingsDB();
     assert.equal(retrieved.enabled, false);
     assert.equal(retrieved.compressToolOutput.compressGit, false);
     assert.equal(retrieved.lazySeniorDev.mode, "strict");
