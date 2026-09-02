@@ -47,8 +47,9 @@ export class LogsLogic {
         const End = Now;
         const RawMap = new Map<number, AnalyticsBucket>();
         for (const b of raw.buckets) {
-            RawMap.set(b.bucket, {
-                bucketStart: b.bucket,
+            const bucketKey = num(b.bucket);
+            RawMap.set(bucketKey, {
+                bucketStart: bucketKey,
                 totalRequests: num(b.totalRequests),
                 successRequests: num(b.successRequests),
                 errorRequests: num(b.errorRequests),
