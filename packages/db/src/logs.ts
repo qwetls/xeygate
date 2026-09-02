@@ -204,11 +204,11 @@ export async function getUsageByModelDB(): Promise<UsageByModelRow[]> {
 
     return Rows.map((row) => ({
         model: row.model,
-        totalRequests: row.totalRequests,
-        totalInputTokens: row.totalInputTokens,
-        totalOutputTokens: row.totalOutputTokens,
-        totalCachedTokens: row.totalCachedTokens,
-        estCost: row.estCost
+        totalRequests: num(row.totalRequests),
+        totalInputTokens: num(row.totalInputTokens),
+        totalOutputTokens: num(row.totalOutputTokens),
+        totalCachedTokens: num(row.totalCachedTokens),
+        estCost: num(row.estCost)
     }));
 }
 
