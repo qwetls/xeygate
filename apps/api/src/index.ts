@@ -53,10 +53,10 @@ app.use("/v1/*", CreateBodyLimitMiddleware());
 
 // Bootstrap the admin account only when SROUTER_ADMIN_PASSWORD is set.
 // Otherwise first-run setup happens through the dashboard.
-bootstrapAdminAccountFromEnv(adminAuthStore);
+void bootstrapAdminAccountFromEnv(adminAuthStore);
 
 // Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
-autostartTunnelIfEnabled();
+void autostartTunnelIfEnabled();
 
 const apiInfo = () => ({
     name: "SRouter API",

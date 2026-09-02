@@ -17,13 +17,13 @@ import type {
 import { formatCost } from "@srouter/pricing";
 
 export class LogsLogic {
-    public static getRecentLogs(limit: number = 50): RequestLogEntry[] {
+    public static async getRecentLogs(limit: number = 50): Promise<RequestLogEntry[]> {
         return getRecentLogsDB(limit);
     }
 
-    public static getUsageStats(): UsageStats {
-        const summary = getUsageSummaryDB();
-        const byModel = getUsageByModelDB();
+    public static async getUsageStats(): Promise<UsageStats> {
+        const summary = await getUsageSummaryDB();
+        const byModel = await getUsageByModelDB();
 
         return {
             object: "usage",
@@ -34,11 +34,11 @@ export class LogsLogic {
         };
     }
 
-    public static getAnalytics(window: AnalyticsWindow): AnalyticsReport {
+    public static async getAnalytics(window: AnalyticsWindow): Promise<AnalyticsReport> {
         const Now = Date.now();
         const BucketSizeMs = getBucketSizeMs(window);
         const BucketCount = getBucketCount(window);
-        const raw = getAnalyticsDB(window);
+        const raw = await getAnalyticsDB(window);
 
         // Zero-fill missing buckets
         const Since = Now - BucketSizeMs * BucketCount;

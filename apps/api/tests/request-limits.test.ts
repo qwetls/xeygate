@@ -30,7 +30,7 @@ test("body limit middleware rejects oversized Content-Length with 413", async ()
     assert.equal(body.error.code, "request_too_large");
 });
 
-test("chat schema rejects oversized structural payloads", () => {
+test("chat schema rejects oversized structural payloads", async () => {
     const base = { model: "gpt-test", messages: [{ role: "user" as const, content: "hi" }] };
 
     assert.ok(
@@ -59,7 +59,7 @@ test("chat schema rejects oversized structural payloads", () => {
     assert.ok(ChatCompletionRequestSchema.safeParse({ ...base, max_tokens: 4096 }).success);
 });
 
-test("anthropic schema keeps valid shapes and rejects runaway payloads", () => {
+test("anthropic schema keeps valid shapes and rejects runaway payloads", async () => {
     const valid = {
         model: "claude-test",
         max_tokens: 1024,
@@ -131,7 +131,7 @@ test("SSRF: private, loopback, link-local, CGNAT, and multicast addresses are bl
 
 test("messages route rejects chunked oversized bodies with 413 (no Content-Length trust)", async () => {
     const { setRequireApiKeyDB } = await import("@srouter/db");
-    setRequireApiKeyDB(false);
+    await setRequireApiKeyDB(false);
     const { MessagesRouter } = await import("../src/routes/v1/messages.js");
     const app = new Hono();
     app.route("/v1", MessagesRouter);

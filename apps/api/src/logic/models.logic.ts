@@ -9,11 +9,11 @@ export class ModelsLogic {
         ForceRefresh = false
     ): Promise<ModelObject[]> {
         const Models = await registry.listAllModels(Provider, ForceRefresh);
-        return this.MergeComboModels(this.MergeCustomModels(Models, Provider));
+        return this.MergeComboModels(await this.MergeCustomModels(Models, Provider));
     }
 
-    private static MergeComboModels(Models: ModelObject[]): ModelObject[] {
-        const Rules = getAllFallbackRulesDB().filter((Rule) => Rule.enabled);
+    private static async MergeComboModels(Models: ModelObject[]): Promise<ModelObject[]> {
+        const Rules = (await getAllFallbackRulesDB()).filter((Rule) => Rule.enabled);
         if (Rules.length === 0) return Models;
 
         const Merged = new Map<string, ModelObject>();
@@ -50,11 +50,11 @@ export class ModelsLogic {
         return Array.from(Merged.values());
     }
 
-    private static MergeCustomModels(
+    private static async MergeCustomModels(
         Models: ModelObject[],
         ProviderFilter?: string
-    ): ModelObject[] {
-        const Rows = getAllCustomModelsDB();
+    ): Promise<ModelObject[]> {
+        const Rows = await getAllCustomModelsDB();
         if (Rows.length === 0) return Models;
 
         const Merged = new Map<string, ModelObject>();

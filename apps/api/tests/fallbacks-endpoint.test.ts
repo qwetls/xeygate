@@ -7,14 +7,14 @@ import { ADMIN_SESSION_COOKIE, createAdminSession } from "../src/services/adminA
 
 const createdRuleIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdRuleIds.splice(0)) {
-        deleteFallbackRuleDB(id);
+        await await deleteFallbackRuleDB(id);
     }
 });
 
-function getAuthHeaders(extraHeaders: Record<string, string> = {}) {
-    const sessionToken = createAdminSession();
+async function getAuthHeaders(extraHeaders: Record<string, string> = {}) {
+    const sessionToken = await createAdminSession();
     return {
         Cookie: `${ADMIN_SESSION_COOKIE}=${sessionToken}`,
         ...extraHeaders
@@ -22,7 +22,7 @@ function getAuthHeaders(extraHeaders: Record<string, string> = {}) {
 }
 
 test("GET /settings/fallbacks returns all configured fallback rules", async () => {
-    const rule = createFallbackRuleDB({
+    const rule = await await createFallbackRuleDB({
         sourceModel: "test/endpoint-src",
         targetModel: "test/endpoint-dst",
         priority: 1,
@@ -35,7 +35,7 @@ test("GET /settings/fallbacks returns all configured fallback rules", async () =
 
     const res = await app.request("/v1/settings/fallbacks", {
         method: "GET",
-        headers: getAuthHeaders()
+        headers: await getAuthHeaders()
     });
 
     assert.equal(res.status, 200);
@@ -50,7 +50,7 @@ test("POST /settings/fallbacks creates a new fallback rule", async () => {
 
     const res = await app.request("/v1/settings/fallbacks", {
         method: "POST",
-        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        headers: await getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
             sourceModel: "openai_codex/gpt-4o",
             targetModel: "antigravity/gemini-2.5-pro",
@@ -71,7 +71,7 @@ test("POST /settings/fallbacks creates a new fallback rule", async () => {
 });
 
 test("PUT and DELETE /settings/fallbacks/:id updates and removes fallback rule", async () => {
-    const rule = createFallbackRuleDB({
+    const rule = await await createFallbackRuleDB({
         sourceModel: "test/to-update-src",
         targetModel: "test/to-update-dst",
         priority: 1,
@@ -85,7 +85,7 @@ test("PUT and DELETE /settings/fallbacks/:id updates and removes fallback rule",
     // Update rule
     const updateRes = await app.request(`/v1/settings/fallbacks/${rule.id}`, {
         method: "PUT",
-        headers: getAuthHeaders({ "Content-Type": "application/json" }),
+        headers: await getAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
             targetModel: "test/updated-dst",
             enabled: false
@@ -102,9 +102,9 @@ test("PUT and DELETE /settings/fallbacks/:id updates and removes fallback rule",
     // Delete rule
     const deleteRes = await app.request(`/v1/settings/fallbacks/${rule.id}`, {
         method: "DELETE",
-        headers: getAuthHeaders()
+        headers: await getAuthHeaders()
     });
 
     assert.equal(deleteRes.status, 200);
-    assert.equal(getFallbackRuleByIdDB(rule.id), null);
+    assert.equal(await await getFallbackRuleByIdDB(rule.id), null);
 });

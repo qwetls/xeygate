@@ -337,7 +337,7 @@ const bai: AuthProviderHandler = {
     oauthSuccessMessage: "",
     tokenImportMessage: "B.AI API Key registered and saved directly to SQLite database!",
     mapImportTokens: (params) => ({
-        apiKey: params.apiKey || params.token || params.accessToken,
+        apiKey: params.accessToken || params.access_token,
         refreshToken: params.refreshToken,
         baseUrl: params.baseUrl
     }),

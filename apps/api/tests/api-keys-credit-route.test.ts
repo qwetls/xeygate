@@ -8,9 +8,9 @@ import { createAdminSession, ADMIN_SESSION_COOKIE } from "@/services/adminAuth.j
 
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
 });
 
@@ -21,7 +21,7 @@ function createTestApp() {
 }
 
 test("POST /v1/keys creates key with creditLimit", async () => {
-    const token = createAdminSession();
+    const token = await createAdminSession();
     const app = createTestApp();
     const res = await app.request("/v1/keys", {
         method: "POST",
@@ -43,8 +43,8 @@ test("POST /v1/keys creates key with creditLimit", async () => {
 });
 
 test("POST /v1/keys/:id/credit adds credit to existing key", async () => {
-    const token = createAdminSession();
-    const key = createAPIKeyDB({
+    const token = await createAdminSession();
+    const key = await createAPIKeyDB({
         name: "Topup Route Key",
         credit_limit: 10
     });
@@ -64,13 +64,13 @@ test("POST /v1/keys/:id/credit adds credit to existing key", async () => {
     const body = (await res.json()) as APIKeyZod;
     assert.equal(body.credit_limit, 25);
 
-    const lookup = getAPIKeyByKeyDB(key.key);
+    const lookup = await getAPIKeyByKeyDB(key.key);
     assert.equal(lookup?.credit_limit, 25);
 });
 
 test("POST /v1/keys/:id/credit rejects non-positive amount", async () => {
-    const token = createAdminSession();
-    const key = createAPIKeyDB({ name: "Validation Key" });
+    const token = await createAdminSession();
+    const key = await createAPIKeyDB({ name: "Validation Key" });
     createdIds.push(key.id);
 
     const app = createTestApp();

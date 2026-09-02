@@ -11,27 +11,27 @@ import { ApiKeyAuth, CreateApiKeyAuth } from "../src/middleware/ApiKeyAuth.js";
 
 const createdKeyIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     // Reset require_api_key setting to false
-    setRequireApiKeyDB(false);
+    await setRequireApiKeyDB(false);
     for (const id of createdKeyIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
 });
 
-test("settings DB correctly gets and sets require_api_key toggle", () => {
-    setRequireApiKeyDB(false);
-    assert.equal(getRequireApiKeyDB(), false);
+test("settings DB correctly gets and sets require_api_key toggle", async () => {
+    await setRequireApiKeyDB(false);
+    assert.equal(await getRequireApiKeyDB(), false);
 
-    setRequireApiKeyDB(true);
-    assert.equal(getRequireApiKeyDB(), true);
+    await setRequireApiKeyDB(true);
+    assert.equal(await getRequireApiKeyDB(), true);
 
-    setRequireApiKeyDB(false);
-    assert.equal(getRequireApiKeyDB(), false);
+    await setRequireApiKeyDB(false);
+    assert.equal(await getRequireApiKeyDB(), false);
 });
 
 test("apiKeyAuth middleware rejects requests with 401 when require_api_key is true and no key is provided", async () => {
-    setRequireApiKeyDB(true);
+    await setRequireApiKeyDB(true);
 
     const testApp = new Hono();
     testApp.use("/*", ApiKeyAuth);
@@ -47,9 +47,9 @@ test("apiKeyAuth middleware rejects requests with 401 when require_api_key is tr
 });
 
 test("apiKeyAuth middleware allows request when valid Bearer key is provided", async () => {
-    setRequireApiKeyDB(true);
+    await setRequireApiKeyDB(true);
 
-    const created = createAPIKeyDB({
+    const created = await createAPIKeyDB({
         name: "Test Auth Key"
     });
     createdKeyIds.push(created.id);
@@ -71,7 +71,7 @@ test("apiKeyAuth middleware allows request when valid Bearer key is provided", a
 });
 
 test("apiKeyAuth middleware allows unauthenticated requests when require_api_key is false", async () => {
-    setRequireApiKeyDB(false);
+    await setRequireApiKeyDB(false);
 
     const testApp = new Hono();
     testApp.use("/*", CreateApiKeyAuth({ getClientAddress: () => "127.0.0.1" }));
@@ -87,7 +87,7 @@ test("apiKeyAuth middleware allows unauthenticated requests when require_api_key
 });
 
 test("apiKeyAuth middleware rejects non-loopback requests when require_api_key is false and no key provided", async () => {
-    setRequireApiKeyDB(false);
+    await setRequireApiKeyDB(false);
 
     const testApp = new Hono();
     testApp.use("/*", CreateApiKeyAuth({ getClientAddress: () => "192.168.1.50" }));
@@ -103,9 +103,9 @@ test("apiKeyAuth middleware rejects non-loopback requests when require_api_key i
 });
 
 test("apiKeyAuth middleware accepts non-loopback requests with valid API key", async () => {
-    setRequireApiKeyDB(false);
+    await setRequireApiKeyDB(false);
 
-    const created = createAPIKeyDB({
+    const created = await createAPIKeyDB({
         name: "Remote Auth Key"
     });
     createdKeyIds.push(created.id);

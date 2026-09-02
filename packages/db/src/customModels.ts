@@ -13,34 +13,31 @@ interface CustomModelDBShape {
     created_at: number;
 }
 
-export function getAllCustomModelsDB(): CustomModelRow[] {
-    const Rows = db
+export async function getAllCustomModelsDB(): Promise<CustomModelRow[]> {
+    const Rows = (await db
         .prepare("SELECT * FROM custom_models ORDER BY created_at ASC")
-        .all() as unknown as CustomModelDBShape[];
-
+        .all()) as unknown as CustomModelDBShape[];
     return Rows.map(mapCustomModelRow);
 }
 
-export function getCustomModelsByProviderDB(providerId: string): CustomModelRow[] {
-    const Rows = db
+export async function getCustomModelsByProviderDB(providerId: string): Promise<CustomModelRow[]> {
+    const Rows = (await db
         .prepare("SELECT * FROM custom_models WHERE provider_id = ? ORDER BY created_at ASC")
-        .all(providerId) as unknown as CustomModelDBShape[];
-
+        .all(providerId)) as unknown as CustomModelDBShape[];
     return Rows.map(mapCustomModelRow);
 }
 
-export function addCustomModelDB(providerId: string, modelId: string): CustomModelRow {
+export async function addCustomModelDB(providerId: string, modelId: string): Promise<CustomModelRow> {
     const CreatedAt = Date.now();
-    db.prepare(
+    await db.prepare(
         `INSERT OR IGNORE INTO custom_models (provider_id, model_id, created_at)
          VALUES (?, ?, ?)`
     ).run(providerId, modelId, CreatedAt);
-
     return { providerId, modelId, createdAt: CreatedAt };
 }
 
-export function deleteCustomModelDB(providerId: string, modelId: string): boolean {
-    const Result = db
+export async function deleteCustomModelDB(providerId: string, modelId: string): Promise<boolean> {
+    const Result = await db
         .prepare("DELETE FROM custom_models WHERE provider_id = ? AND model_id = ?")
         .run(providerId, modelId);
     return num(Result.changes) > 0;

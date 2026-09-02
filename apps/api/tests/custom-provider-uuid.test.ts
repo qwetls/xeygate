@@ -8,14 +8,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdIds.splice(0)) {
-        deleteProviderDB(id);
+        await await deleteProviderDB(id);
     }
 });
 
-test("AddProvider generates a UUID v4 as immutable internal ID", () => {
-    const result = ProvidersLogic.AddProvider({
+test("AddProvider generates a UUID v4 as immutable internal ID", async () => {
+    const result = await await ProvidersLogic.AddProvider({
         name: "My Gateway",
         category: "custom_provider",
         protocol: "openai",
@@ -29,30 +29,30 @@ test("AddProvider generates a UUID v4 as immutable internal ID", () => {
     assert.match(result.id, UUID_RE);
 
     // 2. id === providerId (persisted as the same immutable identity)
-    const savedForProviderId = getProviderByIdDB(result.id);
+    const savedForProviderId = await await getProviderByIdDB(result.id);
     assert.equal(savedForProviderId?.providerId, result.id);
 
     // 3. Name preserved as display name
     assert.equal(result.name, "My Gateway");
 
     // 4. Persisted in DB
-    const saved = getProviderByIdDB(result.id);
+    const saved = await await getProviderByIdDB(result.id);
     assert.ok(saved, "Provider must exist in DB");
     assert.equal(saved?.id, result.id);
     assert.equal(saved?.name, "My Gateway");
 });
 
-test("UUID provider appears in catalog as its own entry", () => {
-    const result = ProvidersLogic.AddProvider({
+test("UUID provider appears in catalog as its own entry", async () => {
+    const result = await await ProvidersLogic.AddProvider({
         name: "Custom Gateway",
         category: "custom_provider",
         protocol: "openai",
         base_url: "https://api.gateway.dev/v1",
-        api_key: "sk-custom-key"
+        api_key: "«redacted:sk-…»"
     });
     createdIds.push(result.id);
 
-    const catalog = ProvidersLogic.GetCatalog();
+    const catalog = await await ProvidersLogic.GetCatalog();
     const apiKeyProviders = catalog.categories.custom_provider;
     const found = apiKeyProviders.find((p) => p.id === result.id);
 
@@ -64,30 +64,30 @@ test("UUID provider appears in catalog as its own entry", () => {
 });
 
 test("UUID provider is found by GetProviderById", async () => {
-    const result = ProvidersLogic.AddProvider({
+    const result = await await ProvidersLogic.AddProvider({
         name: "Searchable Provider",
         category: "custom_provider",
         protocol: "openai",
         base_url: "https://search.example.com/v1",
-        api_key: "sk-search-key"
+        api_key: "«redacted:sk-…»"
     });
     createdIds.push(result.id);
 
-    const found = await ProvidersLogic.GetProviderById(result.id);
+    const found = await await ProvidersLogic.GetProviderById(result.id);
     assert.ok(found, "Provider must be found by UUID");
     assert.equal(found?.name, "Searchable Provider");
 });
 
-test("providerBaseId preserves UUID instead of truncating on dash", () => {
+test("providerBaseId preserves UUID instead of truncating on dash", async () => {
     const uuid = "550e8400-e29b-41d4-a716-446655440000";
     const baseId = providerBaseId(uuid);
     // 6. UUID must not be truncated by dash-split
     assert.equal(baseId, uuid, "providerBaseId must return the full UUID");
 });
 
-test("built-in provider IDs are unchanged by the UUID migration", () => {
+test("built-in provider IDs are unchanged by the UUID migration", async () => {
     // 7. Built-in providers keep their original IDs
-    const catalog = ProvidersLogic.GetCatalog();
+    const catalog = await await ProvidersLogic.GetCatalog();
     const allIds = [
         ...catalog.categories.api_key,
         ...catalog.categories.oauth,
@@ -103,8 +103,8 @@ test("built-in provider IDs are unchanged by the UUID migration", () => {
     assert.ok(allIds.includes("seekai"), "seekai must still exist");
 });
 
-test("ListProviders lists UUID provider", () => {
-    const result = ProvidersLogic.AddProvider({
+test("ListProviders lists UUID provider", async () => {
+    const result = await await ProvidersLogic.AddProvider({
         name: "Listed Provider",
         category: "custom_provider",
         protocol: "openai",
@@ -113,27 +113,27 @@ test("ListProviders lists UUID provider", () => {
     });
     createdIds.push(result.id);
 
-    const list = ProvidersLogic.ListProviders();
+    const list = await await ProvidersLogic.ListProviders();
     const found = list.find((p) => p.id === result.id);
     // 8. Found in list
     assert.ok(found, "UUID provider must be in ListProviders response");
     assert.equal(found?.name, "Listed Provider");
 });
 
-test("UUID persists across GetCatalog calls (no re-generation)", () => {
-    const result = ProvidersLogic.AddProvider({
+test("UUID persists across GetCatalog calls (no re-generation)", async () => {
+    const result = await await ProvidersLogic.AddProvider({
         name: "Stable UUID",
         category: "custom_provider",
         protocol: "openai",
         base_url: "https://stable.example.com/v1",
-        api_key: "sk-stable-key"
+        api_key: "«redacted:sk-…»"
     });
     createdIds.push(result.id);
 
     // Call catalog multiple times
-    const ids1 = ProvidersLogic.GetCatalog();
-    const ids2 = ProvidersLogic.GetCatalog();
-    const ids3 = ProvidersLogic.GetCatalog();
+    const ids1 = await await ProvidersLogic.GetCatalog();
+    const ids2 = await await ProvidersLogic.GetCatalog();
+    const ids3 = await await ProvidersLogic.GetCatalog();
 
     const findIn = (data: typeof ids1) => {
         const all = [
@@ -151,7 +151,7 @@ test("UUID persists across GetCatalog calls (no re-generation)", () => {
     assert.equal(findIn(ids3)?.id, result.id);
 });
 
-test("custom provider with UUID does not collide with seed provider IDs", () => {
+test("custom provider with UUID does not collide with seed provider IDs", async () => {
     const seedIds = [
         "openai",
         "anthropic",
@@ -165,12 +165,12 @@ test("custom provider with UUID does not collide with seed provider IDs", () => 
     ];
 
     // 10. UUID custom provider should not conflict with seed IDs
-    const result = ProvidersLogic.AddProvider({
+    const result = await await ProvidersLogic.AddProvider({
         name: "No Collision",
         category: "custom_provider",
         protocol: "openai",
         base_url: "https://nocollide.example.com/v1",
-        api_key: "sk-nocollide-key"
+        api_key: "«redacted:sk-…»"
     });
     createdIds.push(result.id);
 
@@ -184,8 +184,8 @@ test("custom provider with UUID does not collide with seed provider IDs", () => 
     assert.match(result.id, UUID_RE);
 });
 
-test("duplicate names are allowed for different UUID providers", () => {
-    const first = ProvidersLogic.AddProvider({
+test("duplicate names are allowed for different UUID providers", async () => {
+    const first = await await ProvidersLogic.AddProvider({
         name: "Duplicate Name",
         category: "custom_provider",
         protocol: "openai",
@@ -194,12 +194,12 @@ test("duplicate names are allowed for different UUID providers", () => {
     });
     createdIds.push(first.id);
 
-    const second = ProvidersLogic.AddProvider({
+    const second = await await ProvidersLogic.AddProvider({
         name: "Duplicate Name",
         category: "custom_provider",
         protocol: "openai",
         base_url: "https://second.dup.com/v1",
-        api_key: "sk-second-dup"
+        api_key: "«redacted:sk-…»"
     });
     createdIds.push(second.id);
 
@@ -208,30 +208,30 @@ test("duplicate names are allowed for different UUID providers", () => {
     assert.equal(first.name, second.name, "Both have same name");
 
     // Both appear in catalog
-    const catalog = ProvidersLogic.ListProviders();
+    const catalog = await await ProvidersLogic.ListProviders();
     const withDupName = catalog.filter((p) => p.name === "Duplicate Name");
     assert.equal(withDupName.length, 2, "Both duplicate-name providers must exist");
 });
 
-test("delete provider by UUID works", () => {
-    const result = ProvidersLogic.AddProvider({
+test("delete provider by UUID works", async () => {
+    const result = await await ProvidersLogic.AddProvider({
         name: "Delete Me",
         category: "custom_provider",
         protocol: "openai",
         base_url: "https://deleteme.example.com/v1",
-        api_key: "sk-delete-key"
+        api_key: "«redacted:sk-…»"
     });
     createdIds.push(result.id);
 
     // Verify it exists
-    assert.ok(getProviderByIdDB(result.id), "Provider must exist before delete");
+    assert.ok(await await getProviderByIdDB(result.id), "Provider must exist before delete");
 
     // Delete by UUID
-    const deleted = deleteProviderDB(result.id);
+    const deleted = await await deleteProviderDB(result.id);
     assert.ok(deleted, "deleteProviderDB must return true");
 
     // Verify deleted
-    assert.equal(getProviderByIdDB(result.id), null, "Provider must be gone after delete");
+    assert.equal(await await getProviderByIdDB(result.id), null, "Provider must be gone after delete");
     // Remove from cleanup list since already deleted
     createdIds.splice(createdIds.indexOf(result.id), 1);
 });

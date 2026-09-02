@@ -11,14 +11,14 @@ import {
 
 const createdRuleIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdRuleIds.splice(0)) {
-        deleteFallbackRuleDB(id);
+        await await deleteFallbackRuleDB(id);
     }
 });
 
-test("Fallback DB creates, gets, updates, and deletes fallback rules", () => {
-    const created = createFallbackRuleDB({
+test("Fallback DB creates, gets, updates, and deletes fallback rules", async () => {
+    const created = await await createFallbackRuleDB({
         sourceModel: "openai_codex/gpt-4o",
         targetModel: "antigravity/gemini-2.5-pro",
         priority: 1,
@@ -33,11 +33,11 @@ test("Fallback DB creates, gets, updates, and deletes fallback rules", () => {
     assert.equal(created.enabled, true);
     assert.deepEqual(created.triggerOnStatus, [429, 502, 503]);
 
-    const retrieved = getFallbackRuleByIdDB(created.id);
+    const retrieved = await await getFallbackRuleByIdDB(created.id);
     assert.ok(retrieved);
     assert.equal(retrieved?.id, created.id);
 
-    const updated = updateFallbackRuleDB(created.id, {
+    const updated = await await updateFallbackRuleDB(created.id, {
         targetModel: "anthropic/claude-3-7-sonnet",
         priority: 2,
         enabled: false
@@ -47,12 +47,12 @@ test("Fallback DB creates, gets, updates, and deletes fallback rules", () => {
     assert.equal(updated?.priority, 2);
     assert.equal(updated?.enabled, false);
 
-    deleteFallbackRuleDB(created.id);
-    assert.equal(getFallbackRuleByIdDB(created.id), null);
+    await await deleteFallbackRuleDB(created.id);
+    assert.equal(await await getFallbackRuleByIdDB(created.id), null);
 });
 
-test("findMatchingFallbackRulesDB prioritizes exact match over wildcard prefix and global wildcard", () => {
-    const rule1 = createFallbackRuleDB({
+test("findMatchingFallbackRulesDB prioritizes exact match over wildcard prefix and global wildcard", async () => {
+    const rule1 = await await createFallbackRuleDB({
         sourceModel: "*",
         targetModel: "fallback/global",
         priority: 3,
@@ -60,7 +60,7 @@ test("findMatchingFallbackRulesDB prioritizes exact match over wildcard prefix a
     });
     createdRuleIds.push(rule1.id);
 
-    const rule2 = createFallbackRuleDB({
+    const rule2 = await await createFallbackRuleDB({
         sourceModel: "openai_codex/*",
         targetModel: "fallback/codex-prefix",
         priority: 2,
@@ -68,7 +68,7 @@ test("findMatchingFallbackRulesDB prioritizes exact match over wildcard prefix a
     });
     createdRuleIds.push(rule2.id);
 
-    const rule3 = createFallbackRuleDB({
+    const rule3 = await await createFallbackRuleDB({
         sourceModel: "openai_codex/gpt-4o",
         targetModel: "fallback/exact-gpt4o",
         priority: 1,
@@ -77,7 +77,7 @@ test("findMatchingFallbackRulesDB prioritizes exact match over wildcard prefix a
     createdRuleIds.push(rule3.id);
 
     // Disabled rule should not be returned
-    const ruleDisabled = createFallbackRuleDB({
+    const ruleDisabled = await await createFallbackRuleDB({
         sourceModel: "openai_codex/gpt-4o",
         targetModel: "fallback/disabled",
         priority: 0,
@@ -85,15 +85,15 @@ test("findMatchingFallbackRulesDB prioritizes exact match over wildcard prefix a
     });
     createdRuleIds.push(ruleDisabled.id);
 
-    const matches = findMatchingFallbackRulesDB("openai_codex/gpt-4o");
+    const matches = await await findMatchingFallbackRulesDB("openai_codex/gpt-4o");
     assert.equal(matches.length, 3);
     assert.equal(matches[0]?.targetModel, "fallback/exact-gpt4o");
     assert.equal(matches[1]?.targetModel, "fallback/codex-prefix");
     assert.equal(matches[2]?.targetModel, "fallback/global");
 });
 
-test("findMatchingFallbackRulesDB ignores self-referencing rules", () => {
-    const loopRule = createFallbackRuleDB({
+test("findMatchingFallbackRulesDB ignores self-referencing rules", async () => {
+    const loopRule = await await createFallbackRuleDB({
         sourceModel: "openai_codex/gpt-4o",
         targetModel: "openai_codex/gpt-4o",
         priority: 1,
@@ -101,6 +101,6 @@ test("findMatchingFallbackRulesDB ignores self-referencing rules", () => {
     });
     createdRuleIds.push(loopRule.id);
 
-    const matches = findMatchingFallbackRulesDB("openai_codex/gpt-4o");
+    const matches = await await findMatchingFallbackRulesDB("openai_codex/gpt-4o");
     assert.equal(matches.length, 0);
 });

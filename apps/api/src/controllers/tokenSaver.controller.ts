@@ -10,8 +10,8 @@ import {
 import { Err, Ok } from "@/utils/response.js";
 
 export class TokenSaverController {
-    public static GetSettings(c: Context): Response {
-        return Ok(c, { settings: getTokenSaverSettingsDB() });
+    public static async GetSettings(c: Context): Promise<Response> {
+        return Ok(c, { settings: await getTokenSaverSettingsDB() });
     }
 
     public static async UpdateSettings(c: Context): Promise<Response> {
@@ -22,7 +22,7 @@ export class TokenSaverController {
         }
 
         try {
-            const Updated = setTokenSaverSettingsDB(Parsed.data as Partial<TokenSaverSettings>);
+            const Updated = await setTokenSaverSettingsDB(Parsed.data as Partial<TokenSaverSettings>);
             return Ok(c, {
                 message: "Token Saver settings updated successfully",
                 settings: Updated
@@ -44,7 +44,7 @@ export class TokenSaverController {
         }
 
         try {
-            const CurrentSettings = getTokenSaverSettingsDB();
+            const CurrentSettings = await getTokenSaverSettingsDB();
             const MergedSettings = Parsed.data.settings
                 ? { ...CurrentSettings, ...Parsed.data.settings }
                 : CurrentSettings;

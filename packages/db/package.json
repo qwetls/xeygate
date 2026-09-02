@@ -26,10 +26,12 @@
     },
     "dependencies": {
         "@srouter/constants": "workspace:*",
-        "@srouter/types": "workspace:*"
+        "@srouter/types": "workspace:*",
+        "pg": "^8.23.0"
     },
     "devDependencies": {
         "@types/node": "^26.1.1",
+        "@types/pg": "^8.23.1",
         "typescript": "^5.0.0"
     }
 }

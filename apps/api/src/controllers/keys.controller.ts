@@ -10,10 +10,10 @@ import { CreateAPIKeySchema, AddCreditSchema, UpdateAPIKeySchema } from "@sroute
 import { Err, Ok } from "@/utils/response.js";
 
 export class KeysController {
-    public static ListKeys(c: Context): Response {
+    public static async ListKeys(c: Context): Promise<Response> {
         return Ok(c, {
             object: "list",
-            data: getAllAPIKeysDB()
+            data: await getAllAPIKeysDB()
         });
     }
 
@@ -25,7 +25,7 @@ export class KeysController {
         }
 
         try {
-            const created = createAPIKeyDB({
+            const created = await createAPIKeyDB({
                 name: parsed.data.name.trim(),
                 enabled: parsed.data.enabled,
                 rate_limit: parsed.data.rate_limit ?? 0,
@@ -50,7 +50,7 @@ export class KeysController {
         }
 
         try {
-            const updated = updateAPIKeyDB(id, parsed.data);
+            const updated = await updateAPIKeyDB(id, parsed.data);
             if (!updated) {
                 return Err(c, `Key '${id}' not found`, 404);
             }
@@ -70,7 +70,7 @@ export class KeysController {
             return Err(c, parsed.error.issues[0]?.message || "Invalid credit payload", 400);
         }
 
-        const updated = addCreditAPIKeyDB(id, parsed.data.amount);
+        const updated = await addCreditAPIKeyDB(id, parsed.data.amount);
         if (!updated) {
             return Err(c, `Key '${id}' not found`, 404);
         }
@@ -78,10 +78,10 @@ export class KeysController {
         return Ok(c, updated);
     }
 
-    public static DeleteKey(c: Context): Response {
+    public static async DeleteKey(c: Context): Promise<Response> {
         const id = c.req.param("id");
         if (!id) return Err(c, "Key ID is required", 400);
-        if (!deleteAPIKeyDB(id)) {
+        if (!(await deleteAPIKeyDB(id))) {
             return Err(c, `Key '${id}' not found`, 404);
         }
 

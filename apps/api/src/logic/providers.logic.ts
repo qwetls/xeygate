@@ -82,8 +82,8 @@ function ProviderDefinitionFromConfig(Connection: ProviderConfig): ProviderDefin
     };
 }
 
-function CatalogWithSavedProviders(): ProviderDefinition[] {
-    const Rows = getAllProvidersDB();
+async function CatalogWithSavedProviders(): Promise<ProviderDefinition[]> {
+    const Rows = await getAllProvidersDB();
     const Catalog: ProviderDefinition[] = [];
     const Seen = new Set<string>();
 
@@ -115,7 +115,7 @@ function CatalogWithSavedProviders(): ProviderDefinition[] {
             requires_api_key: Seed ? Seed.requires_api_key : Boolean(Connection.apiKey),
             requires_oauth: Seed?.requires_oauth,
             supports_custom_url: Seed ? (Seed.supports_custom_url ?? true) : true,
-            roundRobin: getRoundRobinDB(BaseId),
+            roundRobin: await getRoundRobinDB(BaseId),
             status: {
                 state: ConnectedCount > 0 ? "connected" : "no_connections",
                 message: Seed?.status_message,
@@ -138,7 +138,7 @@ function CatalogWithSavedProviders(): ProviderDefinition[] {
             requires_api_key: Seed.requires_api_key,
             requires_oauth: Seed.requires_oauth,
             supports_custom_url: Seed.supports_custom_url ?? true,
-            roundRobin: getRoundRobinDB(Seed.id),
+            roundRobin: await getRoundRobinDB(Seed.id),
             status: {
                 state: "no_connections",
                 message: Seed.status_message,
@@ -152,12 +152,12 @@ function CatalogWithSavedProviders(): ProviderDefinition[] {
 }
 
 export class ProvidersLogic {
-    public static ListProviders(): ProviderDefinition[] {
+    public static async ListProviders(): Promise<ProviderDefinition[]> {
         return CatalogWithSavedProviders();
     }
 
-    public static GetCatalog(): CatalogSummary {
-        const Catalog = CatalogWithSavedProviders();
+    public static async GetCatalog(): Promise<CatalogSummary> {
+        const Catalog = await CatalogWithSavedProviders();
 
         const Categories: GroupedCatalog = {
             oauth: Catalog.filter((P) => P.category === "oauth"),
@@ -173,11 +173,11 @@ export class ProvidersLogic {
     }
 
     public static async GetProviderById(ProviderId: string): Promise<ProviderDefinition | null> {
-        const Catalog = CatalogWithSavedProviders();
+        const Catalog = await CatalogWithSavedProviders();
         const Provider = Catalog.find((P) => P.id.toLowerCase() === ProviderId.toLowerCase());
         if (!Provider) return null;
 
-        const Connections = getAllProvidersDB().filter(
+        const Connections = (await getAllProvidersDB()).filter(
             (C) => !isSeedProvider(C) && BaseIdOf(C.providerId || C.id) === ProviderId
         );
         const ConnectedCount = Connections.filter((C) => C.enabled).length;
@@ -208,7 +208,7 @@ export class ProvidersLogic {
             }
         }
 
-        const CustomModels = ProvidersLogic.ListCustomModels(ProviderId);
+        const CustomModels = await ProvidersLogic.ListCustomModels(ProviderId);
         if (CustomModels.length > 0) {
             const Merged = new Map<string, ModelObject>();
             for (const M of LiveModels) {
@@ -232,7 +232,7 @@ export class ProvidersLogic {
         };
     }
 
-    public static AddProvider(Payload: CreateProviderPayload): ProviderDefinition {
+    public static async AddProvider(Payload: CreateProviderPayload): Promise<ProviderDefinition> {
         const Name = Payload.name?.trim();
         if (!Name) throw new Error("Provider name is required");
         if (!isProviderCategory(Payload.category)) throw new Error("Invalid provider category");
@@ -247,7 +247,7 @@ export class ProvidersLogic {
                 throw new Error(
                     "Provider ID must contain letters, numbers, underscores, or hyphens"
                 );
-            if (getAllProvidersDB().some((Provider) => Provider.id === Id))
+            if ((await getAllProvidersDB()).some((Provider) => Provider.id === Id))
                 throw new Error(`Provider ID '${Id}' already exists`);
         } else {
             // Custom provider: generate UUID v4 as immutable internal ID
@@ -285,17 +285,17 @@ export class ProvidersLogic {
             createdAt: Date.now()
         };
 
-        upsertProviderDB(Config);
-        loadSavedProvidersFromDB();
+        await upsertProviderDB(Config);
+        await loadSavedProvidersFromDB();
 
         return ProviderDefinitionFromConfig(Config);
     }
 
-    public static AddCustomModel(ProviderId: string, ModelId: string): ModelObject {
+    public static async AddCustomModel(ProviderId: string, ModelId: string): Promise<ModelObject> {
         const Id = ProviderId.toLowerCase();
         if (
             !DEFAULT_PROVIDER_MAP[Id] &&
-            !getAllProvidersDB().some((P) => BaseIdOf(P.providerId || P.id) === Id)
+            !(await getAllProvidersDB()).some((P) => BaseIdOf(P.providerId || P.id) === Id)
         ) {
             throw new Error(`Provider '${ProviderId}' not found`);
         }
@@ -306,14 +306,14 @@ export class ProvidersLogic {
                 "Model ID may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
             );
 
-        addCustomModelDB(Id, Trimmed);
+        await addCustomModelDB(Id, Trimmed);
         const FullId = `${providerAlias(Id)}/${Trimmed}`;
         registry.clearModelsCache();
         return { id: FullId, object: "model", owned_by: providerAlias(Id) };
     }
 
-    public static DeleteCustomModel(ProviderId: string, ModelId: string): void {
-        const Deleted = deleteCustomModelDB(ProviderId.toLowerCase(), ModelId);
+    public static async DeleteCustomModel(ProviderId: string, ModelId: string): Promise<void> {
+        const Deleted = await deleteCustomModelDB(ProviderId.toLowerCase(), ModelId);
         if (!Deleted) throw new Error(`Custom model '${ModelId}' not found for '${ProviderId}'`);
         registry.clearModelsCache();
     }
@@ -322,12 +322,12 @@ export class ProvidersLogic {
         const Id = ProviderId.toLowerCase();
         const Exists =
             DEFAULT_PROVIDER_MAP[Id] !== undefined ||
-            getAllProvidersDB().some((P) => BaseIdOf(P.providerId || P.id) === Id);
+            (await getAllProvidersDB()).some((P) => BaseIdOf(P.providerId || P.id) === Id);
         if (!Exists) {
             throw new Error(`Provider '${ProviderId}' not found`);
         }
 
-        setRoundRobinDB(Id, Enabled);
+        await setRoundRobinDB(Id, Enabled);
         // Keep the in-memory registry flag in sync — loadSavedProvidersFromDB only runs at boot
         registry.setRoundRobin(Id, Enabled);
         const Provider = await ProvidersLogic.GetProviderById(Id);
@@ -335,9 +335,9 @@ export class ProvidersLogic {
         return Provider;
     }
 
-    public static ListCustomModels(ProviderId: string): ModelObject[] {
+    public static async ListCustomModels(ProviderId: string): Promise<ModelObject[]> {
         const Alias = providerAlias(ProviderId.toLowerCase());
-        return getCustomModelsByProviderDB(ProviderId.toLowerCase()).map((Row) => ({
+        return (await getCustomModelsByProviderDB(ProviderId.toLowerCase())).map((Row) => ({
             id: `${Alias}/${Row.modelId}`,
             object: "model" as const,
             owned_by: Alias,

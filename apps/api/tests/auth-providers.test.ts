@@ -9,15 +9,15 @@ import type { AuthProviderHandler } from "@srouter/types";
 
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdIds.splice(0)) {
-        deleteProviderDB(id);
+        await deleteProviderDB(id);
         registry.unregisterProvider(id);
     }
 });
 
-test("processTokenImport stores an OAuth provider with accountId (Codex shape)", () => {
-    const config = AuthLogic.processTokenImport({
+test("processTokenImport stores an OAuth provider with accountId (Codex shape)", async () => {
+    const config = await AuthLogic.processTokenImport({
         accessToken: "codex-token",
         refreshToken: "codex-refresh",
         accountId: "u_test_account"
@@ -33,13 +33,13 @@ test("processTokenImport stores an OAuth provider with accountId (Codex shape)",
     assert.equal(config.accountId, "u_test_account");
     assert.equal(config.enabled, true);
 
-    const saved = getProviderByIdDB(config.id);
+    const saved = await getProviderByIdDB(config.id);
     assert.equal(saved?.accessToken, "codex-token");
     assert.equal(saved?.accountId, "u_test_account");
 });
 
-test("processTokenImport stores an api_key provider with baseUrl (CommandCode shape)", () => {
-    const config = AuthLogic.processCommandCodeTokenImport({
+test("processTokenImport stores an api_key provider with baseUrl (CommandCode shape)", async () => {
+    const config = await AuthLogic.processCommandCodeTokenImport({
         accessToken: "cc-token",
         baseUrl: "https://api.commandcode.example/alpha/generate",
         name: "My Command Code"
@@ -51,13 +51,13 @@ test("processTokenImport stores an api_key provider with baseUrl (CommandCode sh
     assert.equal(config.name, "My Command Code");
     assert.equal(config.category, "api_key");
     assert.equal(config.protocol, "openai");
-    assert.equal(config.baseUrl, "https://api.commandcode.example/alpha/generate");
+    assert.equal(config.base_url, "https://api.commandcode.example/alpha/generate");
     assert.equal(config.apiKey, "cc-token");
     assert.equal(config.accessToken, undefined);
 });
 
-test("generic logic (initiatePKCEFor) produces an authorizeUrl with expected state/client", () => {
-    const { authorizeUrl, state, codeVerifier, redirectUri } = AuthLogic.initiateOAuthPKCE({});
+test("generic logic (initiatePKCEFor) produces an authorizeUrl with expected state/client", async () => {
+    const { authorizeUrl, state, codeVerifier, redirectUri } = await AuthLogic.initiateOAuthPKCE({});
 
     assert.ok(authorizeUrl.startsWith("https://auth.openai.com/oauth/authorize"));
     assert.ok(authorizeUrl.includes("code_challenge_method=S256"));
@@ -66,7 +66,7 @@ test("generic logic (initiatePKCEFor) produces an authorizeUrl with expected sta
     assert.equal(redirectUri, "http://localhost:1455/auth/callback");
 });
 
-test("auth provider handlers carry preserved per-provider messages", () => {
+test("auth provider handlers carry preserved per-provider messages", async () => {
     assert.equal(AuthHandlers.OpenAI.oauthSuccessMessage, "Login OpenAI Codex Berhasil!");
     assert.equal(
         AuthHandlers.CommandCode.tokenImportMessage,
@@ -74,10 +74,10 @@ test("auth provider handlers carry preserved per-provider messages", () => {
     );
 });
 
-test("processTokenImportFor honors provided id and name", () => {
+test("processTokenImportFor honors provided id and name", async () => {
     const handler: AuthProviderHandler = AuthHandlers.OpenAI;
-    // Uses AuthLogic.processTokenImport (Codex handler) with explicit id/name
-    const config = AuthLogic.processTokenImport({
+    // Uses await AuthLogic.processTokenImport (Codex handler) with explicit id/name
+    const config = await AuthLogic.processTokenImport({
         id: "my-custom-id",
         name: "Custom Label",
         accessToken: "tok"
@@ -89,8 +89,8 @@ test("processTokenImportFor honors provided id and name", () => {
 });
 
 // Registry cleanup helper is inline above; ensure the executor is actually registered.
-test("processTokenImport registers a live executor in the registry", () => {
-    const config = AuthLogic.processTokenImport({ accessToken: "live-token" });
+test("processTokenImport registers a live executor in the registry", async () => {
+    const config = await AuthLogic.processTokenImport({ accessToken: "live-token" });
     createdIds.push(config.id);
 
     const instance = registry.getProvider(config.id) as AIProvider | undefined;

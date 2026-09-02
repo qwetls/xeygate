@@ -14,7 +14,7 @@ function createTestApp(Allowlist = new Set<string>()) {
 
 test("cookie mutation from a foreign origin is rejected even with a valid session", async () => {
     const app = createTestApp();
-    const Token = createAdminSession(adminAuthStore);
+    const Token = await createAdminSession(adminAuthStore);
     try {
         const res = await app.request("/v1/keys", {
             method: "POST",
@@ -27,13 +27,13 @@ test("cookie mutation from a foreign origin is rejected even with a valid sessio
         const body = (await res.json()) as { error: { code: string } };
         assert.equal(body.error.code, "csrf_origin_rejected");
     } finally {
-        revokeAdminSession(adminAuthStore, Token);
+        await await revokeAdminSession(adminAuthStore, Token);
     }
 });
 
 test("same-origin cookie mutation passes", async () => {
     const app = createTestApp();
-    const Token = createAdminSession(adminAuthStore);
+    const Token = await createAdminSession(adminAuthStore);
     try {
         const res = await app.request("http://gateway.local:3000/v1/keys", {
             method: "POST",
@@ -44,13 +44,13 @@ test("same-origin cookie mutation passes", async () => {
         });
         assert.equal(res.status, 200);
     } finally {
-        revokeAdminSession(adminAuthStore, Token);
+        await await revokeAdminSession(adminAuthStore, Token);
     }
 });
 
 test("cross-origin mutation from an allowlisted origin passes", async () => {
     const app = createTestApp(new Set(["https://dash.example.com"]));
-    const Token = createAdminSession(adminAuthStore);
+    const Token = await createAdminSession(adminAuthStore);
     try {
         const res = await app.request("http://gateway.local:3000/v1/keys", {
             method: "POST",
@@ -61,7 +61,7 @@ test("cross-origin mutation from an allowlisted origin passes", async () => {
         });
         assert.equal(res.status, 200);
     } finally {
-        revokeAdminSession(adminAuthStore, Token);
+        await await revokeAdminSession(adminAuthStore, Token);
     }
 });
 

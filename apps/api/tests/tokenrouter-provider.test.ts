@@ -8,9 +8,9 @@ import { AuthHandlers } from "../src/services/authHandlers.js";
 const createdIds: string[] = [];
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+afterEach(async () => {
     globalThis.fetch = originalFetch;
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+    for (const id of createdIds.splice(0)) await await deleteProviderDB(id);
 });
 
 test("saved TokenRouter connections use the official URL and bearer auth", async () => {
@@ -28,7 +28,7 @@ test("saved TokenRouter connections use the official URL and bearer auth", async
         enabled: true,
         createdAt: Date.now()
     };
-    upsertProviderDB(config);
+    await await upsertProviderDB(config);
 
     let requestUrl = "";
     let authorization = "";
@@ -39,7 +39,7 @@ test("saved TokenRouter connections use the official URL and bearer auth", async
     };
 
     const { loadSavedProvidersFromDB, registry } = await import("../src/services/registry.js");
-    loadSavedProvidersFromDB();
+    await await loadSavedProvidersFromDB();
     const provider = registry.getProvider(id);
     assert.ok(provider);
     await provider.listModels();
@@ -51,8 +51,8 @@ test("saved TokenRouter connections use the official URL and bearer auth", async
     registry.unregisterProvider(id);
 });
 
-test("processTokenRouterTokenImport creates and registers TokenRouter provider config", () => {
-    const config = AuthLogic.processTokenRouterTokenImport({
+test("processTokenRouterTokenImport creates and registers TokenRouter provider config", async () => {
+    const config = await AuthLogic.processTokenRouterTokenImport({
         accessToken: "test-tokenrouter-key",
         name: "My TokenRouter Account"
     });
@@ -63,7 +63,7 @@ test("processTokenRouterTokenImport creates and registers TokenRouter provider c
     assert.equal(config.name, "My TokenRouter Account");
     assert.equal(config.category, "api_key");
     assert.equal(config.protocol, "openai");
-    assert.equal(config.baseUrl, "https://api.tokenrouter.com/v1");
+    assert.equal(config.base_url, "https://api.tokenrouter.com/v1");
     assert.equal(config.apiKey, "test-tokenrouter-key");
     assert.equal(config.enabled, true);
     assert.equal(

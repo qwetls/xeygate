@@ -8,13 +8,13 @@ import type { RequestLogEntry } from "@srouter/types";
 const seededIds: string[] = [];
 const seededKeyIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of seededIds.splice(0)) {
         const Delete = db.prepare("DELETE FROM request_logs WHERE id = ?");
         Delete.run(id);
     }
     for (const id of seededKeyIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
 });
 
@@ -87,15 +87,15 @@ function createTestApp() {
 }
 
 /** Creates a disposable API key and returns its token for the Authorization header. */
-function createTestAuth(): string {
-    const key = createAPIKeyDB({ name: "Analytics Test Key" });
+async function createTestAuth(): Promise<string> {
+    const key = await createAPIKeyDB({ name: "Analytics Test Key" });
     seededKeyIds.push(key.id);
     return key.key;
 }
 
-function authedRequest(app: Hono, path: string) {
+async function authedRequest(app: Hono, path: string) {
     return app.request(path, {
-        headers: { Authorization: `Bearer ${createTestAuth()}` }
+        headers: { Authorization: `Bearer ${await createTestAuth()}` }
     });
 }
 

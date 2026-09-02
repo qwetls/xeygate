@@ -17,7 +17,7 @@ export function CreateAdminAuthMiddleware(
 
     return async (c: Context, next: Next) => {
         const SessionToken = getCookie(c, ADMIN_SESSION_COOKIE);
-        if (!verifyAdminSession(Store, SessionToken, Now())) {
+        if (!(await verifyAdminSession(Store, SessionToken, Now()))) {
             return Err(c, "Admin authentication is required", 401, {
                 code: "authentication_required"
             });

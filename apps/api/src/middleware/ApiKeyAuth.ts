@@ -46,14 +46,14 @@ export function CreateApiKeyAuth(Options: ApiKeyAuthOptions = {}) {
     const GetClientAddress = Options.getClientAddress ?? GetDirectClientAddress;
 
     return async function ApiKeyAuthMiddleware(c: Context, next: Next) {
-        if (verifyAdminSession(Store, getCookie(c, ADMIN_SESSION_COOKIE), Now())) {
+        if (await verifyAdminSession(Store, getCookie(c, ADMIN_SESSION_COOKIE), Now())) {
             c.set("authType", "admin_session");
             return await next();
         }
 
         const ClientAddress = GetClientAddress(c);
         const IsLoopback = isLoopbackAddress(ClientAddress);
-        const IsRequired = getRequireApiKeyDB() || !IsLoopback;
+        const IsRequired = (await getRequireApiKeyDB()) || !IsLoopback;
         const AuthHeader = c.req.header("Authorization") || c.req.header("authorization");
         const XApiKey =
             c.req.header("x-api-key") || c.req.header("X-Api-Key") || c.req.header("X-API-KEY");
@@ -68,7 +68,7 @@ export function CreateApiKeyAuth(Options: ApiKeyAuthOptions = {}) {
         }
 
         if (BearerKey) {
-            const ApiKeyRow = getAPIKeyByKeyDB(BearerKey);
+            const ApiKeyRow = await getAPIKeyByKeyDB(BearerKey);
             if (ApiKeyRow) {
                 if (!ApiKeyRow.enabled) {
                     return Err(c, "The provided SRouter API Key is disabled", 401, {

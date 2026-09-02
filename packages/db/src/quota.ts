@@ -302,7 +302,7 @@ export async function getProviderQuotaAccount(p: {
         );
     }
 
-    const UsageRows = getProviderModelUsageDB(p.id);
+    const UsageRows = await getProviderModelUsageDB(p.id);
     const UsageMetrics: ProviderUsageMetric[] = UsageRows.map((row) => ({
         model: row.model,
         totalRequests: row.totalRequests,
@@ -328,7 +328,7 @@ export async function getProviderQuotaAccount(p: {
 }
 
 export async function getQuotaSummaryDB(): Promise<QuotaResponse> {
-    const DbProviders = getAllProvidersDB();
+    const DbProviders = await getAllProvidersDB();
     const ProviderAccounts: ProviderQuotaAccount[] = [];
 
     for (const p of DbProviders) {

@@ -1,5 +1,5 @@
-import type { DatabaseSync } from "node:sqlite";
 import { db } from "./db.js";
+import { getDbClient, type DbClient } from "./client.js";
 import { num, str } from "./row-utils.js";
 
 export interface AdminSession {
@@ -19,81 +19,96 @@ interface AdminSessionRow {
 }
 
 export class AdminAuthStore {
-    public constructor(private readonly database: DatabaseSync = db) {
-        this.database.exec(`
+    private initialized = false;
+    private readonly client: DbClient;
+
+    /** Accept a DbClient for isolation (tests use :memory: SqliteClient); defaults to global. */
+    public constructor(client?: DbClient) {
+        this.client = client ?? getDbClient();
+    }
+
+    private async ensureTables(): Promise<void> {
+        if (this.initialized) return;
+        const pg = Boolean(process.env.DATABASE_URL);
+        const integer = pg ? "BIGINT" : "INTEGER";
+        await this.client.exec(`
             CREATE TABLE IF NOT EXISTS admin_account (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
+                id ${integer} PRIMARY KEY CHECK (id = 1),
                 password_hash TEXT NOT NULL,
-                created_at INTEGER NOT NULL,
-                updated_at INTEGER NOT NULL
+                created_at ${integer} NOT NULL,
+                updated_at ${integer} NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS admin_sessions (
                 token_hash TEXT PRIMARY KEY,
-                created_at INTEGER NOT NULL,
-                expires_at INTEGER NOT NULL
+                created_at ${integer} NOT NULL,
+                expires_at ${integer} NOT NULL
             );
         `);
+        this.initialized = true;
     }
 
-    public hasAdminAccount(): boolean {
-        const Row = this.database
-            .prepare("SELECT 1 AS present FROM admin_account WHERE id = 1")
-            .get();
-
+    public async hasAdminAccount(): Promise<boolean> {
+        await this.ensureTables();
+        const Row = await this.client.get("SELECT 1 AS present FROM admin_account WHERE id = 1");
         return Boolean(Row);
     }
 
-    public createAdminAccount(passwordHash: string, now = Date.now()): boolean {
-        const Result = this.database
-            .prepare(
-                `INSERT OR IGNORE INTO admin_account (id, password_hash, created_at, updated_at)
-                 VALUES (1, ?, ?, ?)`
-            )
-            .run(passwordHash, now, now);
-
+    public async createAdminAccount(passwordHash: string, now = Date.now()): Promise<boolean> {
+        await this.ensureTables();
+        const Result = await this.client.run(
+            `INSERT INTO admin_account (id, password_hash, created_at, updated_at)
+             VALUES (1, ?, ?, ?)
+             ON CONFLICT(id) DO NOTHING`,
+            passwordHash,
+            now,
+            now
+        );
         return num(Result.changes) > 0;
     }
 
-    public getPasswordHash(): string | null {
-        const Row = this.database
-            .prepare("SELECT password_hash FROM admin_account WHERE id = 1")
-            .get() as AdminAccountRow | undefined;
-
+    public async getPasswordHash(): Promise<string | null> {
+        await this.ensureTables();
+        const Row = await this.client.get(
+            "SELECT password_hash FROM admin_account WHERE id = 1"
+        ) as unknown as AdminAccountRow | undefined;
         return Row?.password_hash ? str(Row.password_hash) : null;
     }
 
-    public updatePasswordHash(passwordHash: string, now = Date.now()): boolean {
-        const Result = this.database
-            .prepare(
-                `UPDATE admin_account
-                 SET password_hash = ?, updated_at = ?
-                 WHERE id = 1`
-            )
-            .run(passwordHash, now);
-
+    public async updatePasswordHash(passwordHash: string, now = Date.now()): Promise<boolean> {
+        await this.ensureTables();
+        const Result = await this.client.run(
+            `UPDATE admin_account
+             SET password_hash = ?, updated_at = ?
+             WHERE id = 1`,
+            passwordHash,
+            now
+        );
         return num(Result.changes) > 0;
     }
 
-    public createSession(tokenHash: string, createdAt: number, expiresAt: number): void {
-        this.database
-            .prepare(
-                `INSERT INTO admin_sessions (token_hash, created_at, expires_at)
-                 VALUES (?, ?, ?)`
-            )
-            .run(tokenHash, createdAt, expiresAt);
+    public async createSession(tokenHash: string, createdAt: number, expiresAt: number): Promise<void> {
+        await this.ensureTables();
+        await this.client.run(
+            `INSERT INTO admin_sessions (token_hash, created_at, expires_at)
+             VALUES (?, ?, ?)`,
+            tokenHash,
+            createdAt,
+            expiresAt
+        );
     }
 
-    public getSession(tokenHash: string, now = Date.now()): AdminSession | null {
-        this.database.prepare("DELETE FROM admin_sessions WHERE expires_at <= ?").run(now);
+    public async getSession(tokenHash: string, now = Date.now()): Promise<AdminSession | null> {
+        await this.ensureTables();
+        await this.client.run("DELETE FROM admin_sessions WHERE expires_at <= ?", now);
 
-        const Row = this.database
-            .prepare(
-                `SELECT token_hash, created_at, expires_at
-                 FROM admin_sessions
-                 WHERE token_hash = ? AND expires_at > ?`
-            )
-            .get(tokenHash, now) as AdminSessionRow | undefined;
+        const Row = await this.client.get(
+            `SELECT token_hash, created_at, expires_at
+             FROM admin_sessions
+             WHERE token_hash = ? AND expires_at > ?`,
+            tokenHash,
+            now
+        ) as unknown as AdminSessionRow | undefined;
 
         if (!Row) return null;
 
@@ -104,11 +119,12 @@ export class AdminAuthStore {
         };
     }
 
-    public deleteSession(tokenHash: string): boolean {
-        const Result = this.database
-            .prepare("DELETE FROM admin_sessions WHERE token_hash = ?")
-            .run(tokenHash);
-
+    public async deleteSession(tokenHash: string): Promise<boolean> {
+        await this.ensureTables();
+        const Result = await this.client.run(
+            "DELETE FROM admin_sessions WHERE token_hash = ?",
+            tokenHash
+        );
         return num(Result.changes) > 0;
     }
 }

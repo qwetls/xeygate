@@ -7,9 +7,9 @@ import type { APIKeyZod } from "@srouter/types";
 
 const createdKeyIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdKeyIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
 });
 
@@ -36,7 +36,7 @@ test("rate_limit=0 means unlimited", async () => {
 });
 
 test("requests beyond the per-minute limit get 429 with Retry-After", async () => {
-    const created = createAPIKeyDB({ name: "Rate Limit Test", rateLimit: 3 });
+    const created = await createAPIKeyDB({ name: "Rate Limit Test", rateLimit: 3 });
     createdKeyIds.push(created.id);
 
     const app = createTestApp({ id: created.id, rate_limit: 3 } as APIKeyZod);

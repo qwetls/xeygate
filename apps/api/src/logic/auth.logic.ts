@@ -29,8 +29,8 @@ export type { OAuthLoginParams, OAuthLoginResult, TokenImportParams } from "@sro
 
 const PKCE_SESSION_MAX_AGE_MS = 15 * 60 * 1000;
 
-function CleanupExpiredSessions(): void {
-    cleanupExpiredOAuthSessionsDB(PKCE_SESSION_MAX_AGE_MS);
+function CleanupExpiredSessions(): Promise<void> {
+    return cleanupExpiredOAuthSessionsDB(PKCE_SESSION_MAX_AGE_MS);
 }
 
 function ResolveClientId(handler: AuthProviderHandler, params: OAuthLoginParams): string {
@@ -82,8 +82,8 @@ function BuildAccountIdentity(
     };
 }
 
-function InitiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams): OAuthLoginResult {
-    CleanupExpiredSessions();
+async function InitiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams): Promise<OAuthLoginResult> {
+    await CleanupExpiredSessions();
     const clientId = ResolveClientId(handler, params);
     const redirectUri = ResolveRedirectUri(handler, params);
     const prompt = params.prompt;
@@ -91,7 +91,7 @@ function InitiatePKCEFor(handler: AuthProviderHandler, params: OAuthLoginParams)
     const oAuthInstance = new handler.oauthClass!({ clientId, redirectUri, prompt });
 
     const pkce = generatePKCE();
-    saveOAuthSessionDB({
+    await saveOAuthSessionDB({
         state: pkce.state,
         codeVerifier: pkce.codeVerifier,
         clientId,
@@ -114,14 +114,14 @@ async function ProcessOAuthCallbackFor(
     code: string,
     state: string
 ): Promise<ProviderConfig> {
-    CleanupExpiredSessions();
+    await CleanupExpiredSessions();
 
-    const session = getOAuthSessionDB(state);
+    const session = await getOAuthSessionDB(state);
     if (!session) {
         throw new Error("Invalid or expired OAuth state parameter");
     }
 
-    deleteOAuthSessionDB(state);
+    await deleteOAuthSessionDB(state);
 
     const oAuthInstance = new handler.oauthClass!({
         clientId: session.clientId,
@@ -143,13 +143,13 @@ async function ProcessOAuthCallbackFor(
 
     const baseUrl = handler.baseUrl ? handler.baseUrl() : undefined;
 
-    const providerConfig = upsertProviderDB({
+    const providerConfig = await upsertProviderDB({
         id: accountId,
         providerId: handler.providerId,
         name: accountName,
         category: handler.category,
         protocol: handler.protocol,
-        baseUrl,
+        base_url: baseUrl,
         accessToken: tokens.accessToken,
         refreshToken: tokens.refreshToken,
         accountId: tokens.accountId,
@@ -174,10 +174,10 @@ async function ProcessOAuthCallbackFor(
     return providerConfig;
 }
 
-function ProcessTokenImportFor(
+async function ProcessTokenImportFor(
     handler: AuthProviderHandler,
     params: TokenImportParams
-): ProviderConfig {
+): Promise<ProviderConfig> {
     const timestamp = Date.now();
     const accountId = params.id || `${handler.idPrefix}_${timestamp}`;
     const token = params.access_token || params.accessToken || "";
@@ -192,13 +192,13 @@ function ProcessTokenImportFor(
     };
     const baseUrl = params.base_url || params.baseUrl || handler.baseUrl?.();
 
-    const providerConfig = upsertProviderDB({
+    const providerConfig = await upsertProviderDB({
         id: accountId,
         providerId: handler.providerId,
         name: providerName,
         category: handler.category,
         protocol: handler.protocol,
-        baseUrl: mapping.baseUrl ?? baseUrl,
+        base_url: mapping.baseUrl ?? baseUrl,
         apiKey: mapping.apiKey,
         accessToken: mapping.accessToken,
         refreshToken: mapping.refreshToken,
@@ -315,13 +315,13 @@ async function PollCodeBuddyDeviceTokenFor(
     const accountId = `${options.providerId}_${timestamp}`;
     const accountName = `${options.displayName} (Account #${timestamp.toString().slice(-4)})`;
 
-    const providerConfig = upsertProviderDB({
+    const providerConfig = await upsertProviderDB({
         id: accountId,
         providerId: options.providerId,
         name: accountName,
         category: "oauth",
         protocol: "openai",
-        baseUrl: options.baseUrl,
+        base_url: options.baseUrl,
         accessToken: poll.accessToken,
         refreshToken: poll.refreshToken,
         tokenExpiresAt: poll.expiresIn ? timestamp + poll.expiresIn * 1000 : undefined,
@@ -357,7 +357,7 @@ export async function PollQoderDeviceToken(state: string): Promise<AuthPollResul
         return { status: AuthPollStatus.PENDING, error: "Missing state parameter" };
     }
 
-    const session = getOAuthSessionDB(state);
+    const session = await getOAuthSessionDB(state);
     if (!session) {
         return { status: AuthPollStatus.PENDING, error: "Session expired or not found" };
     }
@@ -373,7 +373,7 @@ export async function PollQoderDeviceToken(state: string): Promise<AuthPollResul
     try {
         poll = await qoderOAuth.pollDeviceToken({
             nonce: state,
-            codeVerifier: session.codeVerifier
+            codeVerifier: session.codeVerifier || ""
         });
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -384,7 +384,7 @@ export async function PollQoderDeviceToken(state: string): Promise<AuthPollResul
         return { status: AuthPollStatus.PENDING };
     }
 
-    deleteOAuthSessionDB(state);
+    await deleteOAuthSessionDB(state);
 
     const userInfo = await qoderOAuth.fetchUserInfo(poll.accessToken);
     const timestamp = Date.now();
@@ -393,7 +393,7 @@ export async function PollQoderDeviceToken(state: string): Promise<AuthPollResul
         ? `Qoder (${userInfo.name})`
         : `Qoder (Account #${timestamp.toString().slice(-4)})`;
 
-    const providerConfig = upsertProviderDB({
+    const providerConfig = await upsertProviderDB({
         id: accountId,
         providerId: "qoder",
         name: accountName,
@@ -437,9 +437,9 @@ export async function PollQoderDeviceToken(state: string): Promise<AuthPollResul
 }
 
 interface AuthProviderEntry {
-    initiate?: (params: OAuthLoginParams) => OAuthLoginResult;
+    initiate?: (params: OAuthLoginParams) => OAuthLoginResult | Promise<OAuthLoginResult>;
     callback?: (code: string, state: string) => Promise<ProviderConfig>;
-    importToken: (params: TokenImportParams) => ProviderConfig;
+    importToken: (params: TokenImportParams) => ProviderConfig | Promise<ProviderConfig>;
 }
 
 const authProviderEntries: Record<string, AuthProviderEntry> = {};
@@ -499,17 +499,17 @@ for (const [key, handler] of [
 }
 
 export const AuthLogic = {
-    initiateOAuthPKCE: (params: OAuthLoginParams): OAuthLoginResult =>
-        authProviderEntries.openai.initiate!(params),
+    initiateOAuthPKCE: async (params: OAuthLoginParams): Promise<OAuthLoginResult> =>
+        authProviderEntries.openai.initiate!(params) as Promise<OAuthLoginResult>,
     processOAuthCallback: async (code: string, state: string): Promise<ProviderConfig> =>
         authProviderEntries.openai.callback!(code, state),
-    processTokenImport: (params: TokenImportParams): ProviderConfig =>
-        authProviderEntries.openai.importToken(params),
+    processTokenImport: async (params: TokenImportParams): Promise<ProviderConfig> =>
+        authProviderEntries.openai.importToken(params) as Promise<ProviderConfig>,
 
-    initiateProviderOAuth(providerKey: string, params: OAuthLoginParams): OAuthLoginResult {
+    async initiateProviderOAuth(providerKey: string, params: OAuthLoginParams): Promise<OAuthLoginResult> {
         const entry = authProviderEntries[providerKey];
         if (!entry?.initiate) throw new Error(`Unknown OAuth provider: ${providerKey}`);
-        return entry.initiate(params);
+        return entry.initiate(params) as Promise<OAuthLoginResult>;
     },
 
     processProviderOAuthCallback(
@@ -522,10 +522,10 @@ export const AuthLogic = {
         return entry.callback(code, state);
     },
 
-    processProviderTokenImport(providerKey: string, params: TokenImportParams): ProviderConfig {
+    async processProviderTokenImport(providerKey: string, params: TokenImportParams): Promise<ProviderConfig> {
         const entry = authProviderEntries[providerKey];
         if (!entry) throw new Error(`Unknown auth provider: ${providerKey}`);
-        return entry.importToken(params);
+        return entry.importToken(params) as Promise<ProviderConfig>;
     },
 
     initiateCodeBuddyOAuth: InitiateCodeBuddyOAuth,

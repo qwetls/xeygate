@@ -9,11 +9,11 @@ import { UpdateSettingsSchema } from "@srouter/types";
 import { Err, Ok } from "@/utils/response.js";
 
 export class SettingsController {
-    public static GetSettings(c: Context): Response {
+    public static async GetSettings(c: Context): Promise<Response> {
         return Ok(c, {
-            require_api_key: getRequireApiKeyDB(),
-            requireApiKey: getRequireApiKeyDB(),
-            settings: getAllSettingsDB()
+            require_api_key: await getRequireApiKeyDB(),
+            requireApiKey: await getRequireApiKeyDB(),
+            settings: await getAllSettingsDB()
         });
     }
 
@@ -26,21 +26,21 @@ export class SettingsController {
 
         try {
             if (typeof Parsed.data.require_api_key === "boolean") {
-                setRequireApiKeyDB(Parsed.data.require_api_key);
+                await setRequireApiKeyDB(Parsed.data.require_api_key);
             }
             if (Parsed.data.settings) {
                 for (const [key, value] of Object.entries(Parsed.data.settings)) {
                     if (typeof value === "string") {
-                        setSettingDB(key, value);
+                        await setSettingDB(key, value);
                     }
                 }
             }
 
             return Ok(c, {
                 message: "Settings updated successfully",
-                require_api_key: getRequireApiKeyDB(),
-                requireApiKey: getRequireApiKeyDB(),
-                settings: getAllSettingsDB()
+                require_api_key: await getRequireApiKeyDB(),
+                requireApiKey: await getRequireApiKeyDB(),
+                settings: await getAllSettingsDB()
             });
         } catch (error) {
             return Err(

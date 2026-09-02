@@ -41,14 +41,14 @@ export class AdminController {
         deleteCookie(c, ADMIN_SESSION_COOKIE, { path: "/", secure: Secure });
     }
 
-    public static GetStatus(
+    public static async GetStatus(
         c: Context,
         Store: AdminAuthStore = adminAuthStore,
         Now: () => number = () => Date.now()
-    ): Response {
-        const Authenticated = verifyAdminSession(Store, getCookie(c, ADMIN_SESSION_COOKIE), Now());
+    ): Promise<Response> {
+        const Authenticated = await verifyAdminSession(Store, getCookie(c, ADMIN_SESSION_COOKIE), Now());
         return Ok(c, {
-            setupRequired: !Store.hasAdminAccount(),
+            setupRequired: !(await Store.hasAdminAccount()),
             authenticated: Authenticated
         });
     }
@@ -59,7 +59,7 @@ export class AdminController {
         Now: () => number = () => Date.now(),
         SecureCookies = process.env.SROUTER_SECURE_COOKIES === "true"
     ): Promise<Response> {
-        if (Store.hasAdminAccount()) {
+        if (await Store.hasAdminAccount()) {
             return Err(c, "Admin setup has already been completed", 409, {
                 code: "setup_already_complete"
             });
@@ -86,14 +86,14 @@ export class AdminController {
             });
         }
 
-        const Created = Store.createAdminAccount(hashAdminPassword(Parsed.data.password), Now());
+        const Created = await Store.createAdminAccount(hashAdminPassword(Parsed.data.password), Now());
         if (!Created) {
             return Err(c, "Admin setup has already been completed", 409, {
                 code: "setup_already_complete"
             });
         }
 
-        const SessionToken = createAdminSession(Store, Now());
+        const SessionToken = await createAdminSession(Store, Now());
         AdminController.SetAdminSessionCookie(c, SessionToken, SecureCookies);
         return Ok(c, { authenticated: true }, 201);
     }
@@ -128,7 +128,7 @@ export class AdminController {
             });
         }
 
-        const PasswordHash = Store.getPasswordHash();
+        const PasswordHash = await Store.getPasswordHash();
         if (!PasswordHash || !verifyAdminPassword(Parsed.data.password, PasswordHash)) {
             const Current = FailedLogins.get(Address);
             const Count = (Current?.count ?? 0) + 1;
@@ -142,7 +142,7 @@ export class AdminController {
         }
 
         FailedLogins.delete(Address);
-        const SessionToken = createAdminSession(Store, Timestamp);
+        const SessionToken = await createAdminSession(Store, Timestamp);
         AdminController.SetAdminSessionCookie(c, SessionToken, SecureCookies);
         return Ok(c, { authenticated: true });
     }
@@ -153,7 +153,7 @@ export class AdminController {
         Now: () => number = () => Date.now()
     ): Promise<Response> {
         const SessionToken = getCookie(c, ADMIN_SESSION_COOKIE);
-        if (!verifyAdminSession(Store, SessionToken, Now())) {
+        if (!(await verifyAdminSession(Store, SessionToken, Now()))) {
             return Err(c, "Admin authentication is required", 401, {
                 code: "authentication_required"
             });
@@ -167,7 +167,7 @@ export class AdminController {
             });
         }
 
-        const PasswordHash = Store.getPasswordHash();
+        const PasswordHash = await Store.getPasswordHash();
         if (!PasswordHash || !verifyAdminPassword(Parsed.data.current_password, PasswordHash)) {
             return Err(c, "Current admin password is incorrect", 401, {
                 code: "invalid_credentials"
@@ -187,7 +187,7 @@ export class AdminController {
             });
         }
 
-        const Updated = Store.updatePasswordHash(hashAdminPassword(Parsed.data.new_password), Now());
+        const Updated = await Store.updatePasswordHash(hashAdminPassword(Parsed.data.new_password), Now());
         if (!Updated) {
             return Err(c, "Failed to update admin password", 500, {
                 code: "password_update_failed"
@@ -197,21 +197,21 @@ export class AdminController {
         return Ok(c, { message: "Admin password updated successfully" });
     }
 
-    public static Logout(
+    public static async Logout(
         c: Context,
         Store: AdminAuthStore = adminAuthStore,
         Now: () => number = () => Date.now(),
         SecureCookies = process.env.SROUTER_SECURE_COOKIES === "true"
-    ): Response {
+    ): Promise<Response> {
         const SessionToken = getCookie(c, ADMIN_SESSION_COOKIE);
-        if (!verifyAdminSession(Store, SessionToken, Now())) {
+        if (!(await verifyAdminSession(Store, SessionToken, Now()))) {
             AdminController.ClearAdminSessionCookie(c, SecureCookies);
             return Err(c, "Admin authentication is required", 401, {
                 code: "authentication_required"
             });
         }
 
-        revokeAdminSession(Store, SessionToken);
+        await revokeAdminSession(Store, SessionToken);
         AdminController.ClearAdminSessionCookie(c, SecureCookies);
         return c.body(null, 204);
     }
