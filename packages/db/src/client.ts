@@ -73,7 +73,9 @@ async function getPool(): Promise<PgPool> {
         connectionString: process.env.DATABASE_URL,
         max: 10,
         idleTimeoutMillis: 30_000,
-        connectionTimeoutMillis: 10_000
+        connectionTimeoutMillis: 10_000,
+        // Heroku Postgres requires TLS; self-signed cert → rejectUnauthorized: false
+        ssl: { rejectUnauthorized: false }
     });
     return pgPool;
 }
