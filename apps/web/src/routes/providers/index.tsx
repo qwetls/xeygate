@@ -3,9 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/useCatalog";
-import { Catalog } from "@/components/providers/Catalog";
-import { CatalogToolbar } from "@/components/providers/CatalogToolbar";
-import { CustomProviderDialog } from "@/components/providers/CustomProviderDialog";
+import { Catalog, CatalogToolbar, CustomProviderDialog } from "@/components/providers";
 import { ProvidersSkeleton } from "@/components/skeletons";
 
 export const Route = createFileRoute("/providers/")({

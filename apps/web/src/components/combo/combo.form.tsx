@@ -5,7 +5,7 @@ import ComboModelPickerModal, {
     getModelCapabilities,
     type ComboModelItem
 } from "./combo.dialog";
-import { ProviderIcon } from "@/components/ProviderIcon";
+import { ProviderIcon } from "@/components/providers";
 import type { CreateFallbackRuleInput, FallbackRule } from "@srouter/types";
 
 interface ComboFormProps {
@@ -118,7 +118,7 @@ export default function ComboForm({
     return (
         <>
             <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4"
+                className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-4"
                 onClick={onCancel}
             >
                 <div
@@ -302,3 +302,5 @@ export default function ComboForm({
         </>
     );
 }
+
+export { ComboForm };

@@ -13,17 +13,20 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProviderIcon } from "@/components/ProviderIcon";
-import { ConnectOAuthModal } from "@/components/providers/ConnectOAuthModal";
+import {
+    AddModelDialog,
+    ConnectOAuthModal,
+    ConnectionCard,
+    ConnectionForm,
+    ProviderIcon,
+    ProviderModelCard,
+    ProviderModelTable,
+    type ConnectionFormInput
+} from "@/components/providers";
 import { useProvider, type AddConnectionPayload } from "@/hooks/useProvider";
 import { useCopy } from "@/hooks/useCopy";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "sonner";
-import { ConnectionCard } from "@/components/providers/ConnectionCard";
-import { ConnectionForm, type ConnectionFormInput } from "@/components/providers/ConnectionForm";
-import { AddModelDialog } from "@/components/providers/AddModelDialog";
-import { ProviderModelCard } from "@/components/providers/ProviderModelCard";
-import { ProviderModelTable } from "@/components/providers/ProviderModelTable";
 import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
 

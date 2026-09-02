@@ -8,13 +8,7 @@ import { useSettings } from "@/hooks/useSettings";
 import { useVersion } from "@/hooks/useVersion";
 import { Button } from "@/components/ui/button";
 
-import { SecuritySettings } from "@/components/settings/SecuritySettings";
-import { GatewaySettings } from "@/components/settings/GatewaySettings";
-import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
-import { LoggingSettings } from "@/components/settings/LoggingSettings";
-import { PlaygroundSettings } from "@/components/settings/PlaygroundSettings";
-import { DataSettings } from "@/components/settings/DataSettings";
-import { SystemSettings } from "@/components/settings/SystemSettings";
+import { AppearanceSettings, DataSettings, GatewaySettings, LoggingSettings, PlaygroundSettings, SecuritySettings, SystemSettings } from "@/components/settings";
 import { SettingsSkeleton } from "@/components/skeletons";
 
 export const Route = createFileRoute("/settings")({

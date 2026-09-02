@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Brain, Eye, Info, Layers, Search, X } from "lucide-react";
 import { api } from "@/lib/api";
-import { ProviderIcon } from "@/components/ProviderIcon";
+import { ProviderIcon } from "@/components/providers";
 import { ANTIGRAVITY_MODELS, KNOWN_PROVIDERS } from "@srouter/constants";
 import type { ModelListResponse } from "@srouter/types";
 
@@ -223,7 +223,7 @@ export default function ComboModelPickerModal({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 sm:p-6"
+            className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm p-4 sm:p-6"
             onClick={onClose}
         >
             <div

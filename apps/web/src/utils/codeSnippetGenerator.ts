@@ -1,4 +1,4 @@
-import type { ExportLanguage } from "@/components/playground/types";
+import type { ExportLanguage } from "@/components/playground";
 
 export interface CodeSnippetParams {
     apiBase: string;
