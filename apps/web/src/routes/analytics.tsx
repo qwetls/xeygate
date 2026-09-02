@@ -12,6 +12,7 @@ import {
     ProviderSplitCard
 } from "@/components/analytics";
 import type { AnalyticsWindow } from "@srouter/types";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 export const Route = createFileRoute("/analytics")({
     staticData: { title: "Analytics" },
@@ -54,9 +55,9 @@ function AnalyticsPage() {
             />
 
             {!hasData ? (
-                <div className="rounded-xl border border-dashed border-border/60 bg-secondary/10 p-12 text-center text-xs text-muted-foreground">
-                    No requests in this window.
-                </div>
+                <Empty className="p-12">
+                    <EmptyTitle>No requests in this window.</EmptyTitle>
+                </Empty>
             ) : (
                 <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

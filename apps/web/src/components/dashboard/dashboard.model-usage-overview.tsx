@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, Cpu, Layers, BarChart2 } from "lucide-react";
 import type { UsageStats } from "@srouter/types";
 import { ProviderIcon } from "@/components/providers";
 import { formatCompactNumber } from "@/lib/utils";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 type ModelUsageOverviewProps = {
     models: UsageStats["byModel"];
@@ -92,18 +93,18 @@ export function ModelUsageOverview({ models }: ModelUsageOverviewProps) {
             </header>
 
             {topModels.length === 0 ? (
-                <div className="mt-6 flex flex-col items-center justify-center rounded-lg border border-dashed border-border/70 p-8 text-center bg-secondary/10">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-secondary/50 text-muted-foreground mb-3">
-                        <Layers className="size-5" />
-                    </div>
-                    <p className="text-xs font-semibold text-foreground">
-                        No model traffic recorded
-                    </p>
-                    <p className="mt-1 max-w-sm text-[11px] text-muted-foreground">
-                        Usage metrics and token distribution will appear here once your gateway
-                        processes its first request.
-                    </p>
-                </div>
+                <Empty className="mt-6">
+                    <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                            <Layers className="size-5" />
+                        </EmptyMedia>
+                        <EmptyTitle>No model traffic recorded</EmptyTitle>
+                        <EmptyDescription>
+                            Usage metrics and token distribution will appear here once your gateway
+                            processes its first request.
+                        </EmptyDescription>
+                    </EmptyHeader>
+                </Empty>
             ) : (
                 <div className="mt-3 space-y-2" aria-label="Top models by token volume">
                     {topModels.map((model, index) => {

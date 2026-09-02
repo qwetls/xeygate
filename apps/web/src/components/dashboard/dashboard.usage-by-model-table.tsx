@@ -22,6 +22,7 @@ import {
 import type { UsageStats } from "@srouter/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import {
     Table,
     TableBody,
@@ -333,17 +334,19 @@ export function UsageByModelTable({ models }: UsageByModelTableProps) {
 
             <CardContent className="p-0">
                 {filteredModels.length === 0 ? (
-                    <div className="flex min-h-44 flex-col items-center justify-center px-6 text-center">
-                        <Search className="mb-3 size-5 text-muted-foreground" strokeWidth={1.5} />
-                        <p className="text-sm font-medium text-foreground">
-                            {hasUsage ? "No matching models" : "No model usage yet"}
-                        </p>
-                        <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                            {hasUsage
-                                ? `No models match “${searchModel.trim()}”. Try a different search.`
-                                : "Usage details will appear after the gateway handles its first request."}
-                        </p>
-                    </div>
+                    <Empty className="min-h-44">
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <Search className="size-5" strokeWidth={1.5} />
+                            </EmptyMedia>
+                            <EmptyTitle>{hasUsage ? "No matching models" : "No model usage yet"}</EmptyTitle>
+                            <EmptyDescription>
+                                {hasUsage
+                                    ? `No models match “${searchModel.trim()}”. Try a different search.`
+                                    : "Usage details will appear after the gateway handles its first request."}
+                            </EmptyDescription>
+                        </EmptyHeader>
+                    </Empty>
                 ) : (
                     <>
                         <Table className="min-w-[900px]">

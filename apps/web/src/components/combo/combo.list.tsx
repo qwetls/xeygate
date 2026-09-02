@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "./combo.confirm-dialog";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { ProviderIcon } from "@/components/providers";
 import { formatModelDisplayName, getModelCapabilities } from "./combo.dialog";
 import { useCopy } from "@/hooks/useCopy";
@@ -130,27 +131,29 @@ function ViewModeToggle({
 
 function EmptyState({ onAddClick }: { onAddClick: () => void }) {
     return (
-        <div className="rounded-xl border border-dashed border-border/80 bg-card/60 p-8 sm:p-10 space-y-5 shadow-2xs text-center">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-secondary/80 text-foreground mx-auto">
-                <Layers className="size-5 text-orange-500" />
-            </div>
-            <div className="space-y-1.5">
-                <h3 className="text-sm font-bold text-foreground">No Model Combos Yet</h3>
-                <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
+        <Empty className="bg-card/60 p-8 sm:p-10 shadow-2xs">
+            <EmptyHeader>
+                <EmptyMedia variant="icon">
+                    <Layers className="size-5 text-orange-500" />
+                </EmptyMedia>
+                <EmptyTitle>No Model Combos Yet</EmptyTitle>
+                <EmptyDescription>
                     Create a virtual model endpoint that cascades to backup models when the primary
                     hits 429 rate limits or provider outages.
-                </p>
-            </div>
-            <Button
-                type="button"
-                size="sm"
-                onClick={onAddClick}
-                className="h-8 px-4 text-xs font-semibold cursor-pointer shadow-2xs gap-1.5 bg-foreground text-background hover:bg-foreground/90"
-            >
-                <Plus className="size-3.5" />
-                <span>Create Combo</span>
-            </Button>
-        </div>
+                </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+                <Button
+                    type="button"
+                    size="sm"
+                    onClick={onAddClick}
+                    className="h-8 px-4 text-xs font-semibold cursor-pointer shadow-2xs gap-1.5 bg-foreground text-background hover:bg-foreground/90"
+                >
+                    <Plus className="size-3.5" />
+                    <span>Create Combo</span>
+                </Button>
+            </EmptyContent>
+        </Empty>
     );
 }
 
@@ -472,16 +475,16 @@ export function ComboList({
 
             {/* Content */}
             {loading ? (
-                <div className="rounded-xl border border-border/80 bg-card p-12 text-center text-xs text-muted-foreground animate-pulse">
-                    Loading combo cascade pipelines...
-                </div>
+                <Empty className="p-12">
+                    <EmptyTitle>Loading combo cascade pipelines...</EmptyTitle>
+                </Empty>
             ) : fallbacks.length === 0 ? (
                 <EmptyState onAddClick={onAddClick} />
             ) : viewMode === "grouped" ? (
                 filteredGroups.length === 0 ? (
-                    <div className="rounded-xl border border-border/80 bg-card p-8 text-center text-xs text-muted-foreground">
-                        No combos found matching &ldquo;{search}&rdquo;
-                    </div>
+                    <Empty className="p-8">
+                            <EmptyTitle>No combos found matching &ldquo;{search}&rdquo;</EmptyTitle>
+                        </Empty>
                 ) : (
                     <div className="space-y-3.5">
                         {filteredGroups.map((group) => {

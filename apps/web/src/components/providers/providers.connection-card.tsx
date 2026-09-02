@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import { useCopy } from "@/hooks/useCopy";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 interface ConnectionCardProps {
     providerName: string;
@@ -160,32 +161,32 @@ export function ConnectionCard({
 
                 {/* Body / Credentials List */}
                 {connections.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border/80 bg-secondary/15 p-8 text-center space-y-3">
-                        <div className="flex size-10 items-center justify-center rounded-xl bg-secondary mx-auto text-muted-foreground border border-border/60">
-                            <KeyRound className="size-4.5" strokeWidth={1.75} />
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-xs font-semibold text-foreground">
-                                No active credentials configured
-                            </p>
-                            <p className="text-[11.5px] text-muted-foreground max-w-sm mx-auto leading-relaxed">
+                    <Empty>
+                        <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                                <KeyRound className="size-4.5" strokeWidth={1.75} />
+                            </EmptyMedia>
+                            <EmptyTitle>No active credentials configured</EmptyTitle>
+                            <EmptyDescription>
                                 Add an API key or OAuth session for{" "}
                                 <span className="text-foreground font-semibold">
                                     {providerName}
                                 </span>{" "}
                                 to enable live routing.
-                            </p>
-                        </div>
-                        <Button
-                            type="button"
-                            size="sm"
-                            onClick={onAdd}
-                            className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5 mt-2"
-                        >
-                            <Plus className="size-3.5" />
-                            <span>Add Connection</span>
-                        </Button>
-                    </div>
+                            </EmptyDescription>
+                        </EmptyHeader>
+                        <EmptyContent>
+                            <Button
+                                type="button"
+                                size="sm"
+                                onClick={onAdd}
+                                className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+                            >
+                                <Plus className="size-3.5" />
+                                <span>Add Connection</span>
+                            </Button>
+                        </EmptyContent>
+                    </Empty>
                 ) : (
                     <div className="grid grid-cols-1 gap-2.5">
                         {connections.map((connection, index) => {

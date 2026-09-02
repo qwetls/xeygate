@@ -29,6 +29,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "sonner";
 import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 export const Route = createFileRoute("/providers/$providerId")({
     staticData: { title: "Providers" },
@@ -423,12 +424,12 @@ function ProviderDetailPage() {
                 </div>
 
                 {sortedModels.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border/80 p-12 text-center text-xs text-muted-foreground space-y-2">
-                        <p>
+                    <Empty className="p-12">
+                        <EmptyTitle>
                             {modelSearch
                                 ? `No models matched your search query "${modelSearch}".`
                                 : "No models currently available."}
-                        </p>
+                        </EmptyTitle>
                         {deletedModelIds.length > 0 && (
                             <button
                                 type="button"
@@ -439,7 +440,7 @@ function ProviderDetailPage() {
                                 <span>Restore all {deletedModelIds.length} models</span>
                             </button>
                         )}
-                    </div>
+                    </Empty>
                 ) : viewMode === "table" ? (
                     <ProviderModelTable
                         models={sortedModels}

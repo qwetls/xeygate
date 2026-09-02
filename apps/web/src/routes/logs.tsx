@@ -8,6 +8,7 @@ import type { ListResponse } from "@/lib/types";
 import { LogsSkeleton } from "@/components/skeletons";
 import { useLogs } from "@/hooks/useLogs";
 import { LogDetailSheet, LogTable } from "@/components/logs";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 export const Route = createFileRoute("/logs")({
     staticData: { title: "Logs" },
@@ -107,9 +108,9 @@ function LogsPage() {
             </div>
 
             {filter.filteredLogs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border/60 bg-secondary/10 p-12 text-center text-xs text-muted-foreground">
-                    No matching audit logs for current filter.
-                </div>
+                <Empty className="p-12">
+                    <EmptyTitle>No matching audit logs for current filter.</EmptyTitle>
+                </Empty>
             ) : (
                 <LogTable logs={filter.filteredLogs} onSelect={setSelectedLog} />
             )}
