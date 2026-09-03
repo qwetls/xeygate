@@ -671,6 +671,14 @@
         ],
         "google": [
             {
+                "id": "gemini-3.8-flash",
+                "input": 0.75,
+                "output": 3.75,
+                "cached": 0.075,
+                "reasoning": 3.75,
+                "cache_creation": 0.75
+            },
+            {
                 "id": "gemini-3.7-flash",
                 "input": 0.75,
                 "output": 3.75,
@@ -1039,6 +1047,9 @@
         "gemini-flash-1.5": "gemini-1.5-flash",
         "gemini-pro-1.5": "gemini-1.5-pro",
         "gemini-3.1-pro-preview": "gemini-3.1-pro",
+        "gemini-3.8-flash-high": "gemini-3.8-flash",
+        "gemini-3.8-flash-medium": "gemini-3.8-flash",
+        "gemini-3.8-flash-low": "gemini-3.8-flash",
         "gemini-3.7-flash-high": "gemini-3.7-flash",
         "gemini-3.7-flash-medium": "gemini-3.7-flash",
         "gemini-3.7-flash-low": "gemini-3.7-flash",

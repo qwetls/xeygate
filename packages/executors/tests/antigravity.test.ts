@@ -18,6 +18,11 @@ test("AntigravityExecutor lists official models with accessToken", async () => {
     const flashModel = models.find((m) => m.id === "gemini-3.7-flash-high");
     assert.ok(flashModel);
     assert.equal(flashModel.owned_by, "antigravity");
+
+    // gemini-3.8-flash must be present in the official Antigravity model list
+    const flash38 = models.find((m) => m.id === "gemini-3.8-flash-high");
+    assert.ok(flash38, "gemini-3.8-flash-high must be listed");
+    assert.equal(flash38.owned_by, "antigravity");
 });
 
 test("AntigravityExecutor accepts Google One AI credits options", () => {
