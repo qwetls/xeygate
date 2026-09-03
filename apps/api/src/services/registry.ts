@@ -11,12 +11,13 @@ import {
     isSeedProvider,
     NEOSANTARA_BASE_URL,
     OPENCODE_ZEN_BASE_URL,
+    providerBaseId,
     SEED_MARKER,
     SEEKAI_BASE_URL,
     TABITOKEN_BASE_URL,
     TOKENROUTER_BASE_URL
 } from "@srouter/constants";
-import { deleteProviderDB, getAllProvidersDB, upsertProviderDB } from "@srouter/db";
+import { deleteProviderDB, getAllProvidersDB, getRoundRobinDB, upsertProviderDB } from "@srouter/db";
 import {
     AntigravityExecutor,
     AnthropicExecutor,
@@ -44,15 +45,15 @@ export const registry = new ProviderRegistry();
  * dashboard catalog is DB-driven but never empty. Rows are flagged with the
  * seed marker so they are not treated as real connections.
  */
-export function seedDefaultProviders(): void {
-    const existing = getAllProvidersDB();
+export async function seedDefaultProviders(): Promise<void> {
+    const existing = await getAllProvidersDB();
     const existingIds = new Set(existing.map((p) => p.id));
     const validSeedIds = new Set(DEFAULT_PROVIDERS.map((p) => p.id));
 
     // Clean up any stale seed records no longer in DEFAULT_PROVIDERS
     for (const p of existing) {
         if (isSeedProvider(p) && !validSeedIds.has(p.id)) {
-            deleteProviderDB(p.id);
+            await deleteProviderDB(p.id);
         }
     }
 
@@ -60,7 +61,7 @@ export function seedDefaultProviders(): void {
     for (const seed of DEFAULT_PROVIDERS) {
         const existingRow = existing.find((p) => p.id === seed.id);
         if (!existingRow) {
-            upsertProviderDB({
+            await upsertProviderDB({
                 id: seed.id,
                 providerId: seed.id,
                 name: seed.name,
@@ -78,7 +79,7 @@ export function seedDefaultProviders(): void {
                 existingRow.name !== seed.name ||
                 existingRow.base_url !== seed.base_url
             ) {
-                upsertProviderDB({
+                await upsertProviderDB({
                     ...existingRow,
                     name: seed.name,
                     category: seed.category,
@@ -93,8 +94,8 @@ export function seedDefaultProviders(): void {
 /**
  * Load saved OAuth & Custom providers from SQLite Database on startup
  */
-export function loadSavedProvidersFromDB(): void {
-    const savedProviders = getAllProvidersDB();
+export async function loadSavedProvidersFromDB(): Promise<void> {
+    const savedProviders = await getAllProvidersDB();
     for (const p of savedProviders) {
         if (!p.enabled) continue;
         // Seed rows describe drivers, not connections; they never get executors.
@@ -102,6 +103,7 @@ export function loadSavedProvidersFromDB(): void {
 
         const providerType = p.providerId || p.id;
         const baseUrl = p.base_url;
+        registry.setRoundRobin(providerBaseId(p.id), await getRoundRobinDB(providerBaseId(p.id)));
 
         switch (true) {
             case isProviderBaseId(p.id, "kiro"):
@@ -288,6 +290,7 @@ export function loadSavedProvidersFromDB(): void {
                     new OpenAIExecutor({
                         id: p.id || p.providerId,
                         name: p.name,
+                        alias: p.alias,
                         baseUrl,
                         apiKey: p.apiKey,
                         accessToken: p.accessToken
@@ -314,6 +317,7 @@ export function loadSavedProvidersFromDB(): void {
                     new AnthropicExecutor({
                         id: p.id || p.providerId,
                         name: p.name,
+                        alias: p.alias,
                         baseUrl,
                         apiKey: p.apiKey,
                         accessToken: p.accessToken
@@ -355,5 +359,8 @@ export function warmModelRegistry(): void {
 }
 
 // Seed built-in driver rows, then auto load saved DB providers
-seedDefaultProviders();
-loadSavedProvidersFromDB();
+// Deferred to boot() — must run after PG schema init.
+// Called from index.ts boot() via warmModelRegistry().
+export function startProviderRegistry(): Promise<void> {
+    return seedDefaultProviders().then(() => loadSavedProvidersFromDB());
+}

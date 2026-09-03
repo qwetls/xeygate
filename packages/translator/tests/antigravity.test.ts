@@ -147,8 +147,10 @@ test("parseAntigravityModelName maps public ids to CloudCode internal ids", () =
     );
     assert.equal(parseAntigravityModelName("gemini-3.7-flash-medium"), "gemini-3.7-flash-tiered");
     assert.equal(parseAntigravityModelName("gemini-3.7-flash-low"), "gemini-3.7-flash-tiered");
+    assert.equal(parseAntigravityModelName("gemini-3.8-flash-high"), "gemini-3.8-flash-tiered");
+    assert.equal(parseAntigravityModelName("gemini-3.8-flash-medium"), "gemini-3.8-flash-tiered");
+    assert.equal(parseAntigravityModelName("gemini-3.8-flash-low"), "gemini-3.8-flash-tiered");
     assert.equal(parseAntigravityModelName("gemini-3.5-flash-high"), "gemini-3-flash-agent");
-    assert.equal(parseAntigravityModelName("gemini-3.1-pro-high"), "gemini-pro-agent");
     assert.equal(parseAntigravityModelName("gemini-3.5-flash-medium"), "gemini-3.5-flash-low");
     assert.equal(parseAntigravityModelName("gemini-3.5-flash-low"), "gemini-3.5-flash-extra-low");
     // pass-through

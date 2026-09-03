@@ -14,10 +14,10 @@ import {
 const originalFetch = globalThis.fetch;
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     globalThis.fetch = originalFetch;
     stopTokenRefreshSweeper();
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+    for (const id of createdIds.splice(0)) await deleteProviderDB(id);
 });
 
 function oauthProvider(overrides: Partial<ProviderConfig> = {}): ProviderConfig {
@@ -35,7 +35,7 @@ function oauthProvider(overrides: Partial<ProviderConfig> = {}): ProviderConfig 
     };
 }
 
-test("isDueForRefresh respects expiry lead time and stale missing expiry", () => {
+test("isDueForRefresh respects expiry lead time and stale missing expiry", async () => {
     const now = 1_000_000;
     assert.equal(isDueForRefresh(oauthProvider({ tokenExpiresAt: now + 10 * 60_000 }), now), false);
     assert.equal(isDueForRefresh(oauthProvider({ tokenExpiresAt: now + 4 * 60_000 }), now), true);
@@ -53,7 +53,7 @@ test("refreshProviderToken deduplicates concurrent refreshes and updates DB plus
     const id = `openai_codex_test_${Date.now()}`;
     createdIds.push(id);
     const config = oauthProvider({ id, tokenExpiresAt: Date.now() - 1_000 });
-    upsertProviderDB({ ...config, category: "oauth", protocol: "openai" });
+    await upsertProviderDB({ ...config, category: "oauth", protocol: "openai" });
 
     const executor = new CodexExecutor({
         id,
@@ -92,7 +92,7 @@ test("refreshProviderToken deduplicates concurrent refreshes and updates DB plus
     assert.equal(second.success, true);
     assert.equal(refreshCalls, 1);
 
-    const saved = getProviderByIdDB(id);
+    const saved = await getProviderByIdDB(id);
     assert.equal(saved?.accessToken, "new-access");
     assert.equal(saved?.refreshToken, "new-refresh");
     assert.ok((saved?.tokenExpiresAt ?? 0) > Date.now() + 50 * 60_000);
@@ -102,7 +102,7 @@ test("refreshProviderToken deduplicates concurrent refreshes and updates DB plus
     assert.equal(modelAuthorization, "Bearer new-access");
 });
 
-test("sweeper timers do not keep the process alive and can be stopped", () => {
+test("sweeper timers do not keep the process alive and can be stopped", async () => {
     startTokenRefreshSweeper(60_000);
     stopTokenRefreshSweeper();
     assert.ok(true);

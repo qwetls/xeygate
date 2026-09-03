@@ -3,18 +3,18 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, test } from "node:test";
 import { Hono } from "hono";
 import { AdminAuthStore } from "../../../packages/db/src/adminAuth.js";
-import { setRequireApiKeyDB } from "@srouter/db";
+import { setRequireApiKeyDB, SqliteClient } from "@srouter/db";
 import { ADMIN_SESSION_COOKIE, createAdminSession } from "../src/services/adminAuth.js";
 import { CreateAdminAuthMiddleware } from "../src/middleware/AdminAuth.js";
 import { CreateApiKeyAuth } from "../src/middleware/ApiKeyAuth.js";
 
-afterEach(() => {
-    setRequireApiKeyDB(false);
+afterEach(async () => {
+    await setRequireApiKeyDB(false);
 });
 
 test("admin middleware requires a valid session cookie", async () => {
-    const store = new AdminAuthStore(new DatabaseSync(":memory:"));
-    store.createAdminAccount("hash");
+    const store = new AdminAuthStore(new SqliteClient(new DatabaseSync(":memory:")));
+    await store.createAdminAccount("hash");
     const app = new Hono();
     app.use("/*", CreateAdminAuthMiddleware({ store }));
     app.get("/providers", (c) => c.json({ ok: true }));
@@ -22,7 +22,7 @@ test("admin middleware requires a valid session cookie", async () => {
     const rejected = await app.request("/providers");
     assert.equal(rejected.status, 401);
 
-    const token = createAdminSession(store);
+    const token = await createAdminSession(store);
     const accepted = await app.request("/providers", {
         headers: { Cookie: `${ADMIN_SESSION_COOKIE}=${token}` }
     });
@@ -30,9 +30,9 @@ test("admin middleware requires a valid session cookie", async () => {
 });
 
 test("client-identifying headers do not bypass API-key auth", async () => {
-    setRequireApiKeyDB(true);
-    const store = new AdminAuthStore(new DatabaseSync(":memory:"));
-    store.createAdminAccount("hash");
+    await setRequireApiKeyDB(true);
+    const store = new AdminAuthStore(new SqliteClient(new DatabaseSync(":memory:")));
+    await store.createAdminAccount("hash");
     const app = new Hono();
     app.use("/*", CreateApiKeyAuth({ store }));
     app.post("/chat/completions", (c) => c.json({ ok: true }));
@@ -43,7 +43,7 @@ test("client-identifying headers do not bypass API-key auth", async () => {
     });
     assert.equal(spoofed.status, 401);
 
-    const token = createAdminSession(store);
+    const token = await createAdminSession(store);
     const adminRequest = await app.request("/chat/completions", {
         method: "POST",
         headers: { Cookie: `${ADMIN_SESSION_COOKIE}=${token}` }

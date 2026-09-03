@@ -6,14 +6,14 @@ import { registry } from "@/services/registry.js";
 
 const createdIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdIds.splice(0)) {
-        deleteAPIKeyDB(id);
+        await deleteAPIKeyDB(id);
     }
 });
 
 test("ChatLogic.ProcessNonStreamingCompletion records usage tokens and dollar cost for apiKeyId", async () => {
-    const key = createAPIKeyDB({
+    const key = await createAPIKeyDB({
         name: "Deduction Key",
         creditLimit: 10
     });
@@ -51,19 +51,19 @@ test("ChatLogic.ProcessNonStreamingCompletion records usage tokens and dollar co
             key.id
         );
 
-        const updated = getAPIKeyByKeyDB(key.key);
+        const updated = await getAPIKeyByKeyDB(key.key);
         assert.ok(updated);
-        assert.equal(updated?.usageTokens, 150);
-        assert.ok((updated?.usageCost ?? 0) > 0, "Usage cost should be greater than 0");
+        assert.equal(updated?.usage_tokens, 150);
+        assert.ok((updated?.usage_cost ?? 0) > 0, "Usage cost should be greater than 0");
     } finally {
         registry.chatCompletion = origMethod;
     }
 });
 
 test("ChatLogic.ProcessStreamingCompletion records usage tokens and dollar cost for apiKeyId", async () => {
-    const key = createAPIKeyDB({
+    const key = await createAPIKeyDB({
         name: "Streaming Deduction Key",
-        creditLimit: 10
+        credit_limit: 10
     });
     createdIds.push(key.id);
 
@@ -106,10 +106,10 @@ test("ChatLogic.ProcessStreamingCompletion records usage tokens and dollar cost 
             // consume stream
         }
 
-        const updated = getAPIKeyByKeyDB(key.key);
+        const updated = await getAPIKeyByKeyDB(key.key);
         assert.ok(updated);
-        assert.equal(updated?.usageTokens, 300);
-        assert.ok((updated?.usageCost ?? 0) > 0, "Streaming usage cost should be greater than 0");
+        assert.equal(updated?.usage_tokens, 300);
+        assert.ok((updated?.usage_cost ?? 0) > 0, "Streaming usage cost should be greater than 0");
     } finally {
         registry.chatCompletionStream = origStream;
     }

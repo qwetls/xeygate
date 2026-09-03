@@ -13,19 +13,23 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ProviderIcon } from "@/components/ProviderIcon";
-import { ConnectOAuthModal } from "@/components/ui/ConnectOAuthModal";
+import {
+    AddModelDialog,
+    ConnectOAuthModal,
+    ConnectionCard,
+    ConnectionForm,
+    ProviderIcon,
+    ProviderModelCard,
+    ProviderModelTable,
+    type ConnectionFormInput
+} from "@/components/providers";
 import { useProvider, type AddConnectionPayload } from "@/hooks/useProvider";
 import { useCopy } from "@/hooks/useCopy";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "sonner";
-import { ConnectionCard } from "@/components/providers/ConnectionCard";
-import { ConnectionForm, type ConnectionFormInput } from "@/components/providers/ConnectionForm";
-import { AddModelDialog } from "@/components/providers/AddModelDialog";
-import { ProviderModelCard } from "@/components/providers/ProviderModelCard";
-import { ProviderModelTable } from "@/components/providers/ProviderModelTable";
 import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
 export const Route = createFileRoute("/providers/$providerId")({
     staticData: { title: "Providers" },
@@ -41,13 +45,13 @@ function ProviderDetailPage() {
         refetch,
         addMutation,
         deleteMutation,
+        toggleRoundRobinMutation,
         addModelMutation,
         deleteModelMutation
     } = useProvider(providerId);
 
     const [modelSearch, setModelSearch] = useState("");
     const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-    const [roundRobin, setRoundRobin] = useState(false);
     const [isAddOpen, setIsAddOpen] = useState(false);
     const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false);
     const [isAddModelOpen, setIsAddModelOpen] = useState(false);
@@ -146,8 +150,8 @@ function ProviderDetailPage() {
             name: input.name?.trim() || `${provider.name} Key`,
             category: provider.category,
             protocol: provider.protocol,
-            baseUrl: input.baseUrl || provider.default_base_url || undefined,
-            apiKey: input.apiKey
+            base_url: input.base_url || input.baseUrl || provider.default_base_url || undefined,
+            api_key: input.apiKey
         };
 
         setFormError("");
@@ -327,9 +331,9 @@ function ProviderDetailPage() {
             <ConnectionCard
                 providerName={provider.name}
                 connections={connections}
-                roundRobin={roundRobin}
+                roundRobin={provider.roundRobin ?? false}
                 isDeleting={deleteMutation.isPending}
-                onToggleRoundRobin={() => setRoundRobin(!roundRobin)}
+                onToggleRoundRobin={(enabled) => toggleRoundRobinMutation.mutate(enabled)}
                 onRefresh={() => void refetch()}
                 onAdd={handleAddConnection}
                 onDelete={(connectionId) =>
@@ -420,12 +424,12 @@ function ProviderDetailPage() {
                 </div>
 
                 {sortedModels.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-border/80 p-12 text-center text-xs text-muted-foreground space-y-2">
-                        <p>
+                    <Empty className="p-12">
+                        <EmptyTitle>
                             {modelSearch
                                 ? `No models matched your search query "${modelSearch}".`
                                 : "No models currently available."}
-                        </p>
+                        </EmptyTitle>
                         {deletedModelIds.length > 0 && (
                             <button
                                 type="button"
@@ -436,7 +440,7 @@ function ProviderDetailPage() {
                                 <span>Restore all {deletedModelIds.length} models</span>
                             </button>
                         )}
-                    </div>
+                    </Empty>
                 ) : viewMode === "table" ? (
                     <ProviderModelTable
                         models={sortedModels}

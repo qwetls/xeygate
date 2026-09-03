@@ -74,30 +74,30 @@ export function hashSessionToken(token: string): string {
     return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
-export function createAdminSession(
+export async function createAdminSession(
     store: Pick<AdminAuthStore, "createSession"> = adminAuthStore,
     now = Date.now()
-): string {
+): Promise<string> {
     const token = randomBytes(32).toString("base64url");
-    store.createSession(hashSessionToken(token), now, now + ADMIN_SESSION_TTL_MS);
+    await store.createSession(hashSessionToken(token), now, now + ADMIN_SESSION_TTL_MS);
     return token;
 }
 
-export function verifyAdminSession(
+export async function verifyAdminSession(
     store: Pick<AdminAuthStore, "getSession"> = adminAuthStore,
     token: string | undefined,
     now = Date.now()
-): boolean {
+): Promise<boolean> {
     if (!token) return false;
-    return store.getSession(hashSessionToken(token), now) !== null;
+    return (await store.getSession(hashSessionToken(token), now)) !== null;
 }
 
-export function revokeAdminSession(
+export async function revokeAdminSession(
     store: Pick<AdminAuthStore, "deleteSession"> = adminAuthStore,
     token: string | undefined
-): boolean {
+): Promise<boolean> {
     if (!token) return false;
-    return store.deleteSession(hashSessionToken(token));
+    return await store.deleteSession(hashSessionToken(token));
 }
 
 export function isLoopbackAddress(address: string | undefined): boolean {
@@ -114,17 +114,17 @@ export function isLoopbackAddress(address: string | undefined): boolean {
  *   dashboard ("create your admin password"), which is first-come-wins until
  *   an account exists.
  */
-export function bootstrapAdminAccountFromEnv(
+export async function bootstrapAdminAccountFromEnv(
     store: AdminAuthStore,
     now: number = Date.now()
-): void {
+): Promise<void> {
     const envPassword = process.env.SROUTER_ADMIN_PASSWORD;
     if (envPassword === undefined || envPassword.length === 0) return;
 
     const hash = hashAdminPassword(envPassword);
-    if (!store.hasAdminAccount()) {
-        store.createAdminAccount(hash, now);
+    if (!(await store.hasAdminAccount())) {
+        await store.createAdminAccount(hash, now);
     } else {
-        store.updatePasswordHash(hash, now);
+        await store.updatePasswordHash(hash, now);
     }
 }

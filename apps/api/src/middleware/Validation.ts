@@ -1,11 +1,16 @@
 import type { ZodSchema } from "zod";
 import type { MiddlewareHandler } from "hono";
+import { MAX_BODY_BYTES } from "@/middleware/BodyLimit.js";
+import { Err } from "@/utils/response.js";
 
 export function ValidateJson<T extends ZodSchema>(Schema: T): MiddlewareHandler {
     return async (c, next) => {
         let Body: unknown;
         try {
             const Raw = await c.req.text();
+            if (Buffer.byteLength(Raw) > MAX_BODY_BYTES) {
+                return Err(c, "Request body too large", 413, { code: "request_too_large" });
+            }
             if (!Raw || !Raw.trim()) {
                 return c.json(
                     {

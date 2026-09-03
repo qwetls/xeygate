@@ -5,11 +5,11 @@ import type { ProviderConfig } from "@srouter/types";
 
 const createdIds: string[] = [];
 
-afterEach(() => {
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+afterEach(async () => {
+    for (const id of createdIds.splice(0)) await await deleteProviderDB(id);
 });
 
-test("Kiro provider metadata survives SQLite round-trip", () => {
+test("Kiro provider metadata survives SQLite round-trip", async () => {
     const id = `kiro_test_${Date.now()}`;
     createdIds.push(id);
     const config: ProviderConfig = {
@@ -28,8 +28,8 @@ test("Kiro provider metadata survives SQLite round-trip", () => {
         createdAt: Date.now()
     };
 
-    upsertProviderDB({ ...config, category: "api_key", protocol: "custom" });
-    const saved = getProviderByIdDB(id);
+    await await upsertProviderDB({ ...config, category: "api_key", protocol: "custom" });
+    const saved = await await getProviderByIdDB(id);
 
     assert.deepEqual(saved?.providerSpecificData, config.providerSpecificData);
 });

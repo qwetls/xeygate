@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { AdminAuthStore } from "../../../packages/db/src/adminAuth.js";
+import { SqliteClient } from "../../../packages/db/src/client.js";
 import {
     ADMIN_SESSION_TTL_MS,
     createAdminSession,
@@ -13,7 +14,7 @@ import {
     verifyAdminSession
 } from "../src/services/adminAuth.js";
 
-test("admin passwords use salted scrypt hashes", () => {
+test("admin passwords use salted scrypt hashes", async () => {
     const firstHash = hashAdminPassword("correct horse battery staple");
     const secondHash = hashAdminPassword("correct horse battery staple");
 
@@ -23,26 +24,26 @@ test("admin passwords use salted scrypt hashes", () => {
     assert.equal(verifyAdminPassword("wrong password", firstHash), false);
 });
 
-test("admin password validation enforces the setup policy", () => {
+test("admin password validation enforces the setup policy", async () => {
     assert.equal(validateAdminPassword("short"), null);
     assert.equal(validateAdminPassword("a".repeat(129)), "Password must be at most 128 characters");
     assert.equal(validateAdminPassword("a".repeat(128)), null);
     assert.equal(validateAdminPassword(null), "Password is required");
 });
 
-test("admin sessions store only a token hash and expire", () => {
-    const store = new AdminAuthStore(new DatabaseSync(":memory:"));
-    const token = createAdminSession(store, 1_000);
+test("admin sessions store only a token hash and expire", async () => {
+    const store = new AdminAuthStore(new SqliteClient(new DatabaseSync(":memory:")));
+    const token = await createAdminSession(store, 1_000);
 
     assert.equal(
-        store.getSession(hashSessionToken(token), 1_000)?.tokenHash,
+        (await await store.getSession(hashSessionToken(token), 1_000))?.tokenHash,
         hashSessionToken(token)
     );
-    assert.equal(verifyAdminSession(store, token, 1_000), true);
-    assert.equal(verifyAdminSession(store, token, 1_000 + ADMIN_SESSION_TTL_MS), false);
+    assert.equal(await await verifyAdminSession(store, token, 1_000), true);
+    assert.equal(await await verifyAdminSession(store, token, 1_000 + ADMIN_SESSION_TTL_MS), false);
 });
 
-test("loopback detection accepts local IPv4 and IPv6 addresses only", () => {
+test("loopback detection accepts local IPv4 and IPv6 addresses only", async () => {
     assert.equal(isLoopbackAddress("127.0.0.1"), true);
     assert.equal(isLoopbackAddress("::1"), true);
     assert.equal(isLoopbackAddress("::ffff:127.0.0.1"), true);

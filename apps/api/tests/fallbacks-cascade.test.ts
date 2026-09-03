@@ -13,12 +13,12 @@ import { registry } from "../src/services/registry.js";
 const createdRuleIds: string[] = [];
 const registeredProviderIds: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
     for (const id of createdRuleIds.splice(0)) {
-        deleteFallbackRuleDB(id);
+        await await deleteFallbackRuleDB(id);
     }
     for (const id of registeredProviderIds.splice(0)) {
-        deleteLogsByProviderDB(id);
+        await await deleteLogsByProviderDB(id);
         registry.unregisterProvider(id);
     }
 });
@@ -84,7 +84,7 @@ test("ChatLogic automatically cascades non-streaming request to fallback provide
     registeredProviderIds.push(primaryProvider.id, fallbackProvider.id);
 
     // Create fallback rule: primary_failing/model-a -> fallback_backup/model-b
-    const rule = createFallbackRuleDB({
+    const rule = await await createFallbackRuleDB({
         sourceModel: "primary_failing/model-a",
         targetModel: "fallback_backup/model-b",
         priority: 1,
@@ -107,7 +107,7 @@ test("ChatLogic automatically cascades non-streaming request to fallback provide
     assert.equal(res.choices[0]?.message.content, "Hello from fallback cascade!");
 
     // Verify request logs record fallback metadata
-    const recentLogs = getRecentLogsDB(5);
+    const recentLogs = await await getRecentLogsDB(5);
     const log = recentLogs.find((l) => l.model === "fallback_backup/model-b");
     assert.ok(log);
     assert.equal(log?.fallbackOccurred, true);
@@ -161,7 +161,7 @@ test("ChatLogic cascades streaming request to fallback provider before first chu
     registry.registerProvider(fallbackProvider);
     registeredProviderIds.push(primaryProvider.id, fallbackProvider.id);
 
-    const rule = createFallbackRuleDB({
+    const rule = await await createFallbackRuleDB({
         sourceModel: "primary_failing_stream/*",
         targetModel: "fallback_backup_stream/model-y",
         priority: 1,

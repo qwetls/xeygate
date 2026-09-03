@@ -16,7 +16,8 @@ import {
 import { toast } from "sonner";
 import { QuotaSkeleton } from "@/components/skeletons";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ProviderIcon } from "@/components/ProviderIcon";
+import { ProviderIcon } from "@/components/providers";
+import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { cn } from "@/lib/utils";
 import { useQuota } from "@/hooks/useQuota";
 import type { LiveModelQuotaItem, ProviderUsageMetric } from "@srouter/types";
@@ -413,25 +414,27 @@ function QuotaPage() {
 
             {/* Provider Accounts Quota List */}
             {activeProviders.length === 0 ? (
-                <div className="rounded-[12px] border border-dashed border-[var(--line)] p-12 text-center space-y-3">
-                    <div className="flex size-10 items-center justify-center rounded-full bg-[var(--field)] mx-auto text-[var(--ink-3)]">
-                        <Gauge className="size-5" />
-                    </div>
-                    <p className="text-sm font-semibold text-[var(--ink)]">
-                        No Active Quotas or Usage Data Yet
-                    </p>
-                    <p className="text-xs text-[var(--ink-3)] max-w-md mx-auto leading-relaxed">
-                        Live quota progress and per-model consumption will appear here as soon as
-                        upstream sessions are synced or gateway requests are processed.
-                    </p>
-                    <Link
-                        to="/providers"
-                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--ink)] text-[var(--canvas)] px-3.5 py-1.5 text-xs font-semibold hover:opacity-90 transition-transform active:scale-[0.98] shadow-xs cursor-pointer"
-                    >
-                        <Plus className="size-3.5" />
-                        <span>Go to Providers Catalog</span>
-                    </Link>
-                </div>
+                <Empty className="p-12">
+                    <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                            <Gauge className="size-5" />
+                        </EmptyMedia>
+                        <EmptyTitle>No Active Quotas or Usage Data Yet</EmptyTitle>
+                        <EmptyDescription>
+                            Live quota progress and per-model consumption will appear here as soon as
+                            upstream sessions are synced or gateway requests are processed.
+                        </EmptyDescription>
+                    </EmptyHeader>
+                    <EmptyContent>
+                        <Link
+                            to="/providers"
+                            className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--ink)] text-[var(--canvas)] px-3.5 py-1.5 text-xs font-semibold hover:opacity-90 transition-transform active:scale-[0.98] shadow-xs cursor-pointer"
+                        >
+                            <Plus className="size-3.5" />
+                            <span>Go to Providers Catalog</span>
+                        </Link>
+                    </EmptyContent>
+                </Empty>
             ) : (
                 <div className="space-y-4">
                     {activeProviders.map((account) => {

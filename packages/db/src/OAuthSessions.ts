@@ -1,4 +1,4 @@
-import { db } from "./db.js";
+import { db, isPostgres } from "./db.js";
 import { num, str } from "./row-utils.js";
 
 export interface OAuthSession {
@@ -17,16 +17,24 @@ interface OAuthSessionRow {
     created_at: number;
 }
 
-export function saveOAuthSessionDB(session: OAuthSession): OAuthSession {
-    db.prepare(
-        `INSERT INTO oauth_sessions (state, code_verifier, client_id, redirect_uri, created_at)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(state) DO UPDATE SET
-             code_verifier = excluded.code_verifier,
-             client_id = excluded.client_id,
-             redirect_uri = excluded.redirect_uri,
-             created_at = excluded.created_at;`
-    ).run(
+export async function saveOAuthSessionDB(session: OAuthSession): Promise<OAuthSession> {
+    const UpsertSql = isPostgres()
+        ? `INSERT INTO oauth_sessions (state, code_verifier, client_id, redirect_uri, created_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(state) DO UPDATE SET
+               code_verifier = EXCLUDED.code_verifier,
+               client_id = EXCLUDED.client_id,
+               redirect_uri = EXCLUDED.redirect_uri,
+               created_at = EXCLUDED.created_at`
+        : `INSERT INTO oauth_sessions (state, code_verifier, client_id, redirect_uri, created_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(state) DO UPDATE SET
+               code_verifier = excluded.code_verifier,
+               client_id = excluded.client_id,
+               redirect_uri = excluded.redirect_uri,
+               created_at = excluded.created_at`;
+
+    await db.prepare(UpsertSql).run(
         session.state,
         session.codeVerifier ?? "",
         session.clientId ?? "",
@@ -37,9 +45,10 @@ export function saveOAuthSessionDB(session: OAuthSession): OAuthSession {
     return session;
 }
 
-export function getOAuthSessionDB(state: string): OAuthSession | null {
-    const Row = db.prepare("SELECT * FROM oauth_sessions WHERE state = ?").get(state) as
-        OAuthSessionRow | undefined;
+export async function getOAuthSessionDB(state: string): Promise<OAuthSession | null> {
+    const Row = (await db
+        .prepare("SELECT * FROM oauth_sessions WHERE state = ?")
+        .get(state)) as unknown as OAuthSessionRow | undefined;
 
     if (!Row) return null;
 
@@ -52,12 +61,12 @@ export function getOAuthSessionDB(state: string): OAuthSession | null {
     };
 }
 
-export function deleteOAuthSessionDB(state: string): boolean {
-    const Result = db.prepare("DELETE FROM oauth_sessions WHERE state = ?").run(state);
+export async function deleteOAuthSessionDB(state: string): Promise<boolean> {
+    const Result = await db.prepare("DELETE FROM oauth_sessions WHERE state = ?").run(state);
     return num(Result.changes) > 0;
 }
 
-export function cleanupExpiredOAuthSessionsDB(maxAgeMs: number): void {
+export async function cleanupExpiredOAuthSessionsDB(maxAgeMs: number): Promise<void> {
     const Cutoff = Date.now() - maxAgeMs;
-    db.prepare("DELETE FROM oauth_sessions WHERE created_at < ?").run(Cutoff);
+    await db.prepare("DELETE FROM oauth_sessions WHERE created_at < ?").run(Cutoff);
 }

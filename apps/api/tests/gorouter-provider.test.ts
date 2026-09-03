@@ -8,9 +8,9 @@ import { AuthHandlers } from "../src/services/authHandlers.js";
 const createdIds: string[] = [];
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+afterEach(async () => {
     globalThis.fetch = originalFetch;
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+    for (const id of createdIds.splice(0)) await await deleteProviderDB(id);
 });
 
 test("saved GoRouter connections use the official URL and bearer auth", async () => {
@@ -28,7 +28,7 @@ test("saved GoRouter connections use the official URL and bearer auth", async ()
         enabled: true,
         createdAt: Date.now()
     };
-    upsertProviderDB(config);
+    await await upsertProviderDB(config);
 
     let requestUrl = "";
     let authorization = "";
@@ -39,7 +39,7 @@ test("saved GoRouter connections use the official URL and bearer auth", async ()
     };
 
     const { loadSavedProvidersFromDB, registry } = await import("../src/services/registry.js");
-    loadSavedProvidersFromDB();
+    await await loadSavedProvidersFromDB();
     const provider = registry.getProvider(id);
     assert.ok(provider);
     await provider.listModels();
@@ -51,8 +51,8 @@ test("saved GoRouter connections use the official URL and bearer auth", async ()
     registry.unregisterProvider(id);
 });
 
-test("processGoRouterTokenImport creates and registers GoRouter provider config", () => {
-    const config = AuthLogic.processGoRouterTokenImport({
+test("processGoRouterTokenImport creates and registers GoRouter provider config", async () => {
+    const config = await AuthLogic.processGoRouterTokenImport({
         accessToken: "test-gorouter-key",
         name: "My GoRouter Account"
     });
@@ -63,7 +63,7 @@ test("processGoRouterTokenImport creates and registers GoRouter provider config"
     assert.equal(config.name, "My GoRouter Account");
     assert.equal(config.category, "api_key");
     assert.equal(config.protocol, "openai");
-    assert.equal(config.baseUrl, "https://gorouter.app/v1");
+    assert.equal(config.base_url, "https://gorouter.app/v1");
     assert.equal(config.apiKey, "test-gorouter-key");
     assert.equal(config.enabled, true);
     assert.equal(

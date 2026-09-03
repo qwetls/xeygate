@@ -42,30 +42,30 @@ function rowToFallbackRule(row: FallbackRuleRow): FallbackRule {
     };
 }
 
-export function getAllFallbackRulesDB(): FallbackRule[] {
-    const Stmt = db.prepare("SELECT * FROM fallback_rules ORDER BY priority ASC, created_at ASC");
-    const Rows = Stmt.all() as unknown as FallbackRuleRow[];
+export async function getAllFallbackRulesDB(): Promise<FallbackRule[]> {
+    const Rows = (await db
+        .prepare("SELECT * FROM fallback_rules ORDER BY priority ASC, created_at ASC")
+        .all()) as unknown as FallbackRuleRow[];
     return Rows.map(rowToFallbackRule);
 }
 
-export function getFallbackRuleByIdDB(id: string): FallbackRule | null {
-    const Stmt = db.prepare("SELECT * FROM fallback_rules WHERE id = ?");
-    const Row = Stmt.get(id) as unknown as FallbackRuleRow | undefined;
+export async function getFallbackRuleByIdDB(id: string): Promise<FallbackRule | null> {
+    const Row = (await db
+        .prepare("SELECT * FROM fallback_rules WHERE id = ?")
+        .get(id)) as unknown as FallbackRuleRow | undefined;
     if (!Row) return null;
     return rowToFallbackRule(Row);
 }
 
-export function createFallbackRuleDB(input: CreateFallbackRuleInput): FallbackRule {
+export async function createFallbackRuleDB(input: CreateFallbackRuleInput): Promise<FallbackRule> {
     const Id = input.id || generateId("fb");
     const CreatedAt = input.createdAt || Date.now();
     const TriggerStatusStr = input.triggerOnStatus ? JSON.stringify(input.triggerOnStatus) : null;
 
-    const Stmt = db.prepare(`
+    await db.prepare(`
         INSERT INTO fallback_rules (id, source_model, target_model, priority, enabled, trigger_on_status, max_retries, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    Stmt.run(
+    `).run(
         Id,
         input.sourceModel,
         input.targetModel,
@@ -88,11 +88,11 @@ export function createFallbackRuleDB(input: CreateFallbackRuleInput): FallbackRu
     };
 }
 
-export function updateFallbackRuleDB(
+export async function updateFallbackRuleDB(
     id: string,
     updates: UpdateFallbackRuleInput
-): FallbackRule | null {
-    const Existing = getFallbackRuleByIdDB(id);
+): Promise<FallbackRule | null> {
+    const Existing = await getFallbackRuleByIdDB(id);
     if (!Existing) return null;
 
     const UpdatedSourceModel = updates.sourceModel ?? Existing.sourceModel;
@@ -110,7 +110,7 @@ export function updateFallbackRuleDB(
               : null;
     const UpdatedMaxRetries = updates.maxRetries ?? Existing.maxRetries ?? 1;
 
-    const Stmt = db.prepare(`
+    await db.prepare(`
         UPDATE fallback_rules
         SET source_model = ?,
             target_model = ?,
@@ -119,9 +119,7 @@ export function updateFallbackRuleDB(
             trigger_on_status = ?,
             max_retries = ?
         WHERE id = ?
-    `);
-
-    Stmt.run(
+    `).run(
         UpdatedSourceModel,
         UpdatedTargetModel,
         UpdatedPriority,
@@ -134,14 +132,13 @@ export function updateFallbackRuleDB(
     return getFallbackRuleByIdDB(id);
 }
 
-export function deleteFallbackRuleDB(id: string): boolean {
-    const Stmt = db.prepare("DELETE FROM fallback_rules WHERE id = ?");
-    const Result = Stmt.run(id);
+export async function deleteFallbackRuleDB(id: string): Promise<boolean> {
+    const Result = await db.prepare("DELETE FROM fallback_rules WHERE id = ?").run(id);
     return num(Result.changes) > 0;
 }
 
-export function findMatchingFallbackRulesDB(sourceModel: string): FallbackRule[] {
-    const AllRules = getAllFallbackRulesDB().filter((r) => r.enabled);
+export async function findMatchingFallbackRulesDB(sourceModel: string): Promise<FallbackRule[]> {
+    const AllRules = (await getAllFallbackRulesDB()).filter((r) => r.enabled);
     const NormalizedSource = sourceModel.toLowerCase().trim();
     const Prefix = sourceModel.includes("/") ? sourceModel.split("/")[0] : undefined;
     const NormalizedPrefix = Prefix?.toLowerCase().trim();

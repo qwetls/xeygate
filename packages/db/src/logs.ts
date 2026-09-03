@@ -1,10 +1,11 @@
 import type {
+    AnalyticsWindow,
     ModelUsageSummaryRow,
     RequestLogEntry,
     UsageByModelRow,
     UsageSummary
 } from "@srouter/types";
-import { db } from "./db.js";
+import { db, isPostgres } from "./db.js";
 import { generateId, num, optStr, str } from "./row-utils.js";
 
 interface RequestLogRow {
@@ -59,16 +60,14 @@ interface UsageByModelDBShape {
     estCost: number;
 }
 
-export function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdAt">): RequestLogEntry {
+export async function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdAt">): Promise<RequestLogEntry> {
     const Id = generateId("log");
     const CreatedAt = Date.now();
 
-    const Query = db.prepare(`
+    await db.prepare(`
         INSERT INTO request_logs (id, api_key_id, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, created_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    Query.run(
+    `).run(
         Id,
         entry.apiKeyId ?? null,
         entry.providerId,
@@ -96,28 +95,26 @@ export function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdAt">): 
     };
 }
 
-export function getRecentLogsDB(limit = 50): RequestLogEntry[] {
-    const Query = db.prepare("SELECT * FROM request_logs ORDER BY created_at DESC LIMIT ?");
-    const Rows = Query.all(limit) as unknown as RequestLogRow[];
-
+export async function getRecentLogsDB(limit = 50): Promise<RequestLogEntry[]> {
+    const Rows = (await db
+        .prepare("SELECT * FROM request_logs ORDER BY created_at DESC LIMIT ?")
+        .all(limit)) as unknown as RequestLogRow[];
     return Rows.map(mapLogRow);
 }
 
-export function getUsageSummaryDB(): UsageSummary {
-    const Query = db.prepare(`
+export async function getUsageSummaryDB(): Promise<UsageSummary> {
+    const Result = (await db.prepare(`
         SELECT 
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(total_tokens), 0) as totalTokens,
-            COALESCE(SUM(prompt_tokens), 0) as totalPromptTokens,
-            COALESCE(SUM(completion_tokens), 0) as totalCompletionTokens,
-            COALESCE(SUM(cached_tokens), 0) as totalCachedTokens,
-            COALESCE(SUM(cache_creation_tokens), 0) as totalCacheCreationTokens,
-            COALESCE(SUM(reasoning_tokens), 0) as totalReasoningTokens,
-            COALESCE(SUM(estimated_cost), 0) as totalEstimatedCost
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(total_tokens), 0) as "totalTokens",
+            COALESCE(SUM(prompt_tokens), 0) as "totalPromptTokens",
+            COALESCE(SUM(completion_tokens), 0) as "totalCompletionTokens",
+            COALESCE(SUM(cached_tokens), 0) as "totalCachedTokens",
+            COALESCE(SUM(cache_creation_tokens), 0) as "totalCacheCreationTokens",
+            COALESCE(SUM(reasoning_tokens), 0) as "totalReasoningTokens",
+            COALESCE(SUM(estimated_cost), 0) as "totalEstimatedCost"
         FROM request_logs
-    `);
-
-    const Result = Query.get() as unknown as UsageSummaryRow | undefined;
+    `).get()) as unknown as UsageSummaryRow | undefined;
 
     return {
         totalRequests: num(Result?.totalRequests),
@@ -133,22 +130,20 @@ export function getUsageSummaryDB(): UsageSummary {
     };
 }
 
-export function getProviderUsageSummaryDB(providerId: string): UsageSummary {
-    const Query = db.prepare(`
+export async function getProviderUsageSummaryDB(providerId: string): Promise<UsageSummary> {
+    const Result = (await db.prepare(`
         SELECT 
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(total_tokens), 0) as totalTokens,
-            COALESCE(SUM(prompt_tokens), 0) as totalPromptTokens,
-            COALESCE(SUM(completion_tokens), 0) as totalCompletionTokens,
-            COALESCE(SUM(cached_tokens), 0) as totalCachedTokens,
-            COALESCE(SUM(cache_creation_tokens), 0) as totalCacheCreationTokens,
-            COALESCE(SUM(reasoning_tokens), 0) as totalReasoningTokens,
-            COALESCE(SUM(estimated_cost), 0) as totalEstimatedCost
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(total_tokens), 0) as "totalTokens",
+            COALESCE(SUM(prompt_tokens), 0) as "totalPromptTokens",
+            COALESCE(SUM(completion_tokens), 0) as "totalCompletionTokens",
+            COALESCE(SUM(cached_tokens), 0) as "totalCachedTokens",
+            COALESCE(SUM(cache_creation_tokens), 0) as "totalCacheCreationTokens",
+            COALESCE(SUM(reasoning_tokens), 0) as "totalReasoningTokens",
+            COALESCE(SUM(estimated_cost), 0) as "totalEstimatedCost"
         FROM request_logs
         WHERE provider_id = ?
-    `);
-
-    const Result = Query.get(providerId) as unknown as UsageSummaryRow | undefined;
+    `).get(providerId)) as unknown as UsageSummaryRow | undefined;
 
     return {
         totalRequests: num(Result?.totalRequests),
@@ -164,24 +159,22 @@ export function getProviderUsageSummaryDB(providerId: string): UsageSummary {
     };
 }
 
-export function getProviderModelUsageDB(providerId: string): ModelUsageSummaryRow[] {
-    const Query = db.prepare(`
+export async function getProviderModelUsageDB(providerId: string): Promise<ModelUsageSummaryRow[]> {
+    const Rows = (await db.prepare(`
         SELECT 
             model,
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(total_tokens), 0) as totalTokens,
-            COALESCE(SUM(prompt_tokens), 0) as promptTokens,
-            COALESCE(SUM(completion_tokens), 0) as completionTokens,
-            COALESCE(SUM(cached_tokens), 0) as cachedTokens,
-            COALESCE(SUM(estimated_cost), 0) as estimatedCost,
-            MAX(created_at) as lastUsedAt
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(total_tokens), 0) as "totalTokens",
+            COALESCE(SUM(prompt_tokens), 0) as "promptTokens",
+            COALESCE(SUM(completion_tokens), 0) as "completionTokens",
+            COALESCE(SUM(cached_tokens), 0) as "cachedTokens",
+            COALESCE(SUM(estimated_cost), 0) as "estimatedCost",
+            MAX(created_at) as "lastUsedAt"
         FROM request_logs
         WHERE provider_id = ?
         GROUP BY model
-        ORDER BY lastUsedAt DESC
-    `);
-
-    const Rows = Query.all(providerId) as unknown as ModelUsageDBShape[];
+        ORDER BY "lastUsedAt" DESC
+    `).all(providerId)) as unknown as ModelUsageDBShape[];
 
     return Rows.map((row) => ({
         model: row.model,
@@ -195,40 +188,36 @@ export function getProviderModelUsageDB(providerId: string): ModelUsageSummaryRo
     }));
 }
 
-export function getUsageByModelDB(): UsageByModelRow[] {
-    const Query = db.prepare(`
+export async function getUsageByModelDB(): Promise<UsageByModelRow[]> {
+    const Rows = (await db.prepare(`
         SELECT 
             model,
-            COUNT(*) as totalRequests,
-            COALESCE(SUM(prompt_tokens), 0) as totalInputTokens,
-            COALESCE(SUM(completion_tokens), 0) as totalOutputTokens,
-            COALESCE(SUM(cached_tokens), 0) as totalCachedTokens,
-            COALESCE(SUM(estimated_cost), 0) as estCost
+            COUNT(*) as "totalRequests",
+            COALESCE(SUM(prompt_tokens), 0) as "totalInputTokens",
+            COALESCE(SUM(completion_tokens), 0) as "totalOutputTokens",
+            COALESCE(SUM(cached_tokens), 0) as "totalCachedTokens",
+            COALESCE(SUM(estimated_cost), 0) as "estCost"
         FROM request_logs
         GROUP BY model
-        ORDER BY totalRequests DESC
-    `);
-
-    const Rows = Query.all() as unknown as UsageByModelDBShape[];
+        ORDER BY "totalRequests" DESC
+    `).all()) as unknown as UsageByModelDBShape[];
 
     return Rows.map((row) => ({
         model: row.model,
-        totalRequests: row.totalRequests,
-        totalInputTokens: row.totalInputTokens,
-        totalOutputTokens: row.totalOutputTokens,
-        totalCachedTokens: row.totalCachedTokens,
-        estCost: row.estCost
+        totalRequests: num(row.totalRequests),
+        totalInputTokens: num(row.totalInputTokens),
+        totalOutputTokens: num(row.totalOutputTokens),
+        totalCachedTokens: num(row.totalCachedTokens),
+        estCost: num(row.estCost)
     }));
 }
 
-export function deleteLogsByModelDB(model: string): void {
-    const Query = db.prepare("DELETE FROM request_logs WHERE model = ?");
-    Query.run(model);
+export async function deleteLogsByModelDB(model: string): Promise<void> {
+    await db.prepare("DELETE FROM request_logs WHERE model = ?").run(model);
 }
 
-export function deleteLogsByProviderDB(providerId: string): void {
-    const Query = db.prepare("DELETE FROM request_logs WHERE provider_id = ?");
-    Query.run(providerId);
+export async function deleteLogsByProviderDB(providerId: string): Promise<void> {
+    await db.prepare("DELETE FROM request_logs WHERE provider_id = ?").run(providerId);
 }
 
 function mapLogRow(row: RequestLogRow): RequestLogEntry {
@@ -251,5 +240,129 @@ function mapLogRow(row: RequestLogRow): RequestLogEntry {
         fallbackReason: optStr(row.fallback_reason),
         resolvedModel: optStr(row.resolved_model),
         createdAt: num(row.created_at)
+    };
+}
+
+// --- Analytics ---
+
+export interface AnalyticsDBResult {
+    buckets: AnalyticsBucketRow[];
+    topModels: AnalyticsTopModelRow[];
+    providers: AnalyticsProviderRow[];
+    p95LatencyMs: number;
+    rps: number;
+}
+
+interface AnalyticsBucketRow {
+    bucket: number;
+    totalRequests: number;
+    successRequests: number;
+    errorRequests: number;
+    avgLatencyMs: number;
+    totalTokens: number;
+    promptTokens: number;
+    completionTokens: number;
+    cachedTokens: number;
+}
+
+interface AnalyticsTopModelRow {
+    model: string;
+    totalRequests: number;
+    totalTokens: number;
+    estCost: number;
+}
+
+interface AnalyticsProviderRow {
+    providerId: string;
+    totalRequests: number;
+}
+
+export function getBucketSizeMs(window: AnalyticsWindow): number {
+    switch (window) {
+        case "1h":
+            return 60_000;
+        case "24h":
+            return 3_600_000;
+        case "7d":
+            return 21_600_000;
+        case "30d":
+            return 86_400_000;
+    }
+}
+
+export function getBucketCount(window: AnalyticsWindow): number {
+    switch (window) {
+        case "1h":
+            return 60;
+        case "24h":
+            return 24;
+        case "7d":
+            return 28;
+        case "30d":
+            return 30;
+    }
+}
+
+export async function getAnalyticsDB(window: AnalyticsWindow): Promise<AnalyticsDBResult> {
+    const Now = Date.now();
+    const BucketSizeMs = getBucketSizeMs(window);
+    const Since = Now - BucketSizeMs * getBucketCount(window);
+
+    // Time buckets. SQLite binds numbers as REAL; CAST truncates to bucket start.
+    // Postgres uses BIGINT timestamps, so division is integer-safe.
+    // Use BIGINT cast for the bucket calculation — the multiplication
+    // (bucketIndex * bucketSize) easily exceeds INT (2.1B) for 24h+ windows.
+    const BucketsSql = `
+        SELECT
+            CAST(created_at / ? AS BIGINT) * ? AS "bucket",
+            COUNT(*)                                             AS "totalRequests",
+            SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END) AS "successRequests",
+            SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END)  AS "errorRequests",
+            AVG(latency_ms)                                      AS "avgLatencyMs",
+            SUM(total_tokens)                                    AS "totalTokens",
+            SUM(prompt_tokens)                                   AS "promptTokens",
+            SUM(completion_tokens)                               AS "completionTokens",
+            SUM(cached_tokens)                                   AS "cachedTokens"
+        FROM request_logs
+        WHERE created_at >= ?
+        GROUP BY "bucket" ORDER BY "bucket" ASC
+    `;
+    const Buckets = (await db.prepare(BucketsSql).all(BucketSizeMs, BucketSizeMs, Since)) as unknown as AnalyticsBucketRow[];
+
+    const ModelsSql = `
+        SELECT model, COUNT(*) AS "totalRequests", SUM(total_tokens) AS "totalTokens",
+               SUM(estimated_cost) AS "estCost"
+        FROM request_logs WHERE created_at >= ?
+        GROUP BY model ORDER BY "totalRequests" DESC LIMIT 10
+    `;
+    const TopModels = (await db.prepare(ModelsSql).all(Since)) as unknown as AnalyticsTopModelRow[];
+
+    const ProviderSql = `
+        SELECT provider_id AS "providerId", COUNT(*) AS "totalRequests"
+        FROM request_logs WHERE created_at >= ?
+        GROUP BY "providerId" ORDER BY "totalRequests" DESC
+    `;
+    const Providers = (await db.prepare(ProviderSql).all(Since)) as unknown as AnalyticsProviderRow[];
+
+    // p95 latency. COUNT(*) is BIGINT; scale to INT only when the result
+    // is guaranteed small (we cap at the table size). Use BIGINT to be safe.
+    const P95Sql = `SELECT latency_ms FROM request_logs
+           WHERE created_at >= ?
+           ORDER BY latency_ms
+           LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.95 AS BIGINT) - 1 FROM request_logs WHERE created_at >= ?)`;
+    const P95Row = (await db.prepare(P95Sql).get(Since, Since)) as { latency_ms: number } | undefined;
+    const P95LatencyMs = P95Row ? num(P95Row.latency_ms) : 0;
+
+    // RPS (last 60s rolling average)
+    const RpsSql = `SELECT COUNT(*) AS count FROM request_logs WHERE created_at >= ?`;
+    const RpsRow = (await db.prepare(RpsSql).get(Now - 60_000)) as { count: number } | undefined;
+    const Rps = RpsRow ? Math.round((num(RpsRow.count) / 60) * 100) / 100 : 0;
+
+    return {
+        buckets: Buckets,
+        topModels: TopModels,
+        providers: Providers,
+        p95LatencyMs: P95LatencyMs,
+        rps: Rps
     };
 }

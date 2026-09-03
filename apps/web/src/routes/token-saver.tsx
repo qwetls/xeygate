@@ -1,8 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useTokenSaver } from "@/hooks/useTokenSaver";
-import { TokenSaverHeader } from "@/components/tokenSaver/TokenSaverHeader";
-import { ToolCompressionCard } from "@/components/tokenSaver/ToolCompressionCard";
-import { PromptOptimizerCard } from "@/components/tokenSaver/PromptOptimizerCard";
+import { PromptOptimizerCard, TokenSaverHeader, ToolCompressionCard } from "@/components/tokenSaver";
 
 export const Route = createFileRoute("/token-saver")({
     staticData: { title: "Token Saver" },

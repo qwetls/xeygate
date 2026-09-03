@@ -15,7 +15,7 @@ import {
 import { ChatLogic } from "../src/logic/chat.logic.js";
 import { registry } from "../src/services/registry.js";
 
-test("isToolProvidedByClient detects if client declared the tool", () => {
+test("isToolProvidedByClient detects if client declared the tool", async () => {
     assert.equal(isToolProvidedByClient(undefined, "web_search"), false);
     assert.equal(isToolProvidedByClient([], "web_search"), false);
 
@@ -27,7 +27,7 @@ test("isToolProvidedByClient detects if client declared the tool", () => {
     assert.equal(isToolProvidedByClient(clientTools, "read_file"), true);
 });
 
-test("shouldInterceptToolCall detects search tools not in client tools", () => {
+test("shouldInterceptToolCall detects search tools not in client tools", async () => {
     assert.equal(shouldInterceptToolCall("web_search"), true);
     assert.equal(shouldInterceptToolCall("google_search"), true);
     assert.equal(shouldInterceptToolCall("bing_search"), true);
@@ -38,7 +38,7 @@ test("shouldInterceptToolCall detects search tools not in client tools", () => {
     assert.equal(shouldInterceptToolCall("web_search", toolsWithSearch), false);
 });
 
-test("extractSearchQuery parses JSON objects and raw strings", () => {
+test("extractSearchQuery parses JSON objects and raw strings", async () => {
     assert.equal(extractSearchQuery('{"query":"GitHub seaavey"}'), "GitHub seaavey");
     assert.equal(extractSearchQuery('{"q":"search test"}'), "search test");
     assert.equal(extractSearchQuery('{"searchTerm":"antigravity"}'), "antigravity");
@@ -181,14 +181,14 @@ const mockProvider: AIProvider = {
     }
 };
 
-beforeEach(() => {
+beforeEach(async () => {
     mockCallCount = 0;
     registry.registerProvider(mockProvider);
 });
 
-afterEach(() => {
+afterEach(async () => {
     registry.unregisterProvider(mockInterceptProviderId);
-    deleteLogsByProviderDB(mockInterceptProviderId);
+    await deleteLogsByProviderDB(mockInterceptProviderId);
 });
 
 test("ChatLogic intercepts non-streaming web_search and returns final answer without tool error", async () => {

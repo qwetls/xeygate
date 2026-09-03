@@ -7,7 +7,7 @@
 Keep a single stable endpoint while SRouter routes requests, refreshes OAuth tokens, enforces quotas, and monitors live telemetry.
 
 <p>
-  <a href="https://github.com/seaavey/SRouter/releases"><img src="https://img.shields.io/badge/version-v0.1.3-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/seaavey/SRouter/releases"><img src="https://img.shields.io/badge/version-v0.1.4-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4.13-e36002?style=flat-square" alt="Hono"></a>
@@ -41,9 +41,11 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   -p 1455:1455 \
-  -v srouter_data:/root/.srouter \
+  -v $HOME/.srouter:/root/.srouter \
   ghcr.io/seaavey/srouter:latest
 ```
+
+> Data is persisted on the host at `~/.srouter` (`$HOME/.srouter`). Using a named volume like `srouter_data:/root/.srouter` will store data inside Docker at `/var/lib/docker/volumes/srouter_data/_data` instead of on the host.
 
 ### Option B: Local Node.js
 
@@ -210,13 +212,10 @@ services:
       - "3000:3000"
       - "1455:1455"
     volumes:
-      - srouter_data:/root/.srouter
+      - ${HOME}/.srouter:/root/.srouter
     environment:
       - PORT=3000
       - NODE_ENV=production
-
-volumes:
-  srouter_data:
 ```
 
 ---

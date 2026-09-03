@@ -21,14 +21,14 @@ async function ExtractState(c: Context): Promise<string | undefined> {
     return StatePayloadSchema.safeParse(body).data?.state ?? c.req.query("state");
 }
 
-function OAuthFor(
+async function OAuthFor(
     handler: AuthProviderHandler,
     initiate: (params: OAuthLoginParams) => ReturnType<typeof AuthLogic.initiateOAuthPKCE>,
     c: Context,
     handleErrors: boolean
-): Response {
+): Promise<Response> {
     try {
-        const result = initiate({
+        const result = await initiate({
             clientId: c.req.query("client_id"),
             redirectUri: c.req.query("redirect_uri"),
             prompt: c.req.query("prompt")
@@ -52,9 +52,9 @@ async function CallbackFor(
     let code = c.req.query("code") ?? body?.code;
     let state = c.req.query("state") ?? body?.state;
 
-    if (body?.callbackUrl) {
+    if (body?.callback_url) {
         try {
-            const url = new URL(body.callbackUrl);
+            const url = new URL(body.callback_url);
             code = code ?? url.searchParams.get("code") ?? undefined;
             state = state ?? url.searchParams.get("state") ?? undefined;
         } catch {}
@@ -74,7 +74,7 @@ async function CallbackFor(
 
 async function ImportTokenFor(
     handler: AuthProviderHandler,
-    importLogic: (body: TokenImportParams) => ProviderConfig,
+    importLogic: (body: TokenImportParams) => ProviderConfig | Promise<ProviderConfig>,
     c: Context
 ): Promise<Response> {
     const rawBody = await c.req.json().catch(() => null);
@@ -87,13 +87,13 @@ async function ImportTokenFor(
         return Err(c, parsed.error.issues[0]?.message ?? "Invalid request body", 400);
     }
 
-    const provider = importLogic(parsed.data as TokenImportParams);
+    const provider = await importLogic(parsed.data as TokenImportParams);
     return Ok(c, { success: true, message: handler.tokenImportMessage, provider }, 201);
 }
 
 export const AuthController = {
     OpenAI: {
-        OAuth: (c: Context): Response =>
+        OAuth: async (c: Context): Promise<Response> =>
             OAuthFor(AuthHandlers.OpenAI, (p) => AuthLogic.initiateOAuthPKCE(p), c, false),
         Callback: (c: Context): Promise<Response> =>
             CallbackFor(
@@ -106,7 +106,7 @@ export const AuthController = {
     },
 
     Antigravity: {
-        OAuth: (c: Context): Response =>
+        OAuth: async (c: Context): Promise<Response> =>
             OAuthFor(
                 AuthHandlers.Antigravity,
                 (p) => AuthLogic.initiateProviderOAuth("antigravity", p),
@@ -146,7 +146,7 @@ export const AuthController = {
     },
 
     Claude: {
-        OAuth: (c: Context): Response =>
+        OAuth: async (c: Context): Promise<Response> =>
             OAuthFor(
                 AuthHandlers.Claude,
                 (p) => AuthLogic.initiateProviderOAuth("claude", p),
@@ -276,7 +276,7 @@ export const AuthController = {
     },
 
     Qoder: {
-        OAuth: (c: Context): Response =>
+        OAuth: async (c: Context): Promise<Response> =>
             OAuthFor(
                 AuthHandlers.Qoder,
                 (p) => AuthLogic.initiateProviderOAuth("qoder", p),

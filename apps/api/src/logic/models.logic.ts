@@ -9,11 +9,11 @@ export class ModelsLogic {
         ForceRefresh = false
     ): Promise<ModelObject[]> {
         const Models = await registry.listAllModels(Provider, ForceRefresh);
-        return this.MergeComboModels(this.MergeCustomModels(Models, Provider));
+        return this.MergeComboModels(await this.MergeCustomModels(Models, Provider));
     }
 
-    private static MergeComboModels(Models: ModelObject[]): ModelObject[] {
-        const Rules = getAllFallbackRulesDB().filter((Rule) => Rule.enabled);
+    private static async MergeComboModels(Models: ModelObject[]): Promise<ModelObject[]> {
+        const Rules = (await getAllFallbackRulesDB()).filter((Rule) => Rule.enabled);
         if (Rules.length === 0) return Models;
 
         const Merged = new Map<string, ModelObject>();
@@ -50,11 +50,11 @@ export class ModelsLogic {
         return Array.from(Merged.values());
     }
 
-    private static MergeCustomModels(
+    private static async MergeCustomModels(
         Models: ModelObject[],
         ProviderFilter?: string
-    ): ModelObject[] {
-        const Rows = getAllCustomModelsDB();
+    ): Promise<ModelObject[]> {
+        const Rows = await getAllCustomModelsDB();
         if (Rows.length === 0) return Models;
 
         const Merged = new Map<string, ModelObject>();
@@ -62,7 +62,7 @@ export class ModelsLogic {
             Merged.set(M.id.toLowerCase(), M);
         }
         for (const Row of Rows) {
-            const Alias = providerAlias(providerBaseId(Row.providerId));
+            const Alias = this.AliasForProviderId(Row.providerId);
             const Id = `${Alias}/${Row.modelId}`;
             if (ProviderFilter && !Alias.toLowerCase().startsWith(ProviderFilter.toLowerCase())) {
                 continue;
@@ -75,6 +75,18 @@ export class ModelsLogic {
             });
         }
         return Array.from(Merged.values());
+    }
+
+    /**
+     * Resolve the human-facing model prefix for a provider id. Custom providers
+     * carry UUID ids whose base identity is the UUID itself, so the runtime
+     * alias (registered executor's alias) must win over the built-in alias
+     * lookup, which would otherwise echo the UUID back as the model prefix.
+     */
+    private static AliasForProviderId(ProviderId: string): string {
+        const Registered = registry.getAllProviders().get(ProviderId);
+        if (Registered?.alias) return Registered.alias;
+        return providerAlias(providerBaseId(ProviderId));
     }
 
     public static async GetModelById(

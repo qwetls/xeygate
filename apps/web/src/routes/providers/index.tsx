@@ -3,8 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useCatalog } from "@/hooks/useCatalog";
-import { Catalog } from "@/components/providers/Catalog";
-import { CatalogToolbar } from "@/components/providers/CatalogToolbar";
+import { Catalog, CatalogToolbar, CustomProviderDialog } from "@/components/providers";
 import { ProvidersSkeleton } from "@/components/skeletons";
 
 export const Route = createFileRoute("/providers/")({
@@ -14,6 +13,7 @@ export const Route = createFileRoute("/providers/")({
 
 function ProvidersPage() {
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+    const [isCustomOpen, setIsCustomOpen] = useState(false);
     const catalog = useCatalog();
     const { data, error, isPending, isFetching, refetch } = catalog;
 
@@ -63,9 +63,12 @@ function ProvidersPage() {
                 onSearchChange={catalog.setSearch}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
+                onAddCustom={() => setIsCustomOpen(true)}
             />
 
             <Catalog groups={catalog.groups} search={catalog.search} viewMode={viewMode} />
+
+            <CustomProviderDialog open={isCustomOpen} onOpenChange={setIsCustomOpen} />
         </div>
     );
 }

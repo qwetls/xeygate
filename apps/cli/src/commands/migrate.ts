@@ -476,7 +476,7 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
     const s = p.spinner();
     try {
         s.start("Preparing target database");
-        initDatabase();
+        await initDatabase();
 
         const targetDb = new DatabaseSync(TargetDbPath);
         targetDb.exec("PRAGMA foreign_keys = OFF;");

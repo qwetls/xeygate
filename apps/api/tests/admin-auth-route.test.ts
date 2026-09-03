@@ -3,11 +3,12 @@ import { DatabaseSync } from "node:sqlite";
 import { test } from "node:test";
 import { Hono } from "hono";
 import { AdminAuthStore } from "../../../packages/db/src/adminAuth.js";
+import { SqliteClient } from "../../../packages/db/src/client.js";
 import { createAdminRoute } from "../src/routes/v1/admin.js";
 import { hashAdminPassword } from "../src/services/adminAuth.js";
 
 function createTestApp(options: { address?: string } = {}) {
-    const store = new AdminAuthStore(new DatabaseSync(":memory:"));
+    const store = new AdminAuthStore(new SqliteClient(new DatabaseSync(":memory:")));
     const app = new Hono();
     app.route(
         "/v1",
@@ -51,7 +52,7 @@ test("local setup creates an account and establishes a session", async () => {
 
     assert.equal(setup.status, 201);
     assert.deepEqual(await setup.json(), { authenticated: true });
-    assert.equal(store.hasAdminAccount(), true);
+    assert.equal(await store.hasAdminAccount(), true);
 
     const status = await app.request("/v1/admin/status", {
         headers: { Cookie: getSessionCookie(setup) }
@@ -88,7 +89,7 @@ test("remote setup is first-come-wins and closes after the first account", async
 
 test("login and logout manage the admin session", async () => {
     const { app, store } = createTestApp({ address: "127.0.0.1" });
-    store.createAdminAccount(hashAdminPassword("correct horse battery staple"));
+    await store.createAdminAccount(hashAdminPassword("correct horse battery staple"));
 
     const invalid = await app.request("/v1/admin/login", {
         method: "POST",
@@ -120,7 +121,7 @@ test("login and logout manage the admin session", async () => {
 
 test("repeated failed logins are throttled", async () => {
     const { app, store } = createTestApp({ address: "192.168.1.10" });
-    store.createAdminAccount("invalid-password-hash");
+    await store.createAdminAccount("invalid-password-hash");
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
         const response = await app.request("/v1/admin/login", {
@@ -141,15 +142,15 @@ test("repeated failed logins are throttled", async () => {
 
 test("change-password validates current password and updates admin account", async () => {
     const { app, store } = createTestApp({ address: "127.0.0.1" });
-    store.createAdminAccount(hashAdminPassword("correct horse battery staple"));
+    await store.createAdminAccount(hashAdminPassword("correct horse battery staple"));
 
     // Unauthorized request without session cookie
     const unauthenticated = await app.request("/v1/admin/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-            currentPassword: "correct horse battery staple",
-            newPassword: "new correct horse battery staple",
+            current_password: "correct horse battery staple",
+            new_password: "new correct horse battery staple",
             confirmation: "new correct horse battery staple"
         })
     });
@@ -169,8 +170,8 @@ test("change-password validates current password and updates admin account", asy
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
-            currentPassword: "wrong password here",
-            newPassword: "new correct horse battery staple",
+            current_password: "wrong password here",
+            new_password: "new correct horse battery staple",
             confirmation: "new correct horse battery staple"
         })
     });
@@ -181,8 +182,8 @@ test("change-password validates current password and updates admin account", asy
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
-            currentPassword: "correct horse battery staple",
-            newPassword: "a".repeat(129),
+            current_password: "correct horse battery staple",
+            new_password: "a".repeat(129),
             confirmation: "a".repeat(129)
         })
     });
@@ -193,8 +194,8 @@ test("change-password validates current password and updates admin account", asy
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
-            currentPassword: "correct horse battery staple",
-            newPassword: "new correct horse battery staple",
+            current_password: "correct horse battery staple",
+            new_password: "new correct horse battery staple",
             confirmation: "different confirmation here"
         })
     });
@@ -205,8 +206,8 @@ test("change-password validates current password and updates admin account", asy
         method: "POST",
         headers: { "Content-Type": "application/json", Cookie: cookie },
         body: JSON.stringify({
-            currentPassword: "correct horse battery staple",
-            newPassword: "new correct horse battery staple",
+            current_password: "correct horse battery staple",
+            new_password: "new correct horse battery staple",
             confirmation: "new correct horse battery staple"
         })
     });

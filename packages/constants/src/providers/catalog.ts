@@ -44,7 +44,12 @@ const KNOWN_PROVIDER_IDS_DESC = Object.freeze(
 
 const LEGACY_ALIAS_MAP: Readonly<Record<string, string>> = Object.freeze({
     claude: "claude",
-    cbai: "codebuddy"
+    cbai: "codebuddy",
+    // OpenCode Zen's executor registers with base id "opencode_zen"; its
+    // listModels splits on "_" and produces "opencode/<model>" ids, while
+    // alias-prefixed connections produce "zen/<model>". Map both so log
+    // attribution and routing resolve to the registered base id.
+    opencode: "opencode_zen"
 });
 
 export function providerById(Id: string): ProviderMetadata | undefined {
@@ -55,7 +60,13 @@ export function isKnownProvider(Id: string): boolean {
     return Id in KNOWN_PROVIDER_MAP;
 }
 
+const UUID_RE =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function providerBaseId(Id: string): string {
+    // Custom providers carry a UUID v4 as their immutable ID — never
+    // truncate it; a UUID is its own base identity.
+    if (UUID_RE.test(Id)) return Id;
     return (
         KNOWN_PROVIDER_IDS_DESC.find(
             (Candidate) =>

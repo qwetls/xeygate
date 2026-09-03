@@ -6,7 +6,7 @@ import type {
 } from "./openai.js";
 
 // --- Provider Spectrum & Catalog Types ---
-export type ProviderCategory = "oauth" | "free_tier" | "api_key";
+export type ProviderCategory = "oauth" | "free_tier" | "api_key" | "custom_provider";
 
 export type ProviderProtocol = "openai" | "anthropic" | "gemini" | "custom";
 
@@ -31,6 +31,7 @@ export interface ProviderDefinition {
     requires_api_key: boolean;
     requires_oauth?: boolean;
     supports_custom_url?: boolean;
+    roundRobin?: boolean;
     status: ProviderStatus;
     models: ModelObject[];
     connections?: ProviderConfig[];
@@ -40,6 +41,7 @@ export interface ProviderConfig {
     id: string;
     providerId: string;
     name: string;
+    alias?: string;
     category?: ProviderCategory;
     protocol?: ProviderProtocol;
     base_url?: string;
@@ -59,6 +61,7 @@ export interface ProviderConfig {
 export interface AIProvider {
     id: string;
     name: string;
+    alias?: string;
     category?: ProviderCategory;
     protocol?: ProviderProtocol;
     listModels(): Promise<ModelObject[]>;

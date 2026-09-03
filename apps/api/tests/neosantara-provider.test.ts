@@ -6,9 +6,9 @@ import type { ProviderConfig } from "@srouter/types";
 const createdIds: string[] = [];
 const originalFetch = globalThis.fetch;
 
-afterEach(() => {
+afterEach(async () => {
     globalThis.fetch = originalFetch;
-    for (const id of createdIds.splice(0)) deleteProviderDB(id);
+    for (const id of createdIds.splice(0)) await deleteProviderDB(id);
 });
 
 test("saved Neosantara connections use the official URL and bearer auth", async () => {
@@ -26,7 +26,7 @@ test("saved Neosantara connections use the official URL and bearer auth", async 
         enabled: true,
         createdAt: Date.now()
     };
-    upsertProviderDB(config);
+    await upsertProviderDB(config);
 
     let requestUrl = "";
     let authorization = "";
@@ -37,7 +37,7 @@ test("saved Neosantara connections use the official URL and bearer auth", async 
     };
 
     const { loadSavedProvidersFromDB, registry } = await import("../src/services/registry.js");
-    loadSavedProvidersFromDB();
+    await loadSavedProvidersFromDB();
     const provider = registry.getProvider(id);
     assert.ok(provider);
     await provider.listModels();

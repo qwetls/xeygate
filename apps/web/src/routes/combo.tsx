@@ -1,10 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useFallbacks } from "@/hooks/useFallbacks";
-import { ComboHeader } from "@/components/combo/ComboHeader";
-import { ComboArchitecture } from "@/components/combo/ComboArchitecture";
-import { ComboForm } from "@/components/combo/ComboForm";
-import { ComboList } from "@/components/combo/ComboList";
+import { ComboArchitecture, ComboForm, ComboHeader, ComboList } from "@/components/combo";
 
 export const Route = createFileRoute("/combo")({
     staticData: { title: "Model Combo" },
@@ -67,9 +64,9 @@ function ComboPage() {
             <ComboForm
                 open={isAdding || Boolean(editingCombo)}
                 saving={saving}
-                existingFallbacks={fallbacks}
-                initialComboName={editingCombo?.name ?? ""}
-                initialModels={editingCombo?.models ?? []}
+                existing_fallbacks={fallbacks}
+                initial_combo_name={editingCombo?.name ?? ""}
+                initial_models={editingCombo?.models ?? []}
                 onCancel={() => {
                     setIsAdding(false);
                     setEditingCombo(null);
@@ -90,17 +87,6 @@ function ComboPage() {
                 }}
                 onEditClick={(comboName, models) => {
                     setEditingCombo({ name: comboName, models });
-                }}
-                onApplyTemplate={async (comboName, models) => {
-                    for (let i = 0; i < models.length; i++) {
-                        await createFallback({
-                            sourceModel: comboName.trim(),
-                            targetModel: models[i]!,
-                            priority: i + 1,
-                            enabled: true,
-                            triggerOnStatus: [429, 403, 500, 502, 503, 504]
-                        });
-                    }
                 }}
             />
         </div>

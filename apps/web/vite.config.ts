@@ -18,7 +18,30 @@ export default defineConfig({
         }
     },
     build: {
-        chunkSizeWarningLimit: 1000
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (!id.includes("node_modules")) return;
+                    // exact package paths, no broad patterns
+                    if (id.includes("node_modules/react/")) return "react-vendor";
+                    if (id.includes("node_modules/react-dom/")) return "react-vendor";
+                    if (id.includes("node_modules/scheduler/")) return "react-vendor";
+                    if (id.includes("node_modules/sonner/")) return "toast";
+                    if (id.includes("node_modules/lucide-react/")) return "icons";
+                    if (id.includes("node_modules/@tanstack/react-router/")) return "router";
+                    if (id.includes("node_modules/@tanstack/react-query/")) return "query";
+                    if (id.includes("node_modules/@tanstack/react-table/")) return "table";
+                    if (id.includes("node_modules/recharts/")) return "charts";
+                    if (id.includes("node_modules/@xyflow/")) return "flow";
+                    if (id.includes("node_modules/@base-ui/")) return "ui";
+                    if (id.includes("node_modules/class-variance-authority/")) return "ui";
+                    if (id.includes("node_modules/clsx/")) return "ui";
+                    if (id.includes("node_modules/tailwind-merge/")) return "ui";
+                    return "vendor"; // everything else
+                }
+            }
+        }
     },
     server: {
         port: 5173,

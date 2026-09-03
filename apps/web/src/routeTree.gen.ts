@@ -10,10 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as ComboRouteImport } from './routes/combo'
 import { Route as KeysRouteImport } from './routes/keys'
 import { Route as LogsRouteImport } from './routes/logs'
-import { Route as PlaygroundRouteImport } from './routes/playground'
 import { Route as ProvidersRouteImport } from './routes/providers'
 import { Route as QuotaRouteImport } from './routes/quota'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -24,6 +24,11 @@ import { Route as ProvidersProviderIdRouteImport } from './routes/providers/$pro
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ComboRoute = ComboRouteImport.update({
@@ -39,11 +44,6 @@ const KeysRoute = KeysRouteImport.update({
 const LogsRoute = LogsRouteImport.update({
   id: '/logs',
   path: '/logs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlaygroundRoute = PlaygroundRouteImport.update({
-  id: '/playground',
-  path: '/playground',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProvidersRoute = ProvidersRouteImport.update({
@@ -79,10 +79,10 @@ const ProvidersProviderIdRoute = ProvidersProviderIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/combo': typeof ComboRoute
   '/keys': typeof KeysRoute
   '/logs': typeof LogsRoute
-  '/playground': typeof PlaygroundRoute
   '/providers': typeof ProvidersRouteWithChildren
   '/quota': typeof QuotaRoute
   '/settings': typeof SettingsRoute
@@ -92,10 +92,10 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/combo': typeof ComboRoute
   '/keys': typeof KeysRoute
   '/logs': typeof LogsRoute
-  '/playground': typeof PlaygroundRoute
   '/quota': typeof QuotaRoute
   '/settings': typeof SettingsRoute
   '/token-saver': typeof TokenSaverRoute
@@ -105,10 +105,10 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/combo': typeof ComboRoute
   '/keys': typeof KeysRoute
   '/logs': typeof LogsRoute
-  '/playground': typeof PlaygroundRoute
   '/providers': typeof ProvidersRouteWithChildren
   '/quota': typeof QuotaRoute
   '/settings': typeof SettingsRoute
@@ -120,10 +120,10 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/analytics'
     | '/combo'
     | '/keys'
     | '/logs'
-    | '/playground'
     | '/providers'
     | '/quota'
     | '/settings'
@@ -133,10 +133,10 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/combo'
     | '/keys'
     | '/logs'
-    | '/playground'
     | '/quota'
     | '/settings'
     | '/token-saver'
@@ -145,10 +145,10 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/analytics'
     | '/combo'
     | '/keys'
     | '/logs'
-    | '/playground'
     | '/providers'
     | '/quota'
     | '/settings'
@@ -159,10 +159,10 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   ComboRoute: typeof ComboRoute
   KeysRoute: typeof KeysRoute
   LogsRoute: typeof LogsRoute
-  PlaygroundRoute: typeof PlaygroundRoute
   ProvidersRoute: typeof ProvidersRouteWithChildren
   QuotaRoute: typeof QuotaRoute
   SettingsRoute: typeof SettingsRoute
@@ -176,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/combo': {
@@ -197,13 +204,6 @@ declare module '@tanstack/react-router' {
       path: '/logs'
       fullPath: '/logs'
       preLoaderRoute: typeof LogsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/playground': {
-      id: '/playground'
-      path: '/playground'
-      fullPath: '/playground'
-      preLoaderRoute: typeof PlaygroundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/providers': {
@@ -267,10 +267,10 @@ const ProvidersRouteWithChildren = ProvidersRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AnalyticsRoute: AnalyticsRoute,
   ComboRoute: ComboRoute,
   KeysRoute: KeysRoute,
   LogsRoute: LogsRoute,
-  PlaygroundRoute: PlaygroundRoute,
   ProvidersRoute: ProvidersRouteWithChildren,
   QuotaRoute: QuotaRoute,
   SettingsRoute: SettingsRoute,

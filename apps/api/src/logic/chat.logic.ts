@@ -5,12 +5,14 @@ import {
     incrementAPIKeyUsageDB
 } from "@srouter/db";
 import { applyTokenSaver, estimateCostForUsage, extractUsageBreakdown } from "@srouter/translator";
+import { providerTypeForAlias } from "@srouter/constants";
 import type {
     ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatMessage,
     FallbackRule,
+    JSONValue,
     ToolCall,
     UsageInfo
 } from "@srouter/types";
@@ -74,8 +76,8 @@ function ShouldTriggerFallback(
     return status === undefined;
 }
 
-function ResolveCandidates(originalModel: string): CandidateModel[] {
-    const matchingRules = findMatchingFallbackRulesDB(originalModel);
+async function ResolveCandidates(originalModel: string): Promise<CandidateModel[]> {
+    const matchingRules = await findMatchingFallbackRulesDB(originalModel);
     const candidates: CandidateModel[] = [{ model: originalModel }];
     const visitedModels = new Set<string>([originalModel]);
 
@@ -88,7 +90,7 @@ function ResolveCandidates(originalModel: string): CandidateModel[] {
     return candidates;
 }
 
-function LogCompletion(
+async function LogCompletion(
     providerId: string,
     model: string,
     startTime: number,
@@ -100,8 +102,14 @@ function LogCompletion(
         fallbackReason?: string;
         apiKeyId?: string;
     }
-): void {
-    const breakdown = extractUsageBreakdown(providerId, options.usage);
+): Promise<void> {
+    // Normalize alias/bare provider id to the registered base id so quota
+    // attribution matches. e.g. "zen" / "opencode" -> "opencode_zen".
+    const normalizedProviderId = providerTypeForAlias(providerId) ?? providerId;
+    const breakdown = extractUsageBreakdown(
+        normalizedProviderId,
+        options.usage as JSONValue | undefined
+    );
     const effectiveModel = model;
     const effectiveProvider = effectiveModel.includes("/")
         ? effectiveModel.split("/")[0]!
@@ -117,7 +125,7 @@ function LogCompletion(
 
     logRequestDB({
         apiKeyId: options.apiKeyId,
-        providerId,
+        providerId: normalizedProviderId,
         model,
         promptTokens: options.statusCode === 200 ? breakdown.prompt_tokens : 0,
         completionTokens: options.statusCode === 200 ? breakdown.completion_tokens : 0,
@@ -143,9 +151,9 @@ export class ChatLogic {
         apiKeyId?: string
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
-            depth === 0 ? applyTokenSaver(body, getTokenSaverSettingsDB()).request : body;
+            depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
-        const candidates = ResolveCandidates(originalModel);
+        const candidates = await ResolveCandidates(originalModel);
 
         let lastError: Error | ErrorWithStatus | string | null = null;
         const fallbackPath: string[] = [originalModel];
@@ -214,7 +222,7 @@ export class ChatLogic {
                     );
                 }
 
-                LogCompletion(providerId, currentModel, startTime, {
+                await LogCompletion(providerId, currentModel, startTime, {
                     statusCode: 200,
                     usage: response.usage,
                     fallbackOccurred,
@@ -257,9 +265,9 @@ export class ChatLogic {
         apiKeyId?: string
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
-            depth === 0 ? applyTokenSaver(body, getTokenSaverSettingsDB()).request : body;
+            depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
-        const candidates = ResolveCandidates(originalModel);
+        const candidates = await ResolveCandidates(originalModel);
 
         let lastError: Error | ErrorWithStatus | string | null = null;
         const fallbackPath: string[] = [originalModel];
