@@ -553,95 +553,126 @@ function QuotaPage() {
                                     </div>
                                 </div>
 
-                                {/* Collapsible Body: Single Unified Table per Provider */}
+                                {/* Collapsible Body: Structured Per Account within this Provider */}
                                 {!isGroupCollapsed && (
-                                    <div className="space-y-4 pt-1 animate-in fade-in-50 duration-150">
-                                        {allQuotasInGroup.length > 0 && (
-                                            <div className="overflow-x-auto rounded-[8px] border border-[var(--line)]">
-                                                <table className="w-full text-left text-xs border-collapse font-mono">
-                                                    <thead>
-                                                        <tr className="border-b border-[var(--line)] bg-[var(--field)]/50 text-[10px] uppercase font-bold text-[var(--ink-3)]">
-                                                            {totalAccounts > 1 && (
-                                                                <th className="py-2.5 px-3.5">Account</th>
-                                                            )}
-                                                            <th className="py-2.5 px-3.5">Quota Name</th>
-                                                            <th className="py-2.5 px-3.5 text-center">Status</th>
-                                                            <th className="py-2.5 px-3.5 text-right">Used / Limit</th>
-                                                            <th className="py-2.5 px-3.5 text-right">Remaining</th>
-                                                            <th className="py-2.5 px-3.5 min-w-[140px]">Capacity</th>
-                                                            <th className="py-2.5 px-3.5 text-right">Resets In</th>
-                                                            <th className="py-2.5 px-3.5 text-right hidden md:table-cell">Reset Time</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-[var(--line)]">
-                                                        {allQuotasInGroup.map((quota, idx) => {
-                                                            const isExhausted = quota.status === "exhausted";
-                                                            const isWarning = quota.status === "warning";
+                                    <div className="space-y-6 pt-2 animate-in fade-in-50 duration-150">
+                                        {group.accounts.map((acc) => {
+                                            const hasQuotas = acc.quotas && acc.quotas.length > 0;
+                                            const hasMetrics = acc.usageMetrics && acc.usageMetrics.length > 0;
 
-                                                            return (
-                                                                <tr key={`${quota.name}-${idx}`} className="hover:bg-[var(--hover)]/30 transition-colors">
-                                                                    {totalAccounts > 1 && (
-                                                                        <td className="py-2.5 px-3.5 font-medium text-[var(--ink-2)] truncate max-w-[140px]">
-                                                                            {quota.accountName}
-                                                                        </td>
-                                                                    )}
-                                                                    <td className="py-2.5 px-3.5 font-bold text-[var(--ink)]">
-                                                                        {quota.name}
-                                                                    </td>
-                                                                    <td className="py-2.5 px-3.5 text-center">
-                                                                        <span
-                                                                            className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase ${
-                                                                                isExhausted
-                                                                                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/30"
-                                                                                    : isWarning
-                                                                                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
-                                                                                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                                                            }`}
-                                                                        >
-                                                                            {quota.status}
-                                                                        </span>
-                                                                    </td>
-                                                                    <td className="py-2.5 px-3.5 text-right tabular-nums text-[var(--ink-2)]">
-                                                                        {quota.used.toLocaleString()} / {quota.limit.toLocaleString()}
-                                                                    </td>
-                                                                    <td className="py-2.5 px-3.5 text-right tabular-nums font-semibold text-[var(--ink)]">
-                                                                        {quota.percentage}
-                                                                    </td>
-                                                                    <td className="py-2.5 px-3.5">
-                                                                        <div className="h-1.5 w-full rounded-full bg-[var(--line)] overflow-hidden">
-                                                                            <div
-                                                                                className={`h-full rounded-full transition-all duration-300 ${
-                                                                                    isExhausted ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
-                                                                                }`}
-                                                                                style={{ width: `${Math.min(100, quota.percentageValue)}%` }}
-                                                                            />
-                                                                        </div>
-                                                                    </td>
-                                                                    <td className="py-2.5 px-3.5 text-right tabular-nums text-[var(--ink-2)] font-medium">
-                                                                        {quota.resetIn || "—"}
-                                                                    </td>
-                                                                    <td className="py-2.5 px-3.5 text-right text-[11px] text-[var(--ink-3)] hidden md:table-cell">
-                                                                        {quota.resetTime ? formatResetTime(quota.resetTime) : "—"}
-                                                                    </td>
-                                                                </tr>
-                                                            );
-                                                        })}
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        )}
+                                            return (
+                                                <div
+                                                    key={acc.id}
+                                                    className="rounded-[10px] border border-[var(--line)] bg-[var(--field)]/25 p-4 space-y-3"
+                                                >
+                                                    {/* Account Sub-Header */}
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-2.5">
+                                                        <div className="flex items-center gap-2 min-w-0">
+                                                            <div className="size-2 rounded-full bg-amber-500 shrink-0" />
+                                                            <span className="font-bold text-xs text-[var(--ink)] truncate">
+                                                                {acc.account}
+                                                            </span>
+                                                            <span
+                                                                className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.2 text-[9px] font-semibold ${
+                                                                    acc.enabled
+                                                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                                                        : "bg-[var(--field)] text-[var(--ink-3)]"
+                                                                }`}
+                                                            >
+                                                                {acc.enabled ? "Active" : "Disabled"}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[10.5px] text-[var(--ink-3)] font-mono">
+                                                            ID: <span className="text-[var(--ink-2)]">{acc.id}</span>
+                                                        </div>
+                                                    </div>
 
-                                        {/* Usage metrics if any */}
-                                        {group.accounts.some((a) => a.usageMetrics && a.usageMetrics.length > 0) && (
-                                            <div className="space-y-2.5 pt-2">
-                                                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-3)]">
-                                                    Usage Consumption History
+                                                    {/* Quotas Table for this specific account */}
+                                                    {hasQuotas ? (
+                                                        <div className="space-y-2">
+                                                            <div className="overflow-x-auto rounded-[6px] border border-[var(--line)] bg-[var(--surface)]">
+                                                                <table className="w-full text-left text-xs border-collapse font-mono">
+                                                                    <thead>
+                                                                        <tr className="border-b border-[var(--line)] bg-[var(--field)]/60 text-[9.5px] uppercase font-bold text-[var(--ink-3)]">
+                                                                            <th className="py-2 px-3">Quota</th>
+                                                                            <th className="py-2 px-3 text-center">Status</th>
+                                                                            <th className="py-2 px-3 text-right">Used / Limit</th>
+                                                                            <th className="py-2 px-3 text-right">Remaining</th>
+                                                                            <th className="py-2 px-3 min-w-[120px]">Capacity</th>
+                                                                            <th className="py-2 px-3 text-right">Resets In</th>
+                                                                            <th className="py-2 px-3 text-right hidden md:table-cell">Reset Time</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-[var(--line)]">
+                                                                        {acc.quotas!.map((quota) => {
+                                                                            const isExhausted = quota.status === "exhausted";
+                                                                            const isWarning = quota.status === "warning";
+
+                                                                            return (
+                                                                                <tr key={quota.name} className="hover:bg-[var(--hover)]/30 transition-colors">
+                                                                                    <td className="py-2 px-3 font-semibold text-[var(--ink)]">
+                                                                                        {quota.name}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-center">
+                                                                                        <span
+                                                                                            className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.2 text-[9px] font-semibold uppercase ${
+                                                                                                isExhausted
+                                                                                                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/30"
+                                                                                                    : isWarning
+                                                                                                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                                                                                                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                                                                            }`}
+                                                                                        >
+                                                                                            {quota.status}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right tabular-nums text-[var(--ink-2)]">
+                                                                                        {quota.used.toLocaleString()} / {quota.limit.toLocaleString()}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right tabular-nums font-semibold text-[var(--ink)]">
+                                                                                        {quota.percentage}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3">
+                                                                                        <div className="h-1.5 w-full rounded-full bg-[var(--line)] overflow-hidden">
+                                                                                            <div
+                                                                                                className={`h-full rounded-full transition-all duration-300 ${
+                                                                                                    isExhausted ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
+                                                                                                }`}
+                                                                                                style={{ width: `${Math.min(100, quota.percentageValue)}%` }}
+                                                                                            />
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right tabular-nums text-[var(--ink-2)] font-medium">
+                                                                                        {quota.resetIn || "—"}
+                                                                                    </td>
+                                                                                    <td className="py-2 px-3 text-right text-[10.5px] text-[var(--ink-3)] hidden md:table-cell">
+                                                                                        {quota.resetTime ? formatResetTime(quota.resetTime) : "—"}
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-[11px] text-[var(--ink-3)] py-2">
+                                                            No active quotas reported for this account.
+                                                        </div>
+                                                    )}
+
+                                                    {/* Usage metrics for this specific account if any */}
+                                                    {hasMetrics && (
+                                                        <div className="space-y-1.5 pt-2">
+                                                            <div className="text-[10px] font-bold uppercase tracking-wider text-[var(--ink-3)]">
+                                                                Usage Consumption History
+                                                            </div>
+                                                            <UsageMetricsTable metrics={acc.usageMetrics!} />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                <UsageMetricsTable
-                                                    metrics={group.accounts.flatMap((a) => a.usageMetrics || [])}
-                                                />
-                                            </div>
-                                        )}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
