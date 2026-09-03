@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import {
     deleteProviderDB,
-    fetchCodeBuddyCNLiveQuota,
     saveOAuthSessionDB,
     upsertProviderDB
 } from "@srouter/db";
+import { fetchCodeBuddyCNLiveQuota } from "@srouter/providers";
 import { CODEBUDDY_CN_BASE_URL, providerById } from "@srouter/constants";
 import type { ProviderConfig } from "@srouter/types";
 import { AuthLogic } from "../src/logic/auth.logic.js";
