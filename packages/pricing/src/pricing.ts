@@ -180,6 +180,72 @@ export function calculateCostFromTokens(
 }
 
 /**
+ * Calculates itemized cost breakdown (input, output, cacheRead, cacheCreation, total)
+ * in dollars from token counts and pricing rates.
+ */
+export function calculateCostBreakdownFromTokens(
+    tokens: {
+        prompt_tokens?: number;
+        input_tokens?: number;
+        completion_tokens?: number;
+        output_tokens?: number;
+        cached_tokens?: number;
+        cache_read_input_tokens?: number;
+        cache_creation_input_tokens?: number;
+        reasoning_tokens?: number;
+    },
+    pricing: ModelPrice
+): {
+    inputCost: number;
+    outputCost: number;
+    cacheReadCost: number;
+    cacheCreationCost: number;
+    totalCost: number;
+} {
+    if (!tokens || !pricing) {
+        return {
+            inputCost: 0,
+            outputCost: 0,
+            cacheReadCost: 0,
+            cacheCreationCost: 0,
+            totalCost: 0
+        };
+    }
+
+    const inputTokens = tokens.prompt_tokens || tokens.input_tokens || 0;
+    const cachedTokens = tokens.cached_tokens || tokens.cache_read_input_tokens || 0;
+    const cacheCreationTokens = tokens.cache_creation_input_tokens || 0;
+    const nonCachedInput = Math.max(0, inputTokens - cachedTokens - cacheCreationTokens);
+
+    const inputCost = nonCachedInput * (pricing.input / 1_000_000);
+    const cacheReadCost =
+        cachedTokens > 0
+            ? cachedTokens * ((pricing.cached ?? pricing.input) / 1_000_000)
+            : 0;
+    const cacheCreationCost =
+        cacheCreationTokens > 0
+            ? cacheCreationTokens * ((pricing.cache_creation ?? pricing.input) / 1_000_000)
+            : 0;
+
+    const outputTokens = tokens.completion_tokens || tokens.output_tokens || 0;
+    const reasoningTokens = tokens.reasoning_tokens || 0;
+    let outputCost = outputTokens * (pricing.output / 1_000_000);
+    if (reasoningTokens > 0) {
+        outputCost += reasoningTokens * ((pricing.reasoning ?? pricing.output) / 1_000_000);
+    }
+
+    const totalCost = inputCost + cacheReadCost + cacheCreationCost + outputCost;
+
+    return {
+        inputCost,
+        outputCost,
+        cacheReadCost,
+        cacheCreationCost,
+        totalCost
+    };
+}
+
+/**
  * Formats cost for display (e.g. "$0.00").
  */
 export function formatCost(cost: number): string {

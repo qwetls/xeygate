@@ -1,8 +1,18 @@
 import { z } from "zod";
 
+export interface LogCostBreakdown {
+    inputCost: number;
+    outputCost: number;
+    cacheReadCost: number;
+    cacheCreationCost?: number;
+    totalCost: number;
+}
+
 export interface RequestLogEntry {
     id: string;
     apiKeyId?: string;
+    apiKeyName?: string;
+    ipAddress?: string;
     providerId: string;
     model: string;
     promptTokens: number;
@@ -14,6 +24,7 @@ export interface RequestLogEntry {
     cacheCreationTokens?: number;
     reasoningTokens?: number;
     estimatedCost?: number;
+    costBreakdown?: LogCostBreakdown;
     fallbackOccurred?: boolean;
     fallbackPath?: string;
     fallbackReason?: string;

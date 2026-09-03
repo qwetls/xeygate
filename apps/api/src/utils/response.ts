@@ -80,6 +80,13 @@ export interface AnthropicErrorPayload {
     };
 }
 
+export function ToContentfulStatusCode(status?: number): ContentfulStatusCode {
+    if (typeof status === "number" && status >= 400 && status <= 599) {
+        return status as ContentfulStatusCode;
+    }
+    return 500;
+}
+
 export function FormatAnthropicErrorPayload(
     message: string,
     status: number = 500,

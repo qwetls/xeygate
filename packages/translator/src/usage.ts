@@ -1,4 +1,8 @@
-import { calculateCostFromTokens, getPricingForModel } from "@srouter/pricing";
+import {
+    calculateCostBreakdownFromTokens,
+    calculateCostFromTokens,
+    getPricingForModel
+} from "@srouter/pricing";
 import type { JSONValue } from "@srouter/types";
 
 export interface UsageBreakdown {
@@ -87,5 +91,24 @@ export function EstimateCostForUsage(
     );
 }
 
+export function EstimateCostBreakdownForUsage(
+    provider: string | undefined,
+    model: string,
+    breakdown: UsageBreakdown
+) {
+    const pricing = getPricingForModel(provider, model);
+    return calculateCostBreakdownFromTokens(
+        {
+            prompt_tokens: breakdown.prompt_tokens,
+            completion_tokens: breakdown.completion_tokens,
+            cached_tokens: breakdown.cached_tokens,
+            cache_creation_input_tokens: breakdown.cache_creation_tokens,
+            reasoning_tokens: breakdown.reasoning_tokens
+        },
+        pricing
+    );
+}
+
 export const extractUsageBreakdown = ExtractUsageBreakdown;
 export const estimateCostForUsage = EstimateCostForUsage;
+export const estimateCostBreakdownForUsage = EstimateCostBreakdownForUsage;
