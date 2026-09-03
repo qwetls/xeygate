@@ -58,59 +58,73 @@ function formatLastUsed(dateStr?: string | null): string {
     }
 }
 
-function QuotaProgressBar({ quota }: { quota: LiveModelQuotaItem }) {
-    const isExhausted = quota.status === "exhausted";
-    const isWarning = quota.status === "warning";
+function QuotaTableView({ quotas }: { quotas: LiveModelQuotaItem[] }) {
+    if (!quotas || quotas.length === 0) return null;
 
     return (
-        <div className="rounded-[8px] border border-[var(--line)] bg-[var(--field)]/30 p-3 space-y-2">
-            <div className="flex items-center justify-between gap-2 text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-bold text-[var(--ink)] truncate" title={quota.name}>
-                        {quota.name}
-                    </span>
-                    <span
-                        className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.2 text-[9.5px] font-semibold uppercase ${
-                            isExhausted
-                                ? "bg-rose-500/10 text-rose-500 border border-rose-500/30"
-                                : isWarning
-                                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
-                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                        }`}
-                    >
-                        {quota.status}
-                    </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] tabular-nums text-[var(--ink-2)] shrink-0">
-                    <span>
-                        {quota.used.toLocaleString()} / {quota.limit.toLocaleString()}
-                    </span>
-                    <span className="font-semibold text-[var(--ink)]">({quota.percentage})</span>
-                </div>
-            </div>
+        <div className="overflow-x-auto rounded-[8px] border border-[var(--line)]">
+            <table className="w-full text-left text-xs border-collapse font-mono">
+                <thead>
+                    <tr className="border-b border-[var(--line)] bg-[var(--field)]/50 text-[10px] uppercase font-bold text-[var(--ink-3)]">
+                        <th className="py-2.5 px-3.5">Quota Name</th>
+                        <th className="py-2.5 px-3.5 text-center">Status</th>
+                        <th className="py-2.5 px-3.5 text-right">Used / Limit</th>
+                        <th className="py-2.5 px-3.5 text-right">Remaining</th>
+                        <th className="py-2.5 px-3.5 min-w-[140px]">Capacity</th>
+                        <th className="py-2.5 px-3.5 text-right">Resets In</th>
+                        <th className="py-2.5 px-3.5 text-right hidden md:table-cell">Reset Time</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--line)]">
+                    {quotas.map((quota) => {
+                        const isExhausted = quota.status === "exhausted";
+                        const isWarning = quota.status === "warning";
 
-            {/* Progress Track */}
-            <div className="h-1.5 w-full rounded-full bg-[var(--line)] overflow-hidden">
-                <div
-                    className={`h-full rounded-full transition-all duration-300 ${
-                        isExhausted ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${Math.min(100, quota.percentageValue)}%` }}
-                />
-            </div>
-
-            {/* Reset Countdown if available */}
-            {quota.resetIn && (
-                <div className="flex items-center justify-between text-[10.5px] text-[var(--ink-3)]">
-                    <span className="flex items-center gap-1">
-                        <Clock className="size-3" />
-                        <span>Resets in {quota.resetIn}</span>
-                    </span>
-                    {quota.resetTime && (
-                        <span title={quota.resetTime}>{formatResetTime(quota.resetTime)}</span>
-                    )}
-                </div>
-            )}
+                        return (
+                            <tr key={quota.name} className="hover:bg-[var(--hover)]/30 transition-colors">
+                                <td className="py-2.5 px-3.5 font-bold text-[var(--ink)]">
+                                    {quota.name}
+                                </td>
+                                <td className="py-2.5 px-3.5 text-center">
+                                    <span
+                                        className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase ${
+                                            isExhausted
+                                                ? "bg-rose-500/10 text-rose-500 border border-rose-500/30"
+                                                : isWarning
+                                                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                                                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                        }`}
+                                    >
+                                        {quota.status}
+                                    </span>
+                                </td>
+                                <td className="py-2.5 px-3.5 text-right tabular-nums text-[var(--ink-2)]">
+                                    {quota.used.toLocaleString()} / {quota.limit.toLocaleString()}
+                                </td>
+                                <td className="py-2.5 px-3.5 text-right tabular-nums font-semibold text-[var(--ink)]">
+                                    {quota.percentage}
+                                </td>
+                                <td className="py-2.5 px-3.5">
+                                    <div className="h-1.5 w-full rounded-full bg-[var(--line)] overflow-hidden">
+                                        <div
+                                            className={`h-full rounded-full transition-all duration-300 ${
+                                                isExhausted ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
+                                            }`}
+                                            style={{ width: `${Math.min(100, quota.percentageValue)}%` }}
+                                        />
+                                    </div>
+                                </td>
+                                <td className="py-2.5 px-3.5 text-right tabular-nums text-[var(--ink-2)] font-medium">
+                                    {quota.resetIn || "—"}
+                                </td>
+                                <td className="py-2.5 px-3.5 text-right text-[11px] text-[var(--ink-3)] hidden md:table-cell">
+                                    {quota.resetTime ? formatResetTime(quota.resetTime) : "—"}
+                                </td>
+                            </tr>
+                        );
+                    })}
+                </tbody>
+            </table>
         </div>
     );
 }
@@ -552,14 +566,7 @@ function QuotaPage() {
                                                 <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-3)]">
                                                     Live Upstream Quotas ({account.quotas!.length})
                                                 </div>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                    {account.quotas!.map((quota) => (
-                                                        <QuotaProgressBar
-                                                            key={quota.name}
-                                                            quota={quota}
-                                                        />
-                                                    ))}
-                                                </div>
+                                                <QuotaTableView quotas={account.quotas!} />
                                             </div>
                                         )}
 
