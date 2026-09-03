@@ -7,7 +7,12 @@ import {
 } from "@srouter/translator";
 import { AnthropicMessageRequestSchema, type AnthropicMessageRequest } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
-import { AnthropicErr, FormatAnthropicErrorPayload, Ok } from "@/utils/response.js";
+import {
+    AnthropicErr,
+    FormatAnthropicErrorPayload,
+    Ok,
+    ToContentfulStatusCode
+} from "@/utils/response.js";
 import { GetApiKeyRow, IsModelAllowed } from "@/middleware/ModelAccess.js";
 import { MAX_BODY_BYTES } from "@/middleware/BodyLimit.js";
 
@@ -120,7 +125,7 @@ export class MessagesController {
                     ? 404
                     : 500);
             const errorMessage = error instanceof Error ? error.message : "Internal server error";
-            return AnthropicErr(c, errorMessage, status as never);
+            return AnthropicErr(c, errorMessage, ToContentfulStatusCode(status));
         }
     }
 }

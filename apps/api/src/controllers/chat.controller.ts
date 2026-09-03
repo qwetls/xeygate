@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { ChatCompletionRequest, APIKeyZod } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
-import { Err, FormatErrorPayload, Ok } from "@/utils/response.js";
+import { Err, FormatErrorPayload, Ok, ToContentfulStatusCode } from "@/utils/response.js";
 
 function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequest {
     for (const msg of Body.messages) {
@@ -80,7 +80,7 @@ export class ChatController {
                     ? 404
                     : 500);
             const ErrorMessage = error instanceof Error ? error.message : "Internal server error";
-            return Err(c, ErrorMessage, status as never);
+            return Err(c, ErrorMessage, ToContentfulStatusCode(status));
         }
     }
 }
