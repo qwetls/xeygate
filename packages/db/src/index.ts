@@ -4,7 +4,6 @@ export * from "./db.js";
 export * from "./logs.js";
 export * from "./OAuthSessions.js";
 export * from "./providers.js";
-export * from "./quota.js";
 export * from "./settings.js";
 export * from "./fallbacks.js";
 export * from "./tokenSaver.js";
