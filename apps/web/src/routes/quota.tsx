@@ -426,7 +426,7 @@ function QuotaPage() {
                 </div>
             </div>
 
-            {/* Provider Accounts Quota List */}
+            {/* Provider Accounts Quota List (Grouped by Provider) */}
             {activeProviders.length === 0 ? (
                 <Empty className="p-12">
                     <EmptyHeader>
@@ -450,67 +450,63 @@ function QuotaPage() {
                     </EmptyContent>
                 </Empty>
             ) : (
-                <div className="space-y-4">
-                    {activeProviders.map((account) => {
-                        const isCollapsed = collapsedMap[account.id] === true;
-                        const hasLiveQuotas = account.quotas && account.quotas.length > 0;
-                        const hasMetrics = account.usageMetrics && account.usageMetrics.length > 0;
+                <div className="space-y-6">
+                    {Object.entries(
+                        activeProviders.reduce((acc, account) => {
+                            const groupKey = account.provider.toLowerCase();
+                            if (!acc[groupKey]) {
+                                acc[groupKey] = {
+                                    providerName: account.provider,
+                                    accounts: []
+                                };
+                            }
+                            acc[groupKey].accounts.push(account);
+                            return acc;
+                        }, {} as Record<string, { providerName: string; accounts: typeof activeProviders }>)
+                    ).map(([groupKey, group]) => {
+                        const isGroupCollapsed = collapsedMap[groupKey] === true;
+                        const totalAccounts = group.accounts.length;
+                        const allQuotasInGroup = group.accounts.flatMap((acc) =>
+                            (acc.quotas || []).map((q) => ({
+                                ...q,
+                                accountName: acc.account,
+                                enabled: acc.enabled
+                            }))
+                        );
 
                         return (
                             <div
-                                key={account.id}
+                                key={groupKey}
                                 className="rounded-[12px] border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4 shadow-2xs transition-all"
                             >
-                                {/* Collapsible Account Header */}
+                                {/* Provider Group Header */}
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
                                     <div
-                                        onClick={() => toggleCollapse(account.id)}
+                                        onClick={() => toggleCollapse(groupKey)}
                                         className="flex items-center gap-3 cursor-pointer group flex-1 select-none"
                                     >
                                         <div className="flex size-9 shrink-0 items-center justify-center rounded-[8px] border border-[var(--line)] bg-[var(--field)] p-1.5 shadow-2xs group-hover:border-[var(--line-strong)] transition-colors">
                                             <ProviderIcon
-                                                providerId={account.provider}
+                                                providerId={group.providerName}
                                                 className="size-5"
                                             />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="text-sm font-bold text-[var(--ink)] group-hover:text-amber-500 transition-colors">
-                                                    {account.account}
+                                                <h3 className="text-sm font-bold text-[var(--ink)] group-hover:text-amber-500 transition-colors capitalize">
+                                                    {group.providerName}
                                                 </h3>
-                                                <span
-                                                    className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.2 text-[9.5px] font-semibold ${
-                                                        account.enabled
-                                                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                                                            : "bg-[var(--field)] text-[var(--ink-3)]"
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className={`size-1 rounded-full ${
-                                                            account.enabled
-                                                                ? "bg-emerald-500"
-                                                                : "bg-[var(--ink-3)]"
-                                                        }`}
-                                                    />
-                                                    <span>
-                                                        {account.enabled ? "Active" : "Disabled"}
-                                                    </span>
+                                                <span className="inline-flex items-center gap-1 rounded-[4px] bg-[var(--field)] border border-[var(--line)] px-1.5 py-0.2 text-[9.5px] font-semibold text-[var(--ink-2)]">
+                                                    {totalAccounts} {totalAccounts === 1 ? "account" : "accounts"}
                                                 </span>
-
-                                                {hasLiveQuotas && (
-                                                    <span className="inline-flex items-center rounded-[4px] bg-[var(--field)] border border-[var(--line)] px-1.5 py-0.2 text-[9.5px] font-semibold text-[var(--ink-2)]">
-                                                        {account.quotas!.length} quotas
-                                                    </span>
-                                                )}
+                                                <span className="inline-flex items-center rounded-[4px] bg-[var(--field)] border border-[var(--line)] px-1.5 py-0.2 text-[9.5px] font-semibold text-[var(--ink-2)]">
+                                                    {allQuotasInGroup.length} quotas
+                                                </span>
                                             </div>
                                             <p className="text-[11px] text-[var(--ink-3)] mt-0.5">
-                                                Provider:{" "}
-                                                <span className="text-[var(--ink-2)] capitalize">
-                                                    {account.provider}
-                                                </span>{" "}
-                                                · ID:{" "}
+                                                Accounts:{" "}
                                                 <span className="text-[var(--ink-2)]">
-                                                    {account.id}
+                                                    {group.accounts.map((a) => a.account).join(", ")}
                                                 </span>
                                             </p>
                                         </div>
@@ -519,14 +515,14 @@ function QuotaPage() {
                                             type="button"
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                toggleCollapse(account.id);
+                                                toggleCollapse(groupKey);
                                             }}
                                             className="flex size-7 items-center justify-center rounded-[4px] border border-[var(--line)] bg-[var(--field)] text-[var(--ink-3)] group-hover:text-[var(--ink)] transition-colors cursor-pointer shrink-0"
-                                            title={isCollapsed ? "Expand card" : "Collapse card"}
+                                            title={isGroupCollapsed ? "Expand provider" : "Collapse provider"}
                                         >
                                             <ChevronDown
                                                 className={`size-4 transition-transform duration-200 ${
-                                                    isCollapsed ? "-rotate-90" : "rotate-0"
+                                                    isGroupCollapsed ? "-rotate-90" : "rotate-0"
                                                 }`}
                                             />
                                         </button>
@@ -535,7 +531,7 @@ function QuotaPage() {
                                     <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                                         <button
                                             type="button"
-                                            onClick={() => void handleRefresh(account.account)}
+                                            onClick={() => void handleRefresh(group.providerName)}
                                             disabled={isSpinning}
                                             className="inline-flex items-center gap-1 rounded-[4px] border border-[var(--line)] bg-[var(--field)] hover:bg-[var(--hover)] px-2 py-1 text-[11px] text-[var(--ink-2)] hover:text-[var(--ink)] transition-colors cursor-pointer disabled:opacity-50"
                                             title="Refresh this provider"
@@ -548,7 +544,7 @@ function QuotaPage() {
 
                                         <Link
                                             to="/providers/$providerId"
-                                            params={{ providerId: account.provider }}
+                                            params={{ providerId: group.providerName }}
                                             className="inline-flex items-center gap-1 text-xs text-amber-500 hover:text-amber-400 transition-colors"
                                         >
                                             <span>Manage</span>
@@ -557,27 +553,92 @@ function QuotaPage() {
                                     </div>
                                 </div>
 
-                                {/* Collapsible Body */}
-                                {!isCollapsed && (
+                                {/* Collapsible Body: Single Unified Table per Provider */}
+                                {!isGroupCollapsed && (
                                     <div className="space-y-4 pt-1 animate-in fade-in-50 duration-150">
-                                        {/* Live Model Quotas Section */}
-                                        {hasLiveQuotas && (
-                                            <div className="space-y-2.5">
-                                                <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-3)]">
-                                                    Live Upstream Quotas ({account.quotas!.length})
-                                                </div>
-                                                <QuotaTableView quotas={account.quotas!} />
+                                        {allQuotasInGroup.length > 0 && (
+                                            <div className="overflow-x-auto rounded-[8px] border border-[var(--line)]">
+                                                <table className="w-full text-left text-xs border-collapse font-mono">
+                                                    <thead>
+                                                        <tr className="border-b border-[var(--line)] bg-[var(--field)]/50 text-[10px] uppercase font-bold text-[var(--ink-3)]">
+                                                            {totalAccounts > 1 && (
+                                                                <th className="py-2.5 px-3.5">Account</th>
+                                                            )}
+                                                            <th className="py-2.5 px-3.5">Quota Name</th>
+                                                            <th className="py-2.5 px-3.5 text-center">Status</th>
+                                                            <th className="py-2.5 px-3.5 text-right">Used / Limit</th>
+                                                            <th className="py-2.5 px-3.5 text-right">Remaining</th>
+                                                            <th className="py-2.5 px-3.5 min-w-[140px]">Capacity</th>
+                                                            <th className="py-2.5 px-3.5 text-right">Resets In</th>
+                                                            <th className="py-2.5 px-3.5 text-right hidden md:table-cell">Reset Time</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-[var(--line)]">
+                                                        {allQuotasInGroup.map((quota, idx) => {
+                                                            const isExhausted = quota.status === "exhausted";
+                                                            const isWarning = quota.status === "warning";
+
+                                                            return (
+                                                                <tr key={`${quota.name}-${idx}`} className="hover:bg-[var(--hover)]/30 transition-colors">
+                                                                    {totalAccounts > 1 && (
+                                                                        <td className="py-2.5 px-3.5 font-medium text-[var(--ink-2)] truncate max-w-[140px]">
+                                                                            {quota.accountName}
+                                                                        </td>
+                                                                    )}
+                                                                    <td className="py-2.5 px-3.5 font-bold text-[var(--ink)]">
+                                                                        {quota.name}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3.5 text-center">
+                                                                        <span
+                                                                            className={`inline-flex items-center gap-1 rounded-[4px] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase ${
+                                                                                isExhausted
+                                                                                    ? "bg-rose-500/10 text-rose-500 border border-rose-500/30"
+                                                                                    : isWarning
+                                                                                      ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                                                                                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                                                            }`}
+                                                                        >
+                                                                            {quota.status}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3.5 text-right tabular-nums text-[var(--ink-2)]">
+                                                                        {quota.used.toLocaleString()} / {quota.limit.toLocaleString()}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3.5 text-right tabular-nums font-semibold text-[var(--ink)]">
+                                                                        {quota.percentage}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3.5">
+                                                                        <div className="h-1.5 w-full rounded-full bg-[var(--line)] overflow-hidden">
+                                                                            <div
+                                                                                className={`h-full rounded-full transition-all duration-300 ${
+                                                                                    isExhausted ? "bg-rose-500" : isWarning ? "bg-amber-500" : "bg-emerald-500"
+                                                                                }`}
+                                                                                style={{ width: `${Math.min(100, quota.percentageValue)}%` }}
+                                                                            />
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3.5 text-right tabular-nums text-[var(--ink-2)] font-medium">
+                                                                        {quota.resetIn || "—"}
+                                                                    </td>
+                                                                    <td className="py-2.5 px-3.5 text-right text-[11px] text-[var(--ink-3)] hidden md:table-cell">
+                                                                        {quota.resetTime ? formatResetTime(quota.resetTime) : "—"}
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         )}
 
-                                        {/* Usage Metrics Section */}
-                                        {hasMetrics && (
-                                            <div className="space-y-2.5">
+                                        {/* Usage metrics if any */}
+                                        {group.accounts.some((a) => a.usageMetrics && a.usageMetrics.length > 0) && (
+                                            <div className="space-y-2.5 pt-2">
                                                 <div className="text-[11px] font-bold uppercase tracking-wider text-[var(--ink-3)]">
                                                     Usage Consumption History
                                                 </div>
                                                 <UsageMetricsTable
-                                                    metrics={account.usageMetrics!}
+                                                    metrics={group.accounts.flatMap((a) => a.usageMetrics || [])}
                                                 />
                                             </div>
                                         )}
