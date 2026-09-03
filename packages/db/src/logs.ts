@@ -12,6 +12,7 @@ interface RequestLogRow {
     id: string;
     api_key_id: string | null;
     ip_address: string | null;
+    user_agent: string | null;
     provider_id: string;
     model: string;
     prompt_tokens: number;
@@ -66,12 +67,13 @@ export async function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdA
     const CreatedAt = Date.now();
 
     await db.prepare(`
-        INSERT INTO request_logs (id, api_key_id, ip_address, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO request_logs (id, api_key_id, ip_address, user_agent, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         Id,
         entry.apiKeyId ?? null,
         entry.ipAddress ?? null,
+        entry.userAgent ?? null,
         entry.providerId,
         entry.model,
         entry.promptTokens,
@@ -227,6 +229,7 @@ function mapLogRow(row: RequestLogRow): RequestLogEntry {
         id: str(row.id),
         apiKeyId: optStr(row.api_key_id),
         ipAddress: optStr(row.ip_address),
+        userAgent: optStr(row.user_agent),
         providerId: str(row.provider_id),
         model: str(row.model),
         promptTokens: num(row.prompt_tokens),
@@ -251,9 +254,16 @@ function mapLogRow(row: RequestLogRow): RequestLogEntry {
 export interface AnalyticsDBResult {
     buckets: AnalyticsBucketRow[];
     topModels: AnalyticsTopModelRow[];
+    topAgents: AnalyticsTopAgentRow[];
     providers: AnalyticsProviderRow[];
     p95LatencyMs: number;
     rps: number;
+}
+
+interface AnalyticsTopAgentRow {
+    userAgent: string;
+    totalRequests: number;
+    totalTokens: number;
 }
 
 interface AnalyticsBucketRow {
@@ -340,6 +350,14 @@ export async function getAnalyticsDB(window: AnalyticsWindow): Promise<Analytics
     `;
     const TopModels = (await db.prepare(ModelsSql).all(Since)) as unknown as AnalyticsTopModelRow[];
 
+    const AgentSql = `
+        SELECT COALESCE(user_agent, 'Unknown') AS "userAgent", COUNT(*) AS "totalRequests",
+               SUM(total_tokens) AS "totalTokens"
+        FROM request_logs WHERE created_at >= ?
+        GROUP BY "userAgent" ORDER BY "totalRequests" DESC LIMIT 10
+    `;
+    const TopAgents = (await db.prepare(AgentSql).all(Since)) as unknown as AnalyticsTopAgentRow[];
+
     const ProviderSql = `
         SELECT provider_id AS "providerId", COUNT(*) AS "totalRequests"
         FROM request_logs WHERE created_at >= ?
@@ -364,6 +382,7 @@ export async function getAnalyticsDB(window: AnalyticsWindow): Promise<Analytics
     return {
         buckets: Buckets,
         topModels: TopModels,
+        topAgents: TopAgents,
         providers: Providers,
         p95LatencyMs: P95LatencyMs,
         rps: Rps

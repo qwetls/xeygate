@@ -5,6 +5,7 @@ const ICON_MAPPING: Record<string, string> = {
     "b.ai": "/icons/providers/bai.svg",
     openai_codex: "/icons/providers/codex.png",
     openai: "/icons/providers/openai.png",
+    gpt: "/icons/providers/openai.png",
     chatgpt: "/icons/providers/openai.png",
     anthropic: "/icons/providers/anthropic.png",
     claude: "/icons/providers/claude.png",
@@ -13,6 +14,8 @@ const ICON_MAPPING: Record<string, string> = {
     gorouter: "/icons/providers/newapi.png",
     newapi: "/icons/providers/newapi.png",
     bluesminds: "/icons/providers/bluesminds.png",
+    commandcode: "/icons/providers/commandcode.png",
+    kiro: "/icons/providers/kiro.png",
     seekai: "/icons/providers/newapi.png",
     tabitoken: "/icons/providers/newapi.png",
     tokenrouter: "/icons/providers/tokenrouter.png",
@@ -42,7 +45,8 @@ const ICON_MAPPING: Record<string, string> = {
     siliconflow: "/icons/providers/siliconflow.png",
     opencode: "/icons/providers/opencode.png",
     opencode_zen: "/icons/providers/opencode.png",
-    "opencode-zen": "/icons/providers/opencode.png"
+    "opencode-zen": "/icons/providers/opencode.png",
+    zen: "/icons/providers/opencode.png"
 };
 
 export function ProviderIcon({
@@ -55,7 +59,7 @@ export function ProviderIcon({
     const [hasError, setHasError] = useState(false);
     const id = providerId.toLowerCase().trim();
 
-    if (id === "opencode" || id === "opencode_zen" || id === "opencode-zen" || id.includes("opencode")) {
+    if (id === "opencode" || id === "opencode_zen" || id === "opencode-zen" || id === "zen" || id.includes("opencode")) {
         return (
             <svg
                 fill="currentColor"
@@ -95,7 +99,7 @@ export function ProviderIcon({
         }
     }
 
-    // 3. Fallback to `/icons/providers/${id}.png`
+    // 3. Fallback to local `/icons/providers/${id}.png`
     if (!src) {
         src = `/icons/providers/${id.replace(/[^a-z0-9_-]/g, "")}.png`;
     }
@@ -105,14 +109,8 @@ export function ProviderIcon({
             src={src}
             alt={providerId}
             className={`${className} rounded object-contain shrink-0`}
-            onError={(e) => {
-                const img = e.target as HTMLImageElement;
-                if (!img.dataset.fallbackTried) {
-                    img.dataset.fallbackTried = "remote";
-                    img.src = `https://raw.githubusercontent.com/decolua/9router/master/public/providers/${id}.png`;
-                } else {
-                    setHasError(true);
-                }
+            onError={() => {
+                setHasError(true);
             }}
         />
     );

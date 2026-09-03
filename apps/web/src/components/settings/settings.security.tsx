@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, KeyRound, Eye, EyeOff, Lock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,10 @@ export function SecuritySettings({
         setPasswordError(null);
         if (!currentPassword) {
             setPasswordError("Please enter your current admin password.");
+            return;
+        }
+        if (newPassword.length < 6) {
+            setPasswordError("New password must be at least 6 characters.");
             return;
         }
         if (newPassword !== confirmation) {
@@ -72,70 +76,119 @@ export function SecuritySettings({
                         : "Anyone can query without an API key."
                 }
                 control={
-                    <SegmentedControl
-                        options={[
-                            { value: false, label: "OFF" },
-                            { value: true, label: "ON" }
-                        ]}
-                        value={requireApiKey}
-                        onChange={onToggleRequireApiKey}
-                        disabled={isUpdating}
-                    />
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className={[
+                                "hidden sm:inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-mono font-medium border",
+                                requireApiKey
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-muted/50 text-muted-foreground border-border/60"
+                            ].join(" ")}
+                        >
+                            {requireApiKey ? "Enforced" : "Permissive"}
+                        </span>
+                        <SegmentedControl
+                            options={[
+                                { value: false, label: "OFF" },
+                                { value: true, label: "ON" }
+                            ]}
+                            value={requireApiKey}
+                            onChange={onToggleRequireApiKey}
+                            disabled={isUpdating}
+                        />
+                    </div>
                 }
             />
 
-            <div className="py-3.5">
-                <div className="mb-2 text-xs font-semibold text-foreground">Admin Password</div>
-                <form onSubmit={handleChangePassword} className="space-y-2 max-w-xl">
-                    {passwordError && (
-                        <div className="text-[11px] text-destructive">{passwordError}</div>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Input
-                            type={showPasswords ? "text" : "password"}
-                            placeholder="Current"
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            required
-                            className="w-36 text-[11px]"
-                        />
-                        <Input
-                            type={showPasswords ? "text" : "password"}
-                            placeholder="New"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            required
-                            className="w-36 text-[11px]"
-                        />
-                        <Input
-                            type={showPasswords ? "text" : "password"}
-                            placeholder="Confirm"
-                            value={confirmation}
-                            onChange={(e) => setConfirmation(e.target.value)}
-                            required
-                            className="w-36 text-[11px]"
-                        />
-                        <Button
-                            type="submit"
-                            size="sm"
-                            disabled={isChangingPassword}
-                            className="font-semibold"
-                        >
-                            <KeyRound className="size-3.5" />
-                            {isChangingPassword ? "Updating..." : "Update"}
-                        </Button>
+            <div className="py-4">
+                <form
+                    onSubmit={handleChangePassword}
+                    className="rounded-xl border border-border/70 bg-secondary/15 p-4 sm:p-4.5 space-y-4"
+                >
+                    <div className="flex items-center justify-between border-b border-border/50 pb-3">
+                        <div className="flex items-center gap-2">
+                            <Lock className="size-3.5 text-muted-foreground" />
+                            <div>
+                                <h3 className="text-xs font-semibold text-foreground leading-none">
+                                    Change Admin Password
+                                </h3>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">
+                                    Used to unlock dashboard management actions and sensitive config.
+                                </p>
+                            </div>
+                        </div>
                         <button
                             type="button"
                             onClick={() => setShowPasswords(!showPasswords)}
-                            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground cursor-pointer"
+                            className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer select-none px-2 py-1 rounded hover:bg-secondary/40"
                         >
-                            {showPasswords ? (
-                                <EyeOff className="size-3" />
-                            ) : (
-                                <Eye className="size-3" />
-                            )}
-                            {showPasswords ? "Hide" : "Show"}
+                            {showPasswords ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                            <span>{showPasswords ? "Hide" : "Show"}</span>
                         </button>
+                    </div>
+
+                    {passwordError && (
+                        <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-[11px] text-destructive">
+                            <AlertCircle className="size-3.5 shrink-0" />
+                            <span>{passwordError}</span>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                                Current Password
+                            </label>
+                            <Input
+                                type={showPasswords ? "text" : "password"}
+                                placeholder="••••••••"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                required
+                                className="h-8.5 text-xs font-mono"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                                New Password
+                            </label>
+                            <Input
+                                type={showPasswords ? "text" : "password"}
+                                placeholder="••••••••"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                required
+                                className="h-8.5 text-xs font-mono"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-[11px] font-medium text-muted-foreground">
+                                Confirm Password
+                            </label>
+                            <Input
+                                type={showPasswords ? "text" : "password"}
+                                placeholder="••••••••"
+                                value={confirmation}
+                                onChange={(e) => setConfirmation(e.target.value)}
+                                required
+                                className="h-8.5 text-xs font-mono"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-border/40">
+                        <span className="text-[10px] text-muted-foreground/70 font-mono">
+                            Minimum 6 characters
+                        </span>
+                        <Button
+                            type="submit"
+                            size="sm"
+                            disabled={isChangingPassword || !currentPassword || !newPassword || !confirmation}
+                            className="font-semibold text-xs h-8 px-3.5 cursor-pointer"
+                        >
+                            <KeyRound className="size-3.5" />
+                            {isChangingPassword ? "Saving..." : "Update Password"}
+                        </Button>
                     </div>
                 </form>
             </div>

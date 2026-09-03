@@ -174,6 +174,7 @@ const TABLES: TableDef[] = [
             { name: "id", definition: "TEXT PRIMARY KEY" },
             { name: "api_key_id", definition: "TEXT" },
             { name: "ip_address", definition: "TEXT" },
+            { name: "user_agent", definition: "TEXT" },
             { name: "provider_id", definition: "TEXT NOT NULL" },
             { name: "model", definition: "TEXT NOT NULL" },
             { name: "prompt_tokens", definition: "INTEGER NOT NULL DEFAULT 0" },
@@ -340,6 +341,7 @@ function initSqliteSchemaSync(): void {
     ]);
     ensureSync("request_logs", [
         { name: "ip_address", definition: "ip_address TEXT" },
+        { name: "user_agent", definition: "user_agent TEXT" },
         { name: "cached_tokens", definition: "cached_tokens INTEGER NOT NULL DEFAULT 0" },
         { name: "cache_creation_tokens", definition: "cache_creation_tokens INTEGER NOT NULL DEFAULT 0" },
         { name: "reasoning_tokens", definition: "reasoning_tokens INTEGER NOT NULL DEFAULT 0" },
@@ -375,6 +377,8 @@ async function initPostgresSchema(): Promise<void> {
         { name: "usage_cost", definition: "usage_cost REAL DEFAULT 0" }
     ]);
     await ensureColumns("request_logs", [
+        { name: "ip_address", definition: "ip_address TEXT" },
+        { name: "user_agent", definition: "user_agent TEXT" },
         { name: "cached_tokens", definition: "cached_tokens INTEGER NOT NULL DEFAULT 0" },
         { name: "cache_creation_tokens", definition: "cache_creation_tokens INTEGER NOT NULL DEFAULT 0" },
         { name: "reasoning_tokens", definition: "reasoning_tokens INTEGER NOT NULL DEFAULT 0" },

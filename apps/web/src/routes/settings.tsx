@@ -128,7 +128,7 @@ function SettingsPage() {
                                 Gateway Configuration
                             </h1>
                             <span className="rounded-md border border-border/70 bg-secondary/50 px-2 py-0.5 text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">
-                                v{currentVersion}
+                                {currentVersion}
                             </span>
                             {hasUpdate && latestVersion && (
                                 <span className="flex items-center gap-1 text-[9px] font-bold tracking-wider uppercase text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-0.5">

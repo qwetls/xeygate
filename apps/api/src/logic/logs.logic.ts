@@ -136,6 +136,12 @@ export class LogsLogic {
                 totalTokens: num(m.totalTokens),
                 estCost: num(m.estCost)
             })),
+            topAgents: (raw.topAgents || []).map((a) => ({
+                agent: a.userAgent,
+                rawUserAgent: a.userAgent,
+                totalRequests: num(a.totalRequests),
+                totalTokens: num(a.totalTokens)
+            })),
             providers: raw.providers
         };
     }

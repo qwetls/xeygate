@@ -13,6 +13,7 @@ export interface RequestLogEntry {
     apiKeyId?: string;
     apiKeyName?: string;
     ipAddress?: string;
+    userAgent?: string;
     providerId: string;
     model: string;
     promptTokens: number;
@@ -96,6 +97,13 @@ export interface AnalyticsTopModel {
     estCost: number;
 }
 
+export interface AnalyticsTopAgent {
+    agent: string;
+    rawUserAgent: string;
+    totalRequests: number;
+    totalTokens: number;
+}
+
 export interface AnalyticsProviderSlice {
     providerId: string;
     totalRequests: number;
@@ -112,6 +120,7 @@ export interface AnalyticsReport {
     p95LatencyMs: number;
     buckets: AnalyticsBucket[];
     topModels: AnalyticsTopModel[];
+    topAgents?: AnalyticsTopAgent[];
     providers: AnalyticsProviderSlice[];
 }
 

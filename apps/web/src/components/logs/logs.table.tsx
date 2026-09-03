@@ -16,13 +16,9 @@ import {
     ArrowUpDown,
     CheckCircle2,
     ChevronLeft,
-    ChevronRight,
-    KeyRound,
-    Cpu,
-    Coins
+    ChevronRight
 } from "lucide-react";
 import type { RequestLogEntry } from "@srouter/types";
-import { Badge } from "@/components/ui/badge";
 import {
     Table,
     TableHeader,
@@ -32,10 +28,7 @@ import {
     TableCell
 } from "@/components/ui/table";
 import { formatTime } from "@/utils/format";
-
-function formatDate(ms: number): string {
-    return new Date(ms).toLocaleDateString();
-}
+import { parseUserAgent } from "@/utils/agent-detector";
 
 interface LogTableProps {
     logs: RequestLogEntry[];
@@ -62,112 +55,54 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                             className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
                         >
-                            <span>Timestamp</span>
+                            <span>Time</span>
                             {isSorted === "asc" ? (
-                                <ArrowUp className="size-3 text-amber-500" />
+                                <ArrowUp className="size-3 text-foreground" />
                             ) : isSorted === "desc" ? (
-                                <ArrowDown className="size-3 text-amber-500" />
+                                <ArrowDown className="size-3 text-foreground" />
                             ) : (
-                                <ArrowUpDown className="size-3 opacity-40 hover:opacity-100" />
+                                <ArrowUpDown className="size-3 opacity-30 hover:opacity-100" />
                             )}
                         </button>
                     );
                 },
-                cell: ({ row }) => (
-                    <div className="whitespace-nowrap">
-                        <div className="font-mono text-xs font-semibold text-foreground">
-                            {formatTime(row.original.createdAt, true)}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground/80">
-                            {formatDate(row.original.createdAt)}
-                        </div>
-                    </div>
-                )
-            }
-        ];
-
-        // Tampilkan kolom API Key hanya jika requireApiKey aktif
-        if (requireApiKey) {
-            cols.push({
-                accessorKey: "apiKeyId",
-                header: "API Key",
                 cell: ({ row }) => {
-                    const keyId = row.original.apiKeyId;
-                    const keyName = row.original.apiKeyName;
-
-                    if (!keyId) {
-                        return (
-                            <span className="font-mono text-[11px] text-muted-foreground/50 italic">
-                                None (bypass)
-                            </span>
-                        );
-                    }
-
+                    const client = parseUserAgent(row.original.userAgent);
                     return (
-                        <div className="flex items-center gap-1.5 max-w-[140px] truncate" title={`Key: ${keyName || keyId}`}>
-                            <div className="flex size-5 shrink-0 items-center justify-center rounded bg-secondary/50 text-indigo-400 border border-border/50">
-                                <KeyRound className="size-2.5" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                                <span className="font-mono text-xs font-medium text-foreground truncate">
-                                    {keyName || "Virtual Key"}
-                                </span>
-                                <span className="font-mono text-[9px] text-muted-foreground truncate">
-                                    {keyId.slice(0, 10)}…
-                                </span>
-                            </div>
+                        <div className="whitespace-nowrap flex flex-col font-mono leading-tight">
+                            <span className="text-xs font-medium text-foreground">
+                                {formatTime(row.original.createdAt, true)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground/60 truncate max-w-[90px]" title={row.original.userAgent || row.original.ipAddress || "127.0.0.1"}>
+                                {client.isKnownAgent ? client.name : (row.original.ipAddress || "127.0.0.1")}
+                            </span>
                         </div>
-                    );
-                }
-            });
-        }
-
-        cols.push(
-            {
-                accessorKey: "ipAddress",
-                header: "Client IP",
-                cell: ({ row }) => {
-                    const ip = row.original.ipAddress;
-                    if (!ip) {
-                        return (
-                            <span className="font-mono text-[10px] text-muted-foreground/40 italic">
-                                —
-                            </span>
-                        );
-                    }
-                    return (
-                        <span className="inline-flex items-center font-mono text-[11px] text-muted-foreground/90 bg-secondary/30 px-1.5 py-0.5 rounded border border-border/40">
-                            {ip}
-                        </span>
                     );
                 }
             },
             {
-                accessorKey: "providerId",
-                header: ({ column }) => {
-                    const isSorted = column.getIsSorted();
+                accessorKey: "statusCode",
+                header: "Status",
+                cell: ({ row }) => {
+                    const status = row.original.statusCode;
+                    const is2xx = status >= 200 && status < 300;
+
                     return (
-                        <button
-                            type="button"
-                            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-                            className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
+                        <span
+                            className={[
+                                "inline-flex items-center gap-1 font-mono text-[11px] tabular-nums font-semibold",
+                                is2xx ? "text-foreground" : "text-destructive font-bold"
+                            ].join(" ")}
                         >
-                            <span>Provider</span>
-                            {isSorted === "asc" ? (
-                                <ArrowUp className="size-3 text-amber-500" />
-                            ) : isSorted === "desc" ? (
-                                <ArrowDown className="size-3 text-amber-500" />
+                            {is2xx ? (
+                                <CheckCircle2 className="size-3 text-muted-foreground/60" />
                             ) : (
-                                <ArrowUpDown className="size-3 opacity-40 hover:opacity-100" />
+                                <AlertCircle className="size-3 text-destructive" />
                             )}
-                        </button>
+                            {status}
+                        </span>
                     );
-                },
-                cell: ({ row }) => (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-mono font-medium bg-secondary/40 text-muted-foreground border border-border/40">
-                        {row.original.providerId}
-                    </span>
-                )
+                }
             },
             {
                 accessorKey: "model",
@@ -179,70 +114,67 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                             className="flex items-center gap-1.5 hover:text-foreground transition-colors cursor-pointer select-none"
                         >
-                            <span>Model & Route</span>
+                            <span>Route</span>
                             {isSorted === "asc" ? (
-                                <ArrowUp className="size-3 text-amber-500" />
+                                <ArrowUp className="size-3 text-foreground" />
                             ) : isSorted === "desc" ? (
-                                <ArrowDown className="size-3 text-amber-500" />
+                                <ArrowDown className="size-3 text-foreground" />
                             ) : (
-                                <ArrowUpDown className="size-3 opacity-40 hover:opacity-100" />
+                                <ArrowUpDown className="size-3 opacity-30 hover:opacity-100" />
                             )}
                         </button>
                     );
                 },
                 cell: ({ row }) => {
                     const model = row.original.model;
+                    const provider = row.original.providerId;
                     const resolved = row.original.resolvedModel;
 
                     return (
-                        <div className="flex flex-col gap-0.5 max-w-xs">
-                            <div className="flex items-center gap-1.5">
-                                <span className="font-mono text-xs font-semibold text-foreground truncate block">
+                        <div className="flex flex-col min-w-0 max-w-sm font-mono leading-tight">
+                            <div className="flex items-center gap-1.5 truncate">
+                                <span className="text-xs font-medium text-foreground truncate">
                                     {model}
                                 </span>
                                 {row.original.fallbackOccurred && (
-                                    <span className="shrink-0 inline-flex items-center rounded px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                                        Fallback
+                                    <span className="shrink-0 text-[9px] text-muted-foreground bg-secondary/50 px-1 rounded">
+                                        fallback
                                     </span>
                                 )}
                             </div>
-                            {resolved && resolved !== model && (
-                                <span
-                                    className="font-mono text-[10px] text-muted-foreground truncate flex items-center gap-1"
-                                    title={`Dispatched to: ${resolved}`}
-                                >
-                                    <span className="text-indigo-400">↳</span>
-                                    <span>{resolved}</span>
-                                </span>
-                            )}
+                            <span className="text-[10px] text-muted-foreground/60 truncate">
+                                {provider}
+                                {resolved && resolved !== model ? ` ↳ ${resolved}` : ""}
+                            </span>
                         </div>
                     );
                 }
-            },
-            {
-                accessorKey: "statusCode",
-                header: "Status",
-                cell: ({ row }) => {
-                    const status = row.original.statusCode;
-                    const is2xx = status >= 200 && status < 300;
-                    const is4xx = status >= 400 && status < 500;
-                    const variant = is2xx ? "emerald" : is4xx ? "amber" : "destructive";
+            }
+        ];
 
+        if (requireApiKey) {
+            cols.push({
+                accessorKey: "apiKeyId",
+                header: "Key",
+                cell: ({ row }) => {
+                    const keyName = row.original.apiKeyName;
+                    const keyId = row.original.apiKeyId;
+                    if (!keyId) {
+                        return <span className="font-mono text-[11px] text-muted-foreground/40">—</span>;
+                    }
                     return (
-                        <Badge
-                            variant={variant}
-                            className="font-mono text-[10px] px-2 py-0.5 font-bold"
+                        <span
+                            className="font-mono text-[11px] text-muted-foreground truncate block max-w-[120px]"
+                            title={keyName || keyId}
                         >
-                            {is2xx ? (
-                                <CheckCircle2 className="size-3" />
-                            ) : (
-                                <AlertCircle className="size-3" />
-                            )}
-                            {status}
-                        </Badge>
+                            {keyName || `${keyId.slice(0, 8)}…`}
+                        </span>
                     );
                 }
-            },
+            });
+        }
+
+        cols.push(
             {
                 accessorKey: "totalTokens",
                 header: ({ column }) => {
@@ -255,35 +187,20 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                         >
                             <span>Tokens</span>
                             {isSorted === "asc" ? (
-                                <ArrowUp className="size-3 text-amber-500" />
+                                <ArrowUp className="size-3 text-foreground" />
                             ) : isSorted === "desc" ? (
-                                <ArrowDown className="size-3 text-amber-500" />
+                                <ArrowDown className="size-3 text-foreground" />
                             ) : (
-                                <ArrowUpDown className="size-3 opacity-40 hover:opacity-100" />
+                                <ArrowUpDown className="size-3 opacity-30 hover:opacity-100" />
                             )}
                         </button>
                     );
                 },
-                cell: ({ row }) => {
-                    const cached = row.original.cachedTokens ?? 0;
-                    return (
-                        <div className="flex flex-col font-mono">
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-xs font-semibold text-foreground">
-                                    {row.original.totalTokens.toLocaleString()}
-                                </span>
-                                {cached > 0 && (
-                                    <span className="text-[9px] px-1 py-0.2 rounded bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                                        ⚡{cached.toLocaleString()} cached
-                                    </span>
-                                )}
-                            </div>
-                            <span className="text-[10px] text-muted-foreground/80">
-                                {row.original.promptTokens.toLocaleString()} in / {row.original.completionTokens.toLocaleString()} out
-                            </span>
-                        </div>
-                    );
-                }
+                cell: ({ row }) => (
+                    <span className="font-mono text-xs text-foreground tabular-nums">
+                        {row.original.totalTokens.toLocaleString()}
+                    </span>
+                )
             },
             {
                 accessorKey: "latencyMs",
@@ -297,27 +214,21 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                         >
                             <span>Latency</span>
                             {isSorted === "asc" ? (
-                                <ArrowUp className="size-3 text-amber-500" />
+                                <ArrowUp className="size-3 text-foreground" />
                             ) : isSorted === "desc" ? (
-                                <ArrowDown className="size-3 text-amber-500" />
+                                <ArrowDown className="size-3 text-foreground" />
                             ) : (
-                                <ArrowUpDown className="size-3 opacity-40 hover:opacity-100" />
+                                <ArrowUpDown className="size-3 opacity-30 hover:opacity-100" />
                             )}
                         </button>
                     );
                 },
                 cell: ({ row }) => {
-                    const latency = row.original.latencyMs;
-                    const color =
-                        latency > 2000
-                            ? "text-rose-400"
-                            : latency > 1000
-                            ? "text-amber-400"
-                            : "text-emerald-400";
-
+                    const ms = row.original.latencyMs;
+                    const display = ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
                     return (
-                        <span className={`font-mono text-xs font-semibold ${color}`}>
-                            {latency}ms
+                        <span className="font-mono text-xs text-muted-foreground tabular-nums">
+                            {display}
                         </span>
                     );
                 }
@@ -326,30 +237,17 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                 accessorKey: "estimatedCost",
                 header: "Cost",
                 cell: ({ row }) => {
-                    const totalCost = row.original.costBreakdown?.totalCost ?? row.original.estimatedCost;
-                    const cacheReadCost = row.original.costBreakdown?.cacheReadCost ?? 0;
-
-                    if (!totalCost && totalCost !== 0) {
-                        return <span className="font-mono text-xs text-muted-foreground/50">—</span>;
-                    }
-
+                    const totalCost = row.original.costBreakdown?.totalCost ?? row.original.estimatedCost ?? 0;
                     return (
-                        <div className="flex flex-col font-mono">
-                            <span className="text-xs font-semibold text-emerald-400">
-                                ${totalCost.toFixed(5)}
-                            </span>
-                            {cacheReadCost > 0 && (
-                                <span className="text-[9px] text-sky-400/90" title="Cost attributed to cache read">
-                                    cache: ${cacheReadCost.toFixed(5)}
-                                </span>
-                            )}
-                        </div>
+                        <span className="font-mono text-xs text-foreground tabular-nums">
+                            ${totalCost.toFixed(4)}
+                        </span>
                     );
                 }
             },
             {
                 id: "details",
-                header: () => <div className="text-right">Details</div>,
+                header: () => null,
                 cell: ({ row }) => (
                     <div className="text-right">
                         <button
@@ -358,8 +256,8 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                                 e.stopPropagation();
                                 onSelect(row.original);
                             }}
-                            className="inline-flex size-6 items-center justify-center rounded-md border border-border/60 bg-secondary/30 text-muted-foreground group-hover:bg-foreground group-hover:text-background transition-all cursor-pointer shadow-2xs"
-                            title="Inspect log breakdown"
+                            className="inline-flex size-6 items-center justify-center rounded text-muted-foreground/60 hover:text-foreground hover:bg-secondary/40 transition-colors cursor-pointer"
+                            title="Inspect log details"
                         >
                             <ChevronRight className="size-3.5" />
                         </button>
@@ -394,24 +292,19 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
 
     return (
         <div className="space-y-3 font-mono">
-            <div className="rounded-xl border border-border/80 bg-card shadow-2xs overflow-hidden">
+            <div className="rounded-xl border border-border/70 bg-card/40 shadow-2xs overflow-hidden">
                 <Table>
-                    <TableHeader className="bg-secondary/20 border-b border-border/70">
+                    <TableHeader className="bg-secondary/15 border-b border-border/60">
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
+                            <TableRow key={headerGroup.id} className="hover:bg-transparent border-none">
                                 {headerGroup.headers.map((header) => (
                                     <TableHead
                                         key={header.id}
-                                        className={`text-[11px] font-semibold tracking-wider uppercase text-muted-foreground/90 ${
-                                            header.id === "details" ? "text-right" : ""
-                                        }`}
+                                        className="h-9 text-[10px] uppercase tracking-wider text-muted-foreground/80 font-semibold px-4"
                                     >
                                         {header.isPlaceholder
                                             ? null
-                                            : flexRender(
-                                                  header.column.columnDef.header,
-                                                  header.getContext()
-                                              )}
+                                            : flexRender(header.column.columnDef.header, header.getContext())}
                                     </TableHead>
                                 ))}
                             </TableRow>
@@ -422,13 +315,10 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
                             <TableRow
                                 key={row.id}
                                 onClick={() => onSelect(row.original)}
-                                className="cursor-pointer group hover:bg-secondary/30 transition-colors border-b border-border/40"
+                                className="cursor-pointer border-b border-border/40 hover:bg-secondary/25 transition-colors group"
                             >
                                 {row.getVisibleCells().map((cell) => (
-                                    <TableCell
-                                        key={cell.id}
-                                        className={cell.column.id === "details" ? "text-right" : ""}
-                                    >
+                                    <TableCell key={cell.id} className="py-2.5 px-4 text-xs">
                                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                     </TableCell>
                                 ))}
@@ -439,57 +329,38 @@ export function LogTable({ logs, requireApiKey = false, onSelect }: LogTableProp
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2 text-[11px]">
-                    <span>Showing</span>
-                    <span className="font-semibold text-foreground">
-                        {totalRows === 0 ? 0 : `${startRow}-${endRow}`}
-                    </span>
-                    <span>of</span>
-                    <span className="font-semibold text-foreground">{totalRows}</span>
-                    <span>logs</span>
-                </div>
-
-                <div className="flex items-center gap-3 self-end sm:self-auto">
-                    <div className="flex items-center gap-1.5 text-[11px]">
-                        <span>Rows:</span>
-                        <select
-                            value={pageSize}
-                            onChange={(e) => table.setPageSize(Number(e.target.value))}
-                            className="rounded-[4px] border border-border bg-secondary/30 px-2 py-0.5 text-[11px] text-foreground focus:outline-none cursor-pointer"
-                        >
-                            <option value={10}>10</option>
-                            <option value={25}>25</option>
-                            <option value={50}>50</option>
-                            <option value={100}>100</option>
-                        </select>
+            {totalRows > pageSize && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2.5 px-1 text-xs text-muted-foreground font-mono">
+                    <div>
+                        Showing <span className="text-foreground font-medium">{startRow}</span>–
+                        <span className="text-foreground font-medium">{endRow}</span> of{" "}
+                        <span className="text-foreground font-medium">{totalRows}</span> logs
                     </div>
-
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                         <button
                             type="button"
                             onClick={() => table.previousPage()}
                             disabled={!table.getCanPreviousPage()}
-                            className="flex size-6 items-center justify-center rounded-[4px] border border-border bg-secondary/30 text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            title="Previous page"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-secondary/20 hover:bg-secondary/50 text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
                         >
                             <ChevronLeft className="size-3.5" />
+                            <span>Prev</span>
                         </button>
-                        <span className="px-2 text-[11px] text-foreground">
-                            {pageCount === 0 ? 1 : currentPage + 1} / {Math.max(1, pageCount)}
+                        <span className="px-2 text-[11px] text-muted-foreground tabular-nums">
+                            {currentPage + 1} / {pageCount}
                         </span>
                         <button
                             type="button"
                             onClick={() => table.nextPage()}
                             disabled={!table.getCanNextPage()}
-                            className="flex size-6 items-center justify-center rounded-[4px] border border-border bg-secondary/30 text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
-                            title="Next page"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-border/60 bg-secondary/20 hover:bg-secondary/50 text-foreground disabled:opacity-40 disabled:pointer-events-none transition-colors cursor-pointer"
                         >
+                            <span>Next</span>
                             <ChevronRight className="size-3.5" />
                         </button>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

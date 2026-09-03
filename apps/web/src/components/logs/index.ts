@@ -1,2 +1,2 @@
-export { LogDetailSheet } from "./logs.detail-sheet";
+export { LogDetailModal } from "./logs.detail-modal";
 export { LogTable } from "./logs.table";

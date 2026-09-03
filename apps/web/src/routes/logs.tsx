@@ -16,7 +16,7 @@ import type { APIKeyZod, RequestLogEntry } from "@srouter/types";
 import type { ListResponse } from "@/lib/types";
 import { LogsSkeleton } from "@/components/skeletons";
 import { useLogs } from "@/hooks/useLogs";
-import { LogDetailSheet, LogTable } from "@/components/logs";
+import { LogDetailModal, LogTable } from "@/components/logs";
 import { Empty, EmptyTitle } from "@/components/ui/empty";
 
 interface ServerSettingsResponse {
@@ -112,167 +112,162 @@ function LogsPage() {
 
     return (
         <div className="flex flex-col gap-6 font-mono">
-            {/* Header with Gateway Auth Status Badge */}
-            <header className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end border-b border-border/70 pb-5">
-                <div className="min-w-0">
-                    <div className="flex items-center gap-2.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground/80">
-                            Observability & Auditing
+            {/* Header: Clean Machined Bar */}
+            <header className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="text-base font-bold tracking-tight text-foreground">
+                                Request Logs
+                            </h1>
+                            <span
+                                className={[
+                                    "rounded-md border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-widest",
+                                    requireApiKey
+                                        ? "border-border/80 bg-secondary/60 text-foreground"
+                                        : "border-border/60 bg-secondary/30 text-muted-foreground"
+                                ].join(" ")}
+                            >
+                                {requireApiKey ? "Key Enforced" : "Permissive"}
+                            </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
+                            Recent 100 API gateway requests with token usage, latency, and cost telemetry.
                         </p>
-                        {requireApiKey ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-                                <ShieldCheck className="size-3" />
-                                API Key Enforced
-                            </span>
-                        ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-secondary/50 text-muted-foreground border border-border/50">
-                                Loopback Bypass (No Key Required)
-                            </span>
-                        )}
                     </div>
-                    <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-foreground">
-                        Request Audit Logs
-                    </h1>
-                    <p className="mt-1 max-w-2xl text-xs text-muted-foreground leading-relaxed">
-                        Live stream of recent 100 API gateway requests with token usage, caching ratio, and itemized cost telemetry.
-                    </p>
-                </div>
 
-                <div className="flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => void refetch()}
-                        disabled={isFetching}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/70 bg-secondary/30 text-xs font-semibold text-foreground hover:bg-secondary transition-all cursor-pointer shadow-2xs disabled:opacity-50"
-                        title="Refresh audit logs"
-                    >
-                        <RefreshCw className={`size-3.5 ${isFetching ? "animate-spin" : ""}`} />
-                        <span>Refresh</span>
-                    </button>
+                    <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => void refetch()}
+                            disabled={isFetching}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/70 bg-secondary/40 hover:bg-secondary text-xs font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-all shadow-2xs disabled:opacity-50"
+                        >
+                            <RefreshCw className={`size-3.5 ${isFetching ? "animate-spin" : ""}`} />
+                            <span>Refresh</span>
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* Quick Metrics Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                        <span>Total Requests</span>
-                        <Activity className="size-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="mt-1.5 font-mono text-xl font-bold text-foreground">
+            {/* Metrics Row: Clean Integrated Grid */}
+            <section
+                aria-label="Log Summary Metrics"
+                className="grid grid-cols-2 rounded-xl border border-border/70 bg-card/60 divide-y sm:divide-y-0 sm:divide-x sm:grid-cols-4 divide-border/60 shadow-2xs"
+            >
+                <div className="p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Total Requests
+                    </span>
+                    <div className="mt-1.5 text-xl font-bold tracking-tight text-foreground tabular-nums">
                         {stats.totalRequests}
                     </div>
-                    <span className="text-[10px] text-emerald-500 font-semibold">
+                    <span className="text-[11px] text-muted-foreground">
                         {stats.successRate.toFixed(1)}% success
                     </span>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                        <span>Tokens Consumed</span>
-                        <Cpu className="size-3.5 text-muted-foreground" />
-                    </div>
-                    <div className="mt-1.5 font-mono text-xl font-bold text-foreground">
+                <div className="p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Tokens
+                    </span>
+                    <div className="mt-1.5 text-xl font-bold tracking-tight text-foreground tabular-nums">
                         {stats.totalTokens.toLocaleString()}
                     </div>
-                    <span className="text-[10px] text-sky-400 font-semibold">
-                        ⚡ {stats.cachedTokens.toLocaleString()} cached
+                    <span className="text-[11px] text-muted-foreground">
+                        {stats.cachedTokens.toLocaleString()} cached
                     </span>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-2xs">
-                    <div className="flex items-center justify-between text-emerald-400 text-[10px] font-semibold uppercase tracking-wider">
-                        <span>Total Cost</span>
-                        <Coins className="size-3.5 text-emerald-400" />
-                    </div>
-                    <div className="mt-1.5 font-mono text-xl font-bold text-emerald-400">
+                <div className="p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Est. Cost
+                    </span>
+                    <div className="mt-1.5 text-xl font-bold tracking-tight text-foreground tabular-nums">
                         ${stats.totalCost.toFixed(4)}
                     </div>
-                    <span className="text-[10px] text-muted-foreground">
-                        Incurred across recent 100
+                    <span className="text-[11px] text-muted-foreground">
+                        Past 100 calls
                     </span>
                 </div>
 
-                <div className="rounded-xl border border-border/70 bg-card p-3.5 shadow-2xs">
-                    <div className="flex items-center justify-between text-muted-foreground text-[10px] font-semibold uppercase tracking-wider">
-                        <span>Security Gate</span>
-                        <KeyRound className="size-3.5 text-indigo-400" />
+                <div className="p-4">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Access Mode
+                    </span>
+                    <div className="mt-1.5 text-xs font-semibold text-foreground truncate">
+                        {requireApiKey ? "Key Required" : "Open Gateway"}
                     </div>
-                    <div className="mt-1.5 font-mono text-sm font-bold text-foreground truncate">
-                        {requireApiKey ? "Virtual Keys Active" : "Key Optional"}
-                    </div>
-                    <span className="text-[10px] text-muted-foreground truncate block">
-                        {requireApiKey ? `${keys.length} keys provisioned` : "API Key column hidden"}
+                    <span className="text-[11px] text-muted-foreground truncate block">
+                        {requireApiKey ? `${keys.length} keys active` : "Bypass enabled"}
                     </span>
                 </div>
-            </div>
+            </section>
 
-            {/* Filter Toolbar */}
-            <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 border-b border-border/60 pb-4">
-                <div className="flex flex-1 items-center gap-2 max-w-xl">
+            {/* Filter Toolbar: Unified & Quiet */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="flex flex-1 items-center gap-2 max-w-lg">
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground" />
+                        <Search className="absolute left-3 top-2.5 size-3.5 text-muted-foreground" />
                         <input
                             type="text"
-                            placeholder={requireApiKey ? "Search by Model, IP, Key, Provider, or ID…" : "Search by Model, IP, Provider, or ID…"}
+                            placeholder={requireApiKey ? "Search model, IP, key, or provider…" : "Search model, IP, or provider…"}
                             value={filter.searchQuery}
                             onChange={(e) => filter.setSearchQuery(e.target.value)}
-                            className="w-full rounded-lg border border-border/60 bg-secondary/30 pl-9 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                            className="w-full rounded-lg border border-border/70 bg-card/50 pl-8.5 pr-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-ring"
                         />
                     </div>
 
-                    {/* API Key Selector filter (hanya jika requireApiKey aktif dan ada kunci) */}
                     {requireApiKey && keys.length > 0 && (
                         <select
                             value={filter.apiKeyFilter}
                             onChange={(e) => filter.setApiKeyFilter(e.target.value)}
-                            className="rounded-lg border border-border/60 bg-secondary/30 px-2.5 py-1.5 text-xs text-foreground focus:outline-none cursor-pointer"
+                            className="rounded-lg border border-border/70 bg-card/50 px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground focus:outline-none cursor-pointer"
                         >
                             <option value="all">All Keys</option>
                             <option value="none">No Key (Bypass)</option>
                             {keys.map((k) => (
                                 <option key={k.id} value={k.id}>
-                                    Key: {k.name}
+                                    {k.name}
                                 </option>
                             ))}
                         </select>
                     )}
                 </div>
 
-                <div className="flex items-center gap-1.5 self-end lg:self-auto">
+                <div className="inline-flex items-center gap-1 rounded-lg border border-border/70 bg-secondary/30 p-0.5 self-start sm:self-auto">
                     <button
                         type="button"
                         onClick={() => filter.setStatusFilter("all")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        className={`rounded px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                             filter.statusFilter === "all"
-                                ? "bg-foreground text-background font-semibold shadow-2xs"
-                                : "bg-secondary/30 text-muted-foreground hover:text-foreground"
+                                ? "bg-foreground text-background font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
                         All ({logs.length})
                     </button>
-
                     <button
                         type="button"
                         onClick={() => filter.setStatusFilter("success")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        className={`rounded px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                             filter.statusFilter === "success"
-                                ? "bg-emerald-500 text-white shadow-2xs font-semibold"
-                                : "bg-secondary/30 text-muted-foreground hover:text-foreground"
+                                ? "bg-foreground text-background font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
-                        Success (2xx)
+                        2xx
                     </button>
                     <button
                         type="button"
                         onClick={() => filter.setStatusFilter("error")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        className={`rounded px-2.5 py-1 text-xs font-medium transition-all cursor-pointer ${
                             filter.statusFilter === "error"
-                                ? "bg-rose-500 text-white shadow-2xs font-semibold"
-                                : "bg-secondary/30 text-muted-foreground hover:text-foreground"
+                                ? "bg-foreground text-background font-semibold"
+                                : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
-                        Errors (4xx/5xx)
+                        Errors
                     </button>
                 </div>
             </div>
@@ -291,7 +286,7 @@ function LogsPage() {
                 />
             )}
 
-            <LogDetailSheet
+            <LogDetailModal
                 log={selectedLog}
                 requireApiKey={requireApiKey}
                 onClose={() => setSelectedLog(null)}

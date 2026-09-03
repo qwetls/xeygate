@@ -19,6 +19,7 @@ export class ChatController {
         );
         const ApiKeyRow = c.get("apiKeyRow") as APIKeyZod | undefined;
         const ApiKeyId = ApiKeyRow?.id;
+        const userAgent = c.req.header("user-agent");
         const rawIp =
             c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
             c.req.header("x-real-ip") ||
@@ -33,7 +34,8 @@ export class ChatController {
                         StartTime,
                         0,
                         ApiKeyId,
-                        rawIp
+                        rawIp,
+                        userAgent
                     );
                     for await (const Chunk of Generator) {
                         await stream.writeSSE({
@@ -67,7 +69,8 @@ export class ChatController {
                 StartTime,
                 0,
                 ApiKeyId,
-                rawIp
+                rawIp,
+                userAgent
             );
             return Ok(c, ResponseData);
         } catch (error) {

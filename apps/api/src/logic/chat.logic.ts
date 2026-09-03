@@ -105,6 +105,7 @@ async function LogCompletion(
         fallbackReason?: string;
         apiKeyId?: string;
         ipAddress?: string;
+        userAgent?: string;
     }
 ): Promise<void> {
     // Normalize alias/bare provider id to the registered base id so quota
@@ -130,6 +131,7 @@ async function LogCompletion(
     logRequestDB({
         apiKeyId: options.apiKeyId,
         ipAddress: options.ipAddress,
+        userAgent: options.userAgent,
         providerId: normalizedProviderId,
         model,
         promptTokens: options.statusCode === 200 ? breakdown.prompt_tokens : 0,
@@ -154,7 +156,8 @@ export class ChatLogic {
         startTime: number,
         depth = 0,
         apiKeyId?: string,
-        ipAddress?: string
+        ipAddress?: string,
+        userAgent?: string
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
@@ -225,7 +228,8 @@ export class ChatLogic {
                         startTime,
                         depth + 1,
                         apiKeyId,
-                        ipAddress
+                        ipAddress,
+                        userAgent
                     );
                 }
 
@@ -236,7 +240,8 @@ export class ChatLogic {
                     fallbackPath,
                     fallbackReason,
                     apiKeyId,
-                    ipAddress
+                    ipAddress,
+                    userAgent
                 });
 
                 return response;
@@ -260,7 +265,8 @@ export class ChatLogic {
             fallbackPath,
             fallbackReason,
             apiKeyId,
-            ipAddress
+            ipAddress,
+            userAgent
         });
 
         throw lastError;
@@ -273,7 +279,8 @@ export class ChatLogic {
         startTime: number,
         depth = 0,
         apiKeyId?: string,
-        ipAddress?: string
+        ipAddress?: string,
+        userAgent?: string
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
@@ -405,7 +412,8 @@ export class ChatLogic {
                         startTime,
                         depth + 1,
                         apiKeyId,
-                        ipAddress
+                        ipAddress,
+                        userAgent
                     );
                     return;
                 }
@@ -421,7 +429,8 @@ export class ChatLogic {
                     fallbackPath,
                     fallbackReason,
                     apiKeyId,
-                    ipAddress
+                    ipAddress,
+                    userAgent
                 });
 
                 return;
@@ -443,7 +452,8 @@ export class ChatLogic {
                     fallbackPath,
                     fallbackReason,
                     apiKeyId,
-                    ipAddress
+                    ipAddress,
+                    userAgent
                 });
                 throw err;
             }
