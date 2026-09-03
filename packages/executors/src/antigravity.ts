@@ -14,6 +14,7 @@ import {
     ANTIGRAVITY_IDE_USER_AGENT,
     accumulateChunks,
     buildAntigravityContents,
+    buildAntigravityContentsAsync,
     buildAntigravityEnvelope,
     buildAntigravityTools,
     createGeminiStreamState,
@@ -185,17 +186,17 @@ export class AntigravityExecutor implements AIProvider {
     /**
      * Build the Antigravity request envelope + sanitized request body.
      */
-    private buildRequest(
+    private async buildRequest(
         model: string,
         req: ChatCompletionRequest,
         stream: boolean,
         enabledCreditTypes?: string[]
-    ): { url: string; body: Record<string, unknown> } {
+    ): Promise<{ url: string; body: Record<string, unknown> }> {
         const cleanBaseUrl = this.getAntigravityBaseUrl();
         const modelName = parseAntigravityModelName(model);
 
         // Build contents (with tool support, prompt stripping, zero-width stripping, trailing turn stripping)
-        const contents = buildAntigravityContents(req);
+        const contents = await buildAntigravityContentsAsync(req);
 
         // ─── Image generation: different request structure ───
         if (isImageModel(modelName)) {
@@ -399,7 +400,7 @@ export class AntigravityExecutor implements AIProvider {
         req: ChatCompletionRequest,
         enabledCreditTypes?: string[]
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
-        const { url, body } = this.buildRequest(model, req, true, enabledCreditTypes);
+        const { url, body } = await this.buildRequest(model, req, true, enabledCreditTypes);
         const streamUrl = url.includes("?") ? url : `${url}?alt=sse`;
         const res = await fetchWithRetry(streamUrl, body, this.getHeaders());
 

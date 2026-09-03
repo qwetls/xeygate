@@ -63,10 +63,37 @@ export function parseGeminiModelName(rawModel: string): string {
 }
 
 export function buildGeminiContents(req: ChatCompletionRequest): GeminiContent[] {
-    return req.messages.map((m) => ({
-        role: m.role === "assistant" ? "model" : "user",
-        parts: [{ text: typeof m.content === "string" ? m.content : JSON.stringify(m.content) }]
-    }));
+    return req.messages.map((m) => {
+        const parts: GeminiContentPart[] = [];
+        if (typeof m.content === "string") {
+            parts.push({ text: m.content });
+        } else if (Array.isArray(m.content)) {
+            for (const part of m.content) {
+                if (part.type === "text" && part.text) {
+                    parts.push({ text: part.text });
+                } else if (part.type === "image_url" && part.image_url?.url) {
+                    const match = part.image_url.url.match(/^data:([^;]+);base64,(.+)$/);
+                    if (match && match[1] && match[2]) {
+                        parts.push({
+                            inlineData: {
+                                mimeType: match[1],
+                                data: match[2]
+                            }
+                        });
+                    }
+                }
+            }
+        } else if (m.content !== null && m.content !== undefined) {
+            parts.push({ text: String(m.content) });
+        }
+        if (parts.length === 0) {
+            parts.push({ text: "..." });
+        }
+        return {
+            role: m.role === "assistant" ? "model" : "user",
+            parts
+        };
+    });
 }
 
 export function buildGeminiBody(
@@ -1006,6 +1033,194 @@ export function parseAntigravityModelName(rawModel: string): string {
     return model;
 }
 
+// Fetch remote image and convert to inlineData (base64)
+async function resolveImageInlineData(url: string): Promise<GeminiInlineData | null> {
+    const match = url.match(/^data:([^;]+);base64,(.+)$/);
+    if (match && match[1] && match[2]) {
+        return {
+            mimeType: match[1],
+            data: match[2]
+        };
+    }
+    if (/^https?:\/\//i.test(url)) {
+        try {
+            const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+            if (!res.ok) return null;
+            const contentType = res.headers.get("content-type") || "image/png";
+            const buffer = Buffer.from(await res.arrayBuffer());
+            return {
+                mimeType: contentType.split(";")[0]?.trim() || "image/png",
+                data: buffer.toString("base64")
+            };
+        } catch {
+            return null;
+        }
+    }
+    return null;
+}
+
+/**
+ * Build Antigravity Gemini contents from ChatCompletionRequest messages, mapping tools.
+ */
+export async function buildAntigravityContentsAsync(req: ChatCompletionRequest): Promise<GeminiContent[]> {
+    const rawContents: GeminiContent[] = [];
+
+    // Map tool_call_id to function name
+    const toolCallNameMap = new Map<string, string>();
+    for (const msg of req.messages) {
+        if (Array.isArray(msg.tool_calls)) {
+            for (const tc of msg.tool_calls) {
+                if (tc.id && tc.function?.name) {
+                    toolCallNameMap.set(tc.id, tc.function.name);
+                }
+            }
+        }
+    }
+
+    for (const m of req.messages) {
+        const role = m.role === "assistant" ? "model" : "user";
+        const parts: GeminiContentPart[] = [];
+
+        if (m.role === "assistant" && Array.isArray(m.tool_calls) && m.tool_calls.length > 0) {
+            let text = typeof m.content === "string" ? m.content.trim() : "";
+            if (text) {
+                text = stripCompetitiveAgentPrompts(stripZeroWidth(text));
+                if (text) parts.push({ text });
+            }
+
+            for (const tc of m.tool_calls) {
+                let args: JSONObject = {};
+                try {
+                    args = stripZeroWidth(JSON.parse(tc.function.arguments || "{}") as JSONObject);
+                } catch {
+                    args = { raw: tc.function.arguments || "" };
+                }
+                const name = sanitizeFunctionName(tc.function.name);
+                const rawTc = tc as unknown as Record<string, unknown>;
+                const rawMsg = m as unknown as Record<string, unknown>;
+                const thoughtSignature =
+                    (rawTc.thoughtSignature as string) ||
+                    (rawTc.thought_signature as string) ||
+                    (rawMsg.thoughtSignature as string) ||
+                    (rawMsg.thought_signature as string) ||
+                    "skip_thought_signature_validator";
+
+                parts.push({
+                    functionCall: { name, args },
+                    thoughtSignature
+                });
+            }
+        } else if (
+            m.role === "assistant" &&
+            (m as unknown as Record<string, unknown>).function_call &&
+            (!Array.isArray(m.tool_calls) || m.tool_calls.length === 0)
+        ) {
+            const rawM = m as unknown as Record<string, unknown>;
+            const legacyFunctionCall = rawM.function_call as {
+                name?: string;
+                arguments?: string;
+                thoughtSignature?: string;
+                thought_signature?: string;
+            };
+            let text = typeof m.content === "string" ? m.content.trim() : "";
+            if (text) {
+                text = stripCompetitiveAgentPrompts(stripZeroWidth(text));
+                if (text) parts.push({ text });
+            }
+            let args: JSONObject = {};
+            try {
+                args = stripZeroWidth(
+                    JSON.parse(legacyFunctionCall.arguments || "{}") as JSONObject
+                );
+            } catch {
+                args = { raw: legacyFunctionCall.arguments || "" };
+            }
+            const name = sanitizeFunctionName(legacyFunctionCall.name || "");
+            const thoughtSignature =
+                legacyFunctionCall.thoughtSignature ||
+                legacyFunctionCall.thought_signature ||
+                (rawM.thoughtSignature as string) ||
+                (rawM.thought_signature as string) ||
+                "skip_thought_signature_validator";
+
+            parts.push({
+                functionCall: { name, args },
+                thoughtSignature
+            });
+        } else if (m.role === "tool") {
+            const rawName =
+                (m.tool_call_id ? toolCallNameMap.get(m.tool_call_id) : undefined) ||
+                m.name ||
+                m.tool_call_id ||
+                "function";
+            const name = sanitizeFunctionName(rawName);
+
+            let responseObj: JSONObject;
+            try {
+                const parsed =
+                    typeof m.content === "string"
+                        ? (JSON.parse(m.content) as JSONObject)
+                        : (m.content as JSONValue);
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                    responseObj = stripZeroWidth(parsed as JSONObject);
+                } else {
+                    responseObj = { output: (parsed as JSONValue) ?? "" };
+                }
+            } catch {
+                responseObj = { output: typeof m.content === "string" ? m.content : "" };
+            }
+
+            parts.push({
+                functionResponse: {
+                    name,
+                    response: responseObj
+                }
+            });
+        } else {
+            if (typeof m.content === "string") {
+                let text = stripCompetitiveAgentPrompts(stripZeroWidth(m.content));
+                if (text) parts.push({ text });
+            } else if (Array.isArray(m.content)) {
+                for (const part of m.content) {
+                    if (part.type === "text" && part.text) {
+                        const text = stripCompetitiveAgentPrompts(stripZeroWidth(part.text));
+                        if (text) parts.push({ text });
+                    } else if (part.type === "image_url" && part.image_url?.url) {
+                        const inline = await resolveImageInlineData(part.image_url.url);
+                        if (inline) {
+                            parts.push({ inlineData: inline });
+                        }
+                    }
+                }
+            } else if (m.content !== null && m.content !== undefined) {
+                const text = stripCompetitiveAgentPrompts(stripZeroWidth(String(m.content)));
+                if (text) parts.push({ text });
+            }
+        }
+
+        if (parts.length === 0) parts.push({ text: "..." });
+        rawContents.push({ role, parts });
+    }
+
+    // Merge adjacent contents of the same role
+    const contents: GeminiContent[] = [];
+    for (const c of rawContents) {
+        if (!Array.isArray(c.parts) || c.parts.length === 0) continue;
+        if (contents.length > 0 && contents[contents.length - 1]?.role === c.role) {
+            contents[contents.length - 1]?.parts.push(...c.parts);
+        } else {
+            contents.push(c);
+        }
+    }
+
+    if (contents.length === 0) {
+        contents.push({ role: "user", parts: [{ text: "..." }] });
+    }
+
+    // Strip trailing assistant / model turn
+    return stripTrailingAssistantTurn(contents);
+}
+
 /**
  * Build Antigravity Gemini contents from ChatCompletionRequest messages, mapping tools.
  */
@@ -1124,14 +1339,38 @@ export function buildAntigravityContents(req: ChatCompletionRequest): GeminiCont
                 }
             });
         } else {
-            let text =
-                typeof m.content === "string"
-                    ? m.content
-                    : Array.isArray(m.content)
-                      ? m.content.map((c) => (c.type === "text" ? c.text || "" : "")).join("\n")
-                      : String(m.content ?? "");
-            text = stripCompetitiveAgentPrompts(stripZeroWidth(text));
-            if (text) parts.push({ text });
+            if (typeof m.content === "string") {
+                let text = stripCompetitiveAgentPrompts(stripZeroWidth(m.content));
+                if (text) parts.push({ text });
+            } else if (Array.isArray(m.content)) {
+                for (const part of m.content) {
+                    if (part.type === "text" && part.text) {
+                        const text = stripCompetitiveAgentPrompts(stripZeroWidth(part.text));
+                        if (text) parts.push({ text });
+                    } else if (part.type === "image_url" && part.image_url?.url) {
+                        const url = part.image_url.url;
+                        const match = url.match(/^data:([^;]+);base64,(.+)$/);
+                        if (match && match[1] && match[2]) {
+                            parts.push({
+                                inlineData: {
+                                    mimeType: match[1],
+                                    data: match[2]
+                                }
+                            });
+                        } else if (/^https?:\/\//i.test(url)) {
+                            // Upstream Gemini API requires inlineData base64 for images
+                            // If it's a web URL, we can note the URL or let the executor fetch if needed,
+                            // but in Antigravity/Gemini native API, remote URLs are passed via fileData or inlineData
+                            parts.push({
+                                text: `[Image: ${url}]`
+                            });
+                        }
+                    }
+                }
+            } else if (m.content !== null && m.content !== undefined) {
+                const text = stripCompetitiveAgentPrompts(stripZeroWidth(String(m.content)));
+                if (text) parts.push({ text });
+            }
         }
 
         if (parts.length === 0) parts.push({ text: "..." });

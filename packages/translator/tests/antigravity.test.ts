@@ -298,6 +298,36 @@ test("buildAntigravityContents preserves existing thoughtSignature", () => {
     assert.equal(modelPart.thoughtSignature, "real_encrypted_signature_blob");
 });
 
+test("buildAntigravityContents converts base64 image_url to inlineData", () => {
+    const req: ChatCompletionRequest = {
+        model: "antigravity/gemini-3.8-flash-high",
+        messages: [
+            {
+                role: "user",
+                content: [
+                    { type: "text", text: "Look at this screenshot" },
+                    {
+                        type: "image_url",
+                        image_url: {
+                            url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                        }
+                    }
+                ]
+            }
+        ]
+    };
+
+    const contents = buildAntigravityContents(req);
+    assert.equal(contents.length, 1);
+    assert.equal(contents[0]?.role, "user");
+    assert.equal(contents[0]?.parts.length, 2);
+    assert.equal(contents[0]?.parts[0]?.text, "Look at this screenshot");
+    assert.deepEqual(contents[0]?.parts[1]?.inlineData, {
+        mimeType: "image/png",
+        data: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+    });
+});
+
 test("geminiStreamToOpenAIChunks propagates thoughtSignature in tool calls", () => {
     const state = createGeminiStreamState("gemini-3.7-flash-high");
     const rawChunk = {

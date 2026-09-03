@@ -1,6 +1,6 @@
-import { loadPricingData } from "./parser.js";
+import { loadModelsDevData, loadPricingData } from "./parser.js";
 import { findCanonicalModelKey, normalizeModelName } from "./matcher.js";
-import type { ModelPrice, PricingDataset } from "./types.js";
+import type { ModelPrice, ModelsDevModel, PricingDataset } from "./types.js";
 
 export * from "./types.js";
 export * from "./parser.js";
@@ -81,6 +81,54 @@ export function getPricingForModel(_provider: string | undefined, model: string)
     }
 
     return DEFAULT_PRICING;
+}
+
+let cachedModelsDevData: Record<string, ModelsDevModel> | undefined;
+
+/**
+ * Retrieves comprehensive metadata (modalities, limits, capabilities) for a model
+ * by resolving aliases and canonical keys from pricing.jsonc / models.jsonc.
+ */
+export function getModelMetadata(modelId: string): ModelsDevModel | undefined {
+    if (!modelId) return undefined;
+    if (!cachedModelsDevData) {
+        try {
+            cachedModelsDevData = loadModelsDevData();
+        } catch {
+            cachedModelsDevData = {};
+        }
+    }
+
+    const data = cachedModelsDevData;
+
+    // 1. Direct key match
+    if (data[modelId]) {
+        return data[modelId];
+    }
+
+    // 2. Canonical / Normalized match using pricing aliases and catalog
+    const canonical =
+        findCanonicalModelKey(modelId, MODEL_PRICING, MODEL_ALIASES) ||
+        normalizeModelName(modelId, MODEL_ALIASES);
+
+    if (canonical && data[canonical]) {
+        return data[canonical];
+    }
+
+    // 3. Search modelsDevData by suffix or id match
+    const targetSuffix = `/${canonical}`;
+    for (const [key, item] of Object.entries(data)) {
+        if (
+            key === canonical ||
+            key.endsWith(targetSuffix) ||
+            item.id === canonical ||
+            item.id.endsWith(targetSuffix)
+        ) {
+            return item;
+        }
+    }
+
+    return undefined;
 }
 
 /**

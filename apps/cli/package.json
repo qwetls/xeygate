@@ -34,6 +34,7 @@
     "devDependencies": {
         "@srouter/constants": "workspace:*",
         "@srouter/db": "workspace:*",
+        "@srouter/pricing": "workspace:*",
         "@srouter/types": "workspace:*",
         "@types/node": "^26.1.1",
         "tsup": "^8.5.1",
