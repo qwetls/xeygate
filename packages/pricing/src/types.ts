@@ -27,6 +27,16 @@ export interface PricingDataset {
     aliases: Record<string, string>;
 }
 
+export interface ModelsDevModelCost {
+    input?: number;
+    output?: number;
+    cache_read?: number;
+    cache_write?: number;
+    reasoning?: number;
+    input_audio?: number;
+    output_audio?: number;
+}
+
 export interface ModelsDevModel {
     id: string;
     name: string;
@@ -44,6 +54,7 @@ export interface ModelsDevModel {
         output?: string[];
     };
     open_weights?: boolean;
+    cost?: ModelsDevModelCost;
     limit?: {
         context?: number;
         output?: number;

@@ -177,4 +177,15 @@ test("models.dev dataset loading from models.jsonc", () => {
     assert.equal(modelsData["minimax/MiniMax-M3"]?.name, "MiniMax-M3");
     assert.equal(modelsData["minimax/MiniMax-M3"]?.family, "minimax");
     assert.ok(modelsData["upstage/solar-pro4"], "Should contain upstage/solar-pro4");
+
+    // Verify pricing data loaded from models.jsonc
+    const modelsDevPricing = loadPricingData();
+    // Full key: <provider>/<model>
+    assert.ok(modelsDevPricing.models["tencent/hy3"]);
+    assert.ok(modelsDevPricing.models["tencent/hy3"].input > 0);
+    assert.ok(modelsDevPricing.models["tencent/hy3"].output > 0);
+
+    // After provider prefix: <model>
+    assert.ok(modelsDevPricing.models["hy3"]);
+    assert.equal(modelsDevPricing.models["hy3"].input, modelsDevPricing.models["tencent/hy3"].input);
 });

@@ -49,15 +49,15 @@ export function findCanonicalModelKey(
 ): string | undefined {
     if (!rawModel) return undefined;
 
-    // 1. Exact match on raw input
-    if (models[rawModel]) {
-        return rawModel;
-    }
-
-    // 2. Normalized name lookup
+    // 1. Normalized name lookup first (strips provider prefix, resolves aliases)
     const normalized = normalizeModelName(rawModel, aliases);
     if (models[normalized]) {
         return normalized;
+    }
+
+    // 2. Exact match on raw input
+    if (models[rawModel]) {
+        return rawModel;
     }
 
     // 3. Case-insensitive lookup on normalized name
