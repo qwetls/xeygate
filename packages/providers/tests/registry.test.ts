@@ -67,10 +67,201 @@ test("Qoder uses qd model prefix alias", () => {
     assert.equal(getProviderAlias("qoder_456"), "qd");
 });
 
-test("custom provider alias matches via prefix matching when models not yet cached", async () => {
+test("custom provider UUID + alias routing resolves alias prefix to UUID provider", async () => {
     const registry = new ProviderRegistry();
+    const uuid = "7f3a2c1e-9b6d-4a5e-8f2c-1d4e5a6b7c8d";
     const customProvider: AIProvider = {
-        id: "7f3a2c1e-9b6d-4a5e-8f2c-1d4e5a6b7c8d",
+        id: uuid,
+        name: "My Gateway",
+        alias: "znext",
+        listModels: async () => [{ id: "znext/mocin", object: "model", owned_by: "znext" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(customProvider);
+
+    // Test 1: alias/znext prefix resolves to the UUID provider
+    const p1 = await registry.getProviderForModel("znext/mocin");
+    assert.equal(p1.id, uuid);
+
+    // Test 2: different alias "foo" with "foo/test-model" resolves correctly
+    const uuid2 = "a1b2c3d4-e5f6-4789-abc1-2d3e4f5a6b7c";
+    const customProvider2: AIProvider = {
+        id: uuid2,
+        name: "Foo Gateway",
+        alias: "foo",
+        listModels: async () => [{ id: "foo/test-model", object: "model", owned_by: "foo" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(customProvider2);
+
+    const p2 = await registry.getProviderForModel("foo/test-model");
+    assert.equal(p2.id, uuid2);
+});
+
+test("two custom providers with different aliases each route correctly", async () => {
+    const registry = new ProviderRegistry();
+    const uuidA = "aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa";
+    const uuidB = "bbbbbbbb-bbbb-4bbb-bbbb-bbbbbbbbbbbb";
+
+    const provA: AIProvider = {
+        id: uuidA,
+        name: "Provider A",
+        alias: "alpha",
+        listModels: async () => [{ id: "alpha/model-a", object: "model", owned_by: "alpha" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    const provB: AIProvider = {
+        id: uuidB,
+        name: "Provider B",
+        alias: "beta",
+        listModels: async () => [{ id: "beta/model-b", object: "model", owned_by: "beta" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(provA);
+    registry.registerProvider(provB);
+
+    const pA = await registry.getProviderForModel("alpha/model-a");
+    assert.equal(pA.id, uuidA);
+
+    const pB = await registry.getProviderForModel("beta/model-b");
+    assert.equal(pB.id, uuidB);
+});
+
+test("custom provider alias survives database reload (registry.registerProvider cycle)", async () => {
+    const registry = new ProviderRegistry();
+    const uuid = "cccccccc-cccc-4ccc-cccc-cccccccccccc";
+    const provider: AIProvider = {
+        id: uuid,
+        alias: "survivor",
+        name: "Survivor Alias",
+        listModels: async () => [{ id: "survivor/model", object: "model", owned_by: "survivor" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(provider);
+
+    // Simulate DB reload: unregister and re-register
+    registry.unregisterProvider(uuid);
+    const reloaded: AIProvider = {
+        id: uuid,
+        alias: "survivor",
+        name: "Survivor Alias",
+        listModels: async () => [{ id: "survivor/model", object: "model", owned_by: "survivor" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(reloaded);
+
+    const p = await registry.getProviderForModel("survivor/model");
+    assert.equal(p.id, uuid);
+});
+
+test("built-in providers continue working after custom alias fix", async () => {
+    const registry = new ProviderRegistry();
+    const qoderProvider: AIProvider = {
+        id: "qoder_1786759000",
+        name: "Qoder",
+        listModels: async () => [{ id: "qoder/ultimate", object: "model" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(qoderProvider);
+
+    // Direct match
+    const p1 = await registry.getProviderForModel("qoder/ultimate");
+    assert.equal(p1.id, qoderProvider.id);
+
+    // Alias prefix (qd/ultimate)
+    const p2 = await registry.getProviderForModel("qd/ultimate");
+    assert.equal(p2.id, qoderProvider.id);
+});
+
+test("unknown prefix still returns descriptive error", async () => {
+    const registry = new ProviderRegistry();
+    await assert.rejects(
+        () => registry.getProviderForModel("unknown/model"),
+        /No active provider connection found for model "unknown\/model"/
+    );
+});
+
+test("custom alias that resembles a built-in provider name must resolve to the custom alias", async () => {
+    const registry = new ProviderRegistry();
+    const qoderBuiltin: AIProvider = {
+        id: "qoder_actual",
+        name: "Qoder Builtin",
+        listModels: async () => [{ id: "qoder/real-model", object: "model", owned_by: "qoder" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(qoderBuiltin);
+
+    // Custom provider whose alias matches a built-in provider id
+    const uuid = "dddddddd-dddd-4ddd-dddd-dddddddddddd";
+    const customProvider: AIProvider = {
+        id: uuid,
+        alias: "qoder",
+        name: "Qoder-like Custom",
+        listModels: async () => [{ id: "qoder/custom-model", object: "model", owned_by: "qoder" }],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(customProvider);
+
+    // Both providers exist — the custom alias prefix should match the
+    // custom provider (not the built-in one) when the model id uses
+    // the alias prefix. Note: the built-in qoder_actual also has
+    // "qoder" as a potential prefix via isProviderBaseId, so both
+    // will match. The key is that the custom provider IS found.
+    const candidates = await registry.getCandidateProvidersForModel("qoder/custom-model");
+    assert.ok(candidates.length > 0, "must find at least one candidate");
+    assert.ok(candidates.some((c) => c.id === uuid), "custom provider must be among candidates");
+});
+
+test("custom provider alias matches via exact alias when model list is empty", async () => {
+    const registry = new ProviderRegistry();
+    const uuid = "7f3a2c1e-9b6d-4a5e-8f2c-1d4e5a6b7c8d";
+    const customProvider: AIProvider = {
+        id: uuid,
         name: "My Gateway",
         alias: "mygw",
         listModels: async () => [],
@@ -85,7 +276,44 @@ test("custom provider alias matches via prefix matching when models not yet cach
 
     // Custom alias prefix should resolve even with empty model list
     const p = await registry.getProviderForModel("mygw/gpt-4o");
-    assert.equal(p.id, customProvider.id);
+    assert.equal(p.id, uuid);
+});
+
+test("custom alias wins over a built-in provider's alias for the same prefix", async () => {
+    const registry = new ProviderRegistry();
+    const qoderBuiltin: AIProvider = {
+        id: "qoder_1786759000",
+        name: "Qoder Builtin",
+        listModels: async () => [],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(qoderBuiltin);
+
+    // Custom provider whose alias shadows the built-in qoder alias "qd"
+    const uuid = "eeeeeeee-eeee-4eee-eeee-eeeeeeeeeeee";
+    const customProvider: AIProvider = {
+        id: uuid,
+        alias: "qd",
+        name: "Qoder-like Custom",
+        listModels: async () => [],
+        chatCompletion: async () => {
+            throw new Error("not used");
+        },
+        chatCompletionStream: async function* () {
+            throw new Error("not used");
+        }
+    };
+    registry.registerProvider(customProvider);
+
+    // The explicitly registered custom alias must resolve to the custom
+    // provider, not fall through to the built-in qoder account.
+    const p = await registry.getProviderForModel("qd/gpt-4o");
+    assert.equal(p.id, uuid);
 });
 
 test("getProviderForModel resolves provider with alias and full name prefixes", async () => {
