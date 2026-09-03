@@ -140,6 +140,8 @@ export class ClaudeAdapter extends AbstractToolAdapter {
         data.env.ANTHROPIC_DEFAULT_OPUS_MODEL = context.opusModel || defaultModel;
         data.env.ANTHROPIC_DEFAULT_SONNET_MODEL = context.sonnetModel || defaultModel;
         data.env.ANTHROPIC_DEFAULT_HAIKU_MODEL = context.haikuModel || defaultModel;
+        // Suppress "not a model Claude Code recognizes" warning for unknown models
+        data.env.CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
 
         // Clean out legacy SCODEX or old vendor keys if present
         if (data.env.ANTHROPIC_DEFAULT_FABLE_MODEL) {
@@ -213,6 +215,7 @@ export class ClaudeAdapter extends AbstractToolAdapter {
                 delete data.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
                 delete data.env.ANTHROPIC_DEFAULT_HAIKU_MODEL;
                 delete data.env.ANTHROPIC_DEFAULT_FABLE_MODEL;
+                delete data.env.CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT;
             }
             await fs.writeFile(configPath, JSON.stringify(data, null, 2), "utf-8");
             return true;
@@ -234,7 +237,8 @@ export class ClaudeAdapter extends AbstractToolAdapter {
             ANTHROPIC_MODEL: defaultModel,
             ANTHROPIC_DEFAULT_OPUS_MODEL: context.opusModel || defaultModel,
             ANTHROPIC_DEFAULT_SONNET_MODEL: context.sonnetModel || defaultModel,
-            ANTHROPIC_DEFAULT_HAIKU_MODEL: context.haikuModel || defaultModel
+            ANTHROPIC_DEFAULT_HAIKU_MODEL: context.haikuModel || defaultModel,
+            CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT: "1"
         };
         return env;
     }

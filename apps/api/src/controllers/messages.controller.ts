@@ -48,7 +48,7 @@ export class MessagesController {
 
         const ApiKeyId = ApiKeyRow?.id;
         const OpenAIReq = AnthropicToOpenAIRequest(body);
-        const isThinkingEnabled = Boolean(body.thinking?.type === "enabled");
+        const isThinkingEnabled = body.thinking?.type !== "disabled";
 
         if (body.stream) {
             c.header("Content-Type", "text/event-stream");

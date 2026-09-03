@@ -26,7 +26,7 @@ export const AnthropicContentBlockSchema: z.ZodType<AnthropicContentBlock> = z.o
 });
 
 export const AnthropicMessageSchema = z.object({
-    role: z.enum(["user", "assistant"]),
+    role: z.enum(["user", "assistant", "system"]),
     content: z.union([z.string(), z.array(AnthropicContentBlockSchema).max(200)])
 });
 
@@ -77,7 +77,7 @@ export const AnthropicMessageRequestSchema = z.object({
         .optional(),
     thinking: z
         .object({
-            type: z.enum(["enabled", "disabled"]),
+            type: z.enum(["enabled", "disabled", "adaptive"]),
             budget_tokens: z.number().int().positive().max(1_000_000).optional()
         })
         .optional()

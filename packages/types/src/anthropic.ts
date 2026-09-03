@@ -56,7 +56,7 @@ export interface AnthropicMessageRequest {
         disable_parallel_tool_use?: boolean;
     };
     thinking?: {
-        type: "enabled" | "disabled";
+        type: "enabled" | "disabled" | "adaptive";
         budget_tokens?: number;
     };
 }

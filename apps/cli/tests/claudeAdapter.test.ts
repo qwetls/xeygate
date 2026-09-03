@@ -112,6 +112,7 @@ test("ClaudeAdapter - link with tier models and getEnv", async () => {
         assert.equal(env.ANTHROPIC_DEFAULT_OPUS_MODEL, "claude-3-opus-20240229");
         assert.equal(env.ANTHROPIC_DEFAULT_SONNET_MODEL, "claude-3-7-sonnet-20250219");
         assert.equal(env.ANTHROPIC_DEFAULT_HAIKU_MODEL, "claude-3-5-haiku-20241022");
+        assert.equal(env.CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT, "1");
 
         // Unlink manually without backup
         const unlinked = await adapter.unlink();
@@ -123,6 +124,10 @@ test("ClaudeAdapter - link with tier models and getEnv", async () => {
         assert.equal(unlinkedData.ANTHROPIC_DEFAULT_OPUS_MODEL, undefined);
         assert.equal(unlinkedData.ANTHROPIC_DEFAULT_SONNET_MODEL, undefined);
         assert.equal(unlinkedData.ANTHROPIC_DEFAULT_HAIKU_MODEL, undefined);
+        assert.equal(
+            unlinkedData.env?.CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT,
+            undefined
+        );
     } finally {
         await fs.rm(tempDir, { recursive: true, force: true });
     }
