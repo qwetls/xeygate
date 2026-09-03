@@ -6,6 +6,6 @@ export type JSONObject = Record<string, JSONValue>;
 export type ChatRole = "system" | "user" | "assistant" | "tool" | "function" | "developer";
 export type ChatMessageRole = ChatRole;
 
-export type AnthropicRole = Extract<ChatRole, "user" | "assistant">;
+export type AnthropicRole = Extract<ChatRole, "user" | "assistant"> | "system";
 export type AssistantOrUserRole = Extract<ChatRole, "user" | "assistant">;
 export type CommandCodeRole = Extract<ChatRole, "user" | "assistant" | "tool">;

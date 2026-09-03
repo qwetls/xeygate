@@ -94,6 +94,30 @@ test("anthropicToOpenAIRequest maps system string, messages, and tools", () => {
     });
 });
 
+test("anthropicToOpenAIRequest maps inline system message role", () => {
+    const req: AnthropicMessageRequest = {
+        model: "claude-3-7-sonnet-20250219",
+        max_tokens: 4096,
+        messages: [
+            {
+                role: "system",
+                content: "You are a helpful coding assistant."
+            },
+            {
+                role: "user",
+                content: "Run test suite"
+            }
+        ]
+    };
+
+    const openAIReq = AnthropicToOpenAIRequest(req);
+    assert.equal(openAIReq.messages.length, 2);
+    assert.equal(openAIReq.messages[0]?.role, "system");
+    assert.equal(openAIReq.messages[0]?.content, "You are a helpful coding assistant.");
+    assert.equal(openAIReq.messages[1]?.role, "user");
+    assert.equal(openAIReq.messages[1]?.content, "Run test suite");
+});
+
 test("openAIToAnthropicResponse maps OpenAI response to Anthropic message format", () => {
     const openAIRes: ChatCompletionResponse = {
         id: "chatcmpl-test-123",
