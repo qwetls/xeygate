@@ -134,11 +134,97 @@ export function resolvePricingDataPath(customPath?: string): string {
 }
 
 /**
- * Loads and parses the pricing dataset from pricing.jsonc / pricing.json file.
+ * Converts a ModelsDevModel into a ModelPrice if valid cost data is present.
+ */
+export function modelsDevToModelPrice(model: ModelsDevModel): ModelPrice | undefined {
+    if (!model.cost) return undefined;
+    const input = model.cost.input ?? 0;
+    const output = model.cost.output ?? 0;
+
+    return {
+        id: model.id,
+        name: model.name,
+        input,
+        output,
+        cached: model.cost.cache_read,
+        reasoning: model.cost.reasoning ?? output,
+        cache_creation: model.cost.cache_write ?? input
+    };
+}
+
+/**
+ * Loads pricing directly from models.jsonc.
+ * Populates models map, aliases, and provider-grouped models.
+ */
+export function loadPricingFromModelsDev(customPath?: string): PricingDataset {
+    const modelsData = loadModelsDevData(customPath);
+    const models: Record<string, ModelPrice> = {};
+    const providerModels: ProviderModelMap = {};
+    const aliases: Record<string, string> = {};
+
+    for (const [key, item] of Object.entries(modelsData)) {
+        const price = modelsDevToModelPrice(item);
+        if (!price) continue;
+
+        // 1. Map by full key e.g. "tencent/hy3" and item.id
+        models[key] = price;
+        if (item.id && item.id !== key) {
+            models[item.id] = price;
+        }
+
+        // 2. Map by model name after provider prefix: <provider>/<model> -> <model>
+        if (key.includes("/")) {
+            const modelName = key.split("/").slice(1).join("/");
+            // Jika belum terdefinisi di models, daftarkan alias dan fallback model price
+            if (!aliases[modelName]) {
+                aliases[modelName] = key;
+            }
+            if (!models[modelName]) {
+                models[modelName] = price;
+            }
+        }
+
+        // Group into providerModels
+        const provider = key.includes("/") ? key.split("/")[0]! : "other";
+        if (!providerModels[provider]) {
+            providerModels[provider] = [];
+        }
+        providerModels[provider].push(price);
+    }
+
+    return {
+        version: "1.0.0",
+        updatedAt: new Date().toISOString().split("T")[0],
+        defaults: {
+            input: 2.0,
+            output: 8.0,
+            cached: 1.0,
+            reasoning: 12.0,
+            cache_creation: 2.0
+        },
+        models,
+        providerModels,
+        aliases
+    };
+}
+
+/**
+ * Loads and parses the pricing dataset.
+ * By default loads pricing from pricing.jsonc / pricing.json.
+ * If customPath targets models.jsonc / models.json, loads directly from models.dev dataset.
  */
 export function loadPricingData(customPath?: string): PricingDataset {
+    if (customPath && (customPath.endsWith("models.jsonc") || customPath.endsWith("models.json"))) {
+        return loadPricingFromModelsDev(customPath);
+    }
+
     const filePath = resolvePricingDataPath(customPath);
     if (!fs.existsSync(filePath)) {
+        // Fallback to models.jsonc if pricing.jsonc does not exist
+        const modelsDevPath = resolveModelsDevDataPath();
+        if (fs.existsSync(modelsDevPath)) {
+            return loadPricingFromModelsDev(modelsDevPath);
+        }
         throw new Error(`Pricing dataset file not found at: ${filePath}`);
     }
     const content = fs.readFileSync(filePath, "utf-8");
@@ -149,21 +235,49 @@ export function loadPricingData(customPath?: string): PricingDataset {
         Object.values(raw.models).length > 0 &&
         Array.isArray(Object.values(raw.models)[0]);
 
-    return {
+    const dataset: PricingDataset = {
         version: raw.version,
         updatedAt: raw.updatedAt,
         defaults: raw.defaults,
-        models: flatModels,
-        providerModels: isGroupedArray ? (raw.models as ProviderModelMap) : undefined,
-        aliases: raw.aliases || {}
+        models: { ...flatModels },
+        providerModels: isGroupedArray ? { ...(raw.models as ProviderModelMap) } : undefined,
+        aliases: { ...(raw.aliases || {}) }
     };
+
+    // Enrich with any models from models.jsonc that are not in pricing.jsonc
+    const modelsDevPath = resolveModelsDevDataPath();
+    if (fs.existsSync(modelsDevPath)) {
+        try {
+            const modelsDevDataset = loadPricingFromModelsDev(modelsDevPath);
+            // Hanya daftarkan model dari models.jsonc jika model tersebut belum ada di pricing.jsonc
+            for (const [k, v] of Object.entries(modelsDevDataset.models)) {
+                if (!dataset.models[k]) {
+                    dataset.models[k] = v;
+                }
+            }
+            for (const [k, v] of Object.entries(modelsDevDataset.aliases)) {
+                if (!dataset.aliases[k] && !dataset.models[k]) {
+                    dataset.aliases[k] = v;
+                }
+            }
+        } catch {
+            // Ignore enrichment errors
+        }
+    }
+
+    return dataset;
 }
 
 /**
  * Finds the path to models.jsonc data file sourced from models.dev.
  */
 export function resolveModelsDevDataPath(customPath?: string): string {
-    if (customPath) return customPath;
+    if (customPath) {
+        if (path.isAbsolute(customPath)) {
+            return customPath;
+        }
+        return path.resolve(process.cwd(), customPath);
+    }
 
     const currentDir = path.dirname(fileURLToPath(import.meta.url));
 
