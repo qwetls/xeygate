@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { ChatCompletionRequest, APIKeyZod } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
-import { Err, FormatErrorPayload, Ok } from "@/utils/response.js";
+import { Err, FormatErrorPayload, Ok, ToContentfulStatusCode } from "@/utils/response.js";
 
 function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequest {
     for (const msg of Body.messages) {
@@ -19,6 +19,11 @@ export class ChatController {
         );
         const ApiKeyRow = c.get("apiKeyRow") as APIKeyZod | undefined;
         const ApiKeyId = ApiKeyRow?.id;
+        const rawIp =
+            c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+            c.req.header("x-real-ip") ||
+            c.req.header("cf-connecting-ip") ||
+            "127.0.0.1";
 
         if (Body.stream) {
             return streamSSE(c, async (stream) => {
@@ -27,7 +32,8 @@ export class ChatController {
                         Body,
                         StartTime,
                         0,
-                        ApiKeyId
+                        ApiKeyId,
+                        rawIp
                     );
                     for await (const Chunk of Generator) {
                         await stream.writeSSE({
@@ -38,10 +44,18 @@ export class ChatController {
                         data: "[DONE]"
                     });
                 } catch (error) {
+                    const status =
+                        (error as { status?: number; statusCode?: number })?.status ||
+                        (error as { status?: number; statusCode?: number })?.statusCode ||
+                        (/no active provider connection|not found/i.test(
+                            error instanceof Error ? error.message : String(error)
+                        )
+                            ? 404
+                            : 500);
                     const ErrorMessage =
                         error instanceof Error ? error.message : "Error occurred during streaming";
                     await stream.writeSSE({
-                        data: JSON.stringify(FormatErrorPayload(ErrorMessage, 500))
+                        data: JSON.stringify(FormatErrorPayload(ErrorMessage, status))
                     });
                 }
             });
@@ -52,12 +66,21 @@ export class ChatController {
                 Body,
                 StartTime,
                 0,
-                ApiKeyId
+                ApiKeyId,
+                rawIp
             );
             return Ok(c, ResponseData);
         } catch (error) {
+            const status =
+                (error as { status?: number; statusCode?: number })?.status ||
+                (error as { status?: number; statusCode?: number })?.statusCode ||
+                (/no active provider connection|not found/i.test(
+                    error instanceof Error ? error.message : String(error)
+                )
+                    ? 404
+                    : 500);
             const ErrorMessage = error instanceof Error ? error.message : "Internal server error";
-            return Err(c, ErrorMessage, 500);
+            return Err(c, ErrorMessage, ToContentfulStatusCode(status));
         }
     }
 }

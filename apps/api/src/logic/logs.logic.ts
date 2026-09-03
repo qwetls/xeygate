@@ -1,8 +1,10 @@
 import {
+    getAllAPIKeysDB,
     getAnalyticsDB,
     getBucketSizeMs,
     getBucketCount,
     getRecentLogsDB,
+    getRequireApiKeyDB,
     getUsageByModelDB,
     getUsageSummaryDB,
     num
@@ -14,11 +16,44 @@ import type {
     RequestLogEntry,
     UsageStats
 } from "@srouter/types";
-import { formatCost } from "@srouter/pricing";
+import { formatCost, getPricingForModel, calculateCostBreakdownFromTokens } from "@srouter/pricing";
 
 export class LogsLogic {
     public static async getRecentLogs(limit: number = 50): Promise<RequestLogEntry[]> {
-        return getRecentLogsDB(limit);
+        const [logs, requireApiKey, keys] = await Promise.all([
+            getRecentLogsDB(limit),
+            getRequireApiKeyDB().catch(() => false),
+            getAllAPIKeysDB().catch(() => [])
+        ]);
+
+        const keyMap = new Map<string, string>();
+        for (const k of keys) {
+            keyMap.set(k.id, k.name);
+        }
+
+        return logs.map((log) => {
+            const pricing = getPricingForModel(log.providerId, log.resolvedModel || log.model);
+            const breakdown = calculateCostBreakdownFromTokens(
+                {
+                    prompt_tokens: log.promptTokens,
+                    completion_tokens: log.completionTokens,
+                    cached_tokens: log.cachedTokens,
+                    cache_creation_input_tokens: log.cacheCreationTokens,
+                    reasoning_tokens: log.reasoningTokens
+                },
+                pricing
+            );
+
+            const apiKeyId = requireApiKey ? log.apiKeyId : undefined;
+            const apiKeyName = apiKeyId ? keyMap.get(apiKeyId) : undefined;
+
+            return {
+                ...log,
+                apiKeyId,
+                apiKeyName,
+                costBreakdown: breakdown
+            };
+        });
     }
 
     public static async getUsageStats(): Promise<UsageStats> {

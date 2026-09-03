@@ -52,7 +52,10 @@ function ExtractStatusCode(
         }
     }
     const msg = typeof err === "string" ? err : err.message || String(err);
-    const match = msg.match(/\b(429|403|500|502|503|504|400|401|402|422)\b/);
+    if (/no active provider connection|not found|unknown model|invalid model|no provider found/i.test(msg)) {
+        return 404;
+    }
+    const match = msg.match(/\b(400|401|402|403|404|408|409|422|429|500|502|503|504)\b/);
     if (match) return parseInt(match[1]!, 10);
     return undefined;
 }
@@ -101,6 +104,7 @@ async function LogCompletion(
         fallbackPath?: string[];
         fallbackReason?: string;
         apiKeyId?: string;
+        ipAddress?: string;
     }
 ): Promise<void> {
     // Normalize alias/bare provider id to the registered base id so quota
@@ -125,6 +129,7 @@ async function LogCompletion(
 
     logRequestDB({
         apiKeyId: options.apiKeyId,
+        ipAddress: options.ipAddress,
         providerId: normalizedProviderId,
         model,
         promptTokens: options.statusCode === 200 ? breakdown.prompt_tokens : 0,
@@ -148,7 +153,8 @@ export class ChatLogic {
         body: ChatCompletionRequest,
         startTime: number,
         depth = 0,
-        apiKeyId?: string
+        apiKeyId?: string,
+        ipAddress?: string
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
@@ -218,7 +224,8 @@ export class ChatLogic {
                         followUpRequest,
                         startTime,
                         depth + 1,
-                        apiKeyId
+                        apiKeyId,
+                        ipAddress
                     );
                 }
 
@@ -228,7 +235,8 @@ export class ChatLogic {
                     fallbackOccurred,
                     fallbackPath,
                     fallbackReason,
-                    apiKeyId
+                    apiKeyId,
+                    ipAddress
                 });
 
                 return response;
@@ -245,12 +253,14 @@ export class ChatLogic {
         }
 
         const provider = originalModel.split("/")[0] || "default";
+        const errorStatusCode = ExtractStatusCode(lastError) ?? 500;
         LogCompletion(provider, originalModel, startTime, {
-            statusCode: 500,
+            statusCode: errorStatusCode,
             fallbackOccurred,
             fallbackPath,
             fallbackReason,
-            apiKeyId
+            apiKeyId,
+            ipAddress
         });
 
         throw lastError;
@@ -262,7 +272,8 @@ export class ChatLogic {
         body: ChatCompletionRequest,
         startTime: number,
         depth = 0,
-        apiKeyId?: string
+        apiKeyId?: string,
+        ipAddress?: string
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
@@ -393,7 +404,8 @@ export class ChatLogic {
                         followUpRequest,
                         startTime,
                         depth + 1,
-                        apiKeyId
+                        apiKeyId,
+                        ipAddress
                     );
                     return;
                 }
@@ -408,7 +420,8 @@ export class ChatLogic {
                     fallbackOccurred,
                     fallbackPath,
                     fallbackReason,
-                    apiKeyId
+                    apiKeyId,
+                    ipAddress
                 });
 
                 return;
@@ -423,12 +436,14 @@ export class ChatLogic {
                 }
 
                 const provider = currentModel.split("/")[0] || "default";
+                const errorStatusCode = ExtractStatusCode(err) ?? 500;
                 LogCompletion(provider, currentModel, startTime, {
-                    statusCode: 500,
+                    statusCode: errorStatusCode,
                     fallbackOccurred,
                     fallbackPath,
                     fallbackReason,
-                    apiKeyId
+                    apiKeyId,
+                    ipAddress
                 });
                 throw err;
             }

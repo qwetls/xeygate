@@ -3,6 +3,13 @@
 This file tracks schema changes that are not automatically handled by the
 declarative `initDatabase()` migration (see `packages/db/src/db.ts`).
 
+## 2026-09 — Add client ip_address column to request_logs
+
+**Change:** Added `ip_address` TEXT column to `request_logs` table for auditing and client request tracking.
+
+- Handled automatically by `initDatabase()` column sync (`ensureSync` in SQLite and column reflection in PostgreSQL).
+- Defaults to NULL for existing records; populated from request headers (`x-forwarded-for`, `x-real-ip`, `cf-connecting-ip`) on new completions.
+
 ## 2026-09 — Dual SQLite / PostgreSQL support (DATABASE_URL)
 
 **Change:** The database layer now supports PostgreSQL via `DATABASE_URL`
