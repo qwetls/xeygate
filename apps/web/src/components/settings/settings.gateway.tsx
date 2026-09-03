@@ -1,3 +1,4 @@
+import { Sliders } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { AppSettings } from "@/hooks/useSettings";
 import { SettingsSection, SettingsRow, SegmentedControl, ValueBadge } from "./settings.ui";
@@ -10,9 +11,11 @@ interface GatewaySettingsProps {
 export function GatewaySettings({ settings, updateSetting }: GatewaySettingsProps) {
     return (
         <SettingsSection
-            index="02"
-            title="Gateway"
-            description="Timeouts, retry behavior, and OAuth token refresh cadence."
+            id="gateway"
+            icon={Sliders}
+            tag="Proxy"
+            title="Gateway Operations"
+            description="Upstream response timeout thresholds, automatic 429 retry backoff, and OAuth token refresh cadences."
         >
             <SettingsRow
                 title="Request Timeout"

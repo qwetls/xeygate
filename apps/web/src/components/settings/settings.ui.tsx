@@ -1,32 +1,55 @@
-export function SettingsSection({
-    index,
-    title,
-    description,
-    children
-}: {
-    index?: string;
+interface SettingsSectionProps {
+    id?: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    tag?: string;
     title: string;
     description?: string;
+    badge?: React.ReactNode;
     children: React.ReactNode;
-}) {
+}
+
+export function SettingsSection({
+    id,
+    icon: Icon,
+    tag,
+    title,
+    description,
+    badge,
+    children
+}: SettingsSectionProps) {
     return (
-        <section className="py-8 first:pt-2 last:pb-2">
-            <div className="mb-5">
-                <div className="flex items-baseline gap-3">
-                    {index && (
-                        <span className="font-mono text-[10px] text-muted-foreground/50">
-                            {index}
-                        </span>
+        <section
+            id={id}
+            className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-2xs transition-all scroll-mt-20"
+        >
+            <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4 mb-2">
+                <div className="flex items-start gap-3.5">
+                    {Icon && (
+                        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-secondary/50 text-foreground shadow-2xs mt-0.5">
+                            <Icon className="size-4" />
+                        </div>
                     )}
-                    <h2 className="text-sm font-bold tracking-tight text-foreground">{title}</h2>
+                    <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h2 className="text-sm font-bold tracking-tight text-foreground">
+                                {title}
+                            </h2>
+                            {tag && (
+                                <span className="rounded-md border border-border/70 bg-secondary/40 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                    {tag}
+                                </span>
+                            )}
+                        </div>
+                        {description && (
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground max-w-2xl">
+                                {description}
+                            </p>
+                        )}
+                    </div>
                 </div>
-                {description && (
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                        {description}
-                    </p>
-                )}
+                {badge && <div className="shrink-0">{badge}</div>}
             </div>
-            <div className="divide-y divide-border/60">{children}</div>
+            <div className="divide-y divide-border/50">{children}</div>
         </section>
     );
 }

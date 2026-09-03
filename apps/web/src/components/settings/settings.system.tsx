@@ -64,9 +64,11 @@ export function SystemSettings({ apiBase }: SystemSettingsProps) {
 
     return (
         <SettingsSection
-            index="07"
-            title="System"
-            description="Runtime diagnostics, version info, and health checks."
+            id="system"
+            icon={Activity}
+            tag="Runtime"
+            title="System & Diagnostics"
+            description="Mesh node status, real-time gateway latency probes, and update channels."
         >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 py-2">
                 <div className="rounded-md border border-border/70 bg-muted/20 p-3 space-y-1.5">

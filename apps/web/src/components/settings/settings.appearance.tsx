@@ -1,4 +1,4 @@
-import { Check, Moon, Sun } from "lucide-react";
+import { Check, Moon, Sun, Palette } from "lucide-react";
 import type { AppSettings } from "@/hooks/useSettings";
 import { SettingsSection, SettingsRow, SegmentedControl } from "./settings.ui";
 
@@ -16,7 +16,13 @@ export function AppearanceSettings({
     updateSetting
 }: AppearanceSettingsProps) {
     return (
-        <SettingsSection index="03" title="Appearance" description="Theme mode and table density.">
+        <SettingsSection
+            id="appearance"
+            icon={Palette}
+            tag="UI"
+            title="Appearance & Interface"
+            description="Visual color theme preferences and dashboard table density settings."
+        >
             <SettingsRow
                 title="Color Theme"
                 control={

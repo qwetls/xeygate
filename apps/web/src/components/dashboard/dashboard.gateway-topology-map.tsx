@@ -350,10 +350,10 @@ function NodeDetailInspector({
             <div className="pt-3 border-t border-border/60">
                 {selectedNode.type === "core" ? (
                     <Link
-                        to="/token-saver"
+                        to="/settings"
                         className="flex w-full items-center justify-center gap-1.5 rounded-md border border-border/80 bg-secondary/50 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
                     >
-                        <span>Configure Token Saver</span>
+                        <span>Configure Settings</span>
                         <ExternalLink className="size-3 text-muted-foreground" />
                     </Link>
                 ) : (

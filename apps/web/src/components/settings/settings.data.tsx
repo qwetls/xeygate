@@ -77,11 +77,16 @@ export function DataSettings(props: DataSettingsProps) {
     };
 
     return (
-        <SettingsSection index="06" title="Data" description="Storage backup, import, and cleanup.">
+        <SettingsSection
+            id="data"
+            icon={HardDrive}
+            tag="Backup"
+            title="Local Data & Storage"
+            description="Client-side configuration snapshot backup, restore, and storage clearing."
+        >
             <div className="flex items-center justify-between py-2">
                 <div className="flex items-center gap-2">
-                    <HardDrive className="size-3.5 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-foreground">LocalStorage</span>
+                    <span className="text-xs font-semibold text-foreground">LocalStorage Usage</span>
                 </div>
                 <span className="font-mono text-[11px] font-bold tabular-nums text-foreground">
                     {formatBytes(stats.totalBytes)} ({stats.itemsCount} keys)

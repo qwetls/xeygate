@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check, ScrollText } from "lucide-react";
 import type { AppSettings } from "@/hooks/useSettings";
 import { Switch } from "@/components/ui/switch";
 import { SettingsSection, SettingsRow, SegmentedControl, ValueBadge } from "./settings.ui";
@@ -17,9 +17,11 @@ export function LoggingSettings({ settings, updateSetting }: LoggingSettingsProp
 
     return (
         <SettingsSection
-            index="04"
-            title="Logging"
-            description="Request payload capture and retention policies."
+            id="logging"
+            icon={ScrollText}
+            tag="Audit"
+            title="Logging & Privacy"
+            description="Request telemetry retention, token tracking granularity, and sensitive header redaction."
         >
             <div className="py-3">
                 <div className="flex gap-2">
