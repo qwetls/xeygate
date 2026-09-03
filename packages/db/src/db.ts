@@ -173,6 +173,7 @@ const TABLES: TableDef[] = [
         columns: [
             { name: "id", definition: "TEXT PRIMARY KEY" },
             { name: "api_key_id", definition: "TEXT" },
+            { name: "ip_address", definition: "TEXT" },
             { name: "provider_id", definition: "TEXT NOT NULL" },
             { name: "model", definition: "TEXT NOT NULL" },
             { name: "prompt_tokens", definition: "INTEGER NOT NULL DEFAULT 0" },
@@ -338,6 +339,7 @@ function initSqliteSchemaSync(): void {
         { name: "usage_cost", definition: "usage_cost REAL DEFAULT 0" }
     ]);
     ensureSync("request_logs", [
+        { name: "ip_address", definition: "ip_address TEXT" },
         { name: "cached_tokens", definition: "cached_tokens INTEGER NOT NULL DEFAULT 0" },
         { name: "cache_creation_tokens", definition: "cache_creation_tokens INTEGER NOT NULL DEFAULT 0" },
         { name: "reasoning_tokens", definition: "reasoning_tokens INTEGER NOT NULL DEFAULT 0" },

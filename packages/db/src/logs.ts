@@ -11,6 +11,7 @@ import { generateId, num, optStr, str } from "./row-utils.js";
 interface RequestLogRow {
     id: string;
     api_key_id: string | null;
+    ip_address: string | null;
     provider_id: string;
     model: string;
     prompt_tokens: number;
@@ -65,11 +66,12 @@ export async function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdA
     const CreatedAt = Date.now();
 
     await db.prepare(`
-        INSERT INTO request_logs (id, api_key_id, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO request_logs (id, api_key_id, ip_address, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         Id,
         entry.apiKeyId ?? null,
+        entry.ipAddress ?? null,
         entry.providerId,
         entry.model,
         entry.promptTokens,
@@ -224,6 +226,7 @@ function mapLogRow(row: RequestLogRow): RequestLogEntry {
     return {
         id: str(row.id),
         apiKeyId: optStr(row.api_key_id),
+        ipAddress: optStr(row.ip_address),
         providerId: str(row.provider_id),
         model: str(row.model),
         promptTokens: num(row.prompt_tokens),

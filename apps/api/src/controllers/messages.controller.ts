@@ -49,6 +49,11 @@ export class MessagesController {
         const ApiKeyId = ApiKeyRow?.id;
         const OpenAIReq = AnthropicToOpenAIRequest(body);
         const isThinkingEnabled = body.thinking?.type !== "disabled";
+        const rawIp =
+            c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ||
+            c.req.header("x-real-ip") ||
+            c.req.header("cf-connecting-ip") ||
+            "127.0.0.1";
 
         if (body.stream) {
             c.header("Content-Type", "text/event-stream");
@@ -61,7 +66,8 @@ export class MessagesController {
                         OpenAIReq,
                         startTime,
                         0,
-                        ApiKeyId
+                        ApiKeyId,
+                        rawIp
                     );
                     const AnthropicStream = OpenAIToAnthropicStream(chunkGenerator, body.model, {
                         allowThinking: isThinkingEnabled
@@ -74,11 +80,19 @@ export class MessagesController {
                         });
                     }
                 } catch (error) {
+                    const status =
+                        (error as { status?: number; statusCode?: number })?.status ||
+                        (error as { status?: number; statusCode?: number })?.statusCode ||
+                        (/no active provider connection|not found/i.test(
+                            error instanceof Error ? error.message : String(error)
+                        )
+                            ? 404
+                            : 500);
                     const errorMessage =
                         error instanceof Error ? error.message : "Error occurred during streaming";
                     await stream.writeSSE({
                         event: "error",
-                        data: JSON.stringify(FormatAnthropicErrorPayload(errorMessage, 500))
+                        data: JSON.stringify(FormatAnthropicErrorPayload(errorMessage, status))
                     });
                 }
             });
@@ -89,15 +103,24 @@ export class MessagesController {
                 OpenAIReq,
                 startTime,
                 0,
-                ApiKeyId
+                ApiKeyId,
+                rawIp
             );
             const AnthropicRes = OpenAIToAnthropicResponse(OpenAIRes, body.model, {
                 allowThinking: isThinkingEnabled
             });
             return Ok(c, AnthropicRes);
         } catch (error) {
+            const status =
+                (error as { status?: number; statusCode?: number })?.status ||
+                (error as { status?: number; statusCode?: number })?.statusCode ||
+                (/no active provider connection|not found/i.test(
+                    error instanceof Error ? error.message : String(error)
+                )
+                    ? 404
+                    : 500);
             const errorMessage = error instanceof Error ? error.message : "Internal server error";
-            return AnthropicErr(c, errorMessage, 500);
+            return AnthropicErr(c, errorMessage, status as never);
         }
     }
 }
