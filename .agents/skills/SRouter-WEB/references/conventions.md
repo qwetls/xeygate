@@ -1,12 +1,11 @@
 # Conventions
 
-## TypeScript & Schemas
+## TypeScript
 
 - use strict typing
 - avoid `any`
-- prefer inferred types from `@srouter/types` and TanStack Query hooks
-- **API Payloads & Contracts**: Consume and send API data contracts strictly using canonical `snake_case` fields (`base_url`, `api_key`, `rate_limit`, `usage_tokens`, `require_api_key`) matching backend schemas.
-- keep helper and component names PascalCase
+- prefer inferred types from hooks/schemas
+- keep helper names PascalCase
 - keep utility functions pure where possible
 
 ## React
