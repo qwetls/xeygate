@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Check, Copy, KeyRound, Eye, EyeOff } from "lucide-react";
+import { ShieldCheck, KeyRound, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -8,83 +8,22 @@ import { SettingsSection, SettingsRow, SegmentedControl } from "./settings.ui";
 
 interface SecuritySettingsProps {
     requireApiKey: boolean;
-    onToggleRequireApiKey: (value: boolean) => void;
+    onToggleRequireApiKey: (required: boolean) => void;
     isUpdating: boolean;
-    apiBase: string;
+    apiBase?: string;
 }
-
-type CodeTab = "curl" | "typescript" | "python";
 
 export function SecuritySettings({
     requireApiKey,
     onToggleRequireApiKey,
-    isUpdating,
-    apiBase
+    isUpdating
 }: SecuritySettingsProps) {
-    const [codeTab, setCodeTab] = useState<CodeTab>("curl");
-    const [copied, setCopied] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmation, setConfirmation] = useState("");
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [passwordError, setPasswordError] = useState<string | null>(null);
     const [showPasswords, setShowPasswords] = useState(false);
-
-    const getSnippet = (tab: CodeTab) => {
-        if (tab === "curl") {
-            return `curl ${apiBase}/chat/completions \\
-  -H "Content-Type: application/json" \\
-${
-    requireApiKey
-        ? '  -H "Authorization: Bearer sr-liv..._key" \\\n'
-        : '  # -H "Authorization: Bearer ***" \\\n'
-}  -d '{
-    "model": "antigravity/gemini-2.5-flash",
-    "messages": [
-      { "role": "user", "content": "Explain quantum computing in one sentence." }
-    ]
-  }'`;
-        }
-        if (tab === "typescript") {
-            return `import OpenAI from "openai";
-
-const client = new OpenAI({
-  baseURL: "${apiBase}",
-  apiKey: "${requireApiKey ? "sr-live-your_virtual_key" : "optional_or_any_string"}",
-});
-
-async function main() {
-  const response = await client.chat.completions.create({
-    model: "antigravity/gemini-2.5-flash",
-    messages: [{ role: "user", content: "Hello SRouter!" }],
-  });
-  console.log(response.choices[0].message.content);
-}
-main();`;
-        }
-        return `from openai import OpenAI
-
-client = OpenAI(
-    base_url="${apiBase}",
-    api_key="${requireApiKey ? "sr-live-your_virtual_key" : "optional_or_any_string"}"
-)
-response = client.chat.completions.create(
-    model="antigravity/gemini-2.5-flash",
-    messages=[{"role": "user", "content": "Hello SRouter!"}]
-)
-print(response.choices[0].message.content)`;
-    };
-
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(getSnippet(codeTab));
-            setCopied(true);
-            toast.success("Code snippet copied");
-            setTimeout(() => setCopied(false), 2000);
-        } catch {
-            toast.error("Failed to copy code snippet");
-        }
-    };
 
     const handleChangePassword = async (e: FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -119,9 +58,11 @@ print(response.choices[0].message.content)`;
 
     return (
         <SettingsSection
-            index="01"
-            title="Security"
-            description="API key enforcement and the admin control plane password."
+            id="security"
+            icon={ShieldCheck}
+            tag="Core"
+            title="Security & Access Control"
+            description="Virtual API key bearer verification and admin dashboard authentication."
         >
             <SettingsRow
                 title="Enforce Bearer Authentication"
@@ -142,38 +83,6 @@ print(response.choices[0].message.content)`;
                     />
                 }
             />
-
-            <div className="py-3.5">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Client Integration
-                    </span>
-                    <SegmentedControl
-                        options={[
-                            { value: "curl", label: "curl" },
-                            { value: "typescript", label: "ts" },
-                            { value: "python", label: "py" }
-                        ]}
-                        value={codeTab}
-                        onChange={setCodeTab}
-                    />
-                </div>
-                <div className="relative rounded-md border border-border/70 bg-background p-3 font-mono text-[10.5px] leading-relaxed text-foreground overflow-x-auto">
-                    <button
-                        type="button"
-                        onClick={handleCopy}
-                        className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                        {copied ? (
-                            <Check className="size-2.5 text-emerald-500" />
-                        ) : (
-                            <Copy className="size-2.5" />
-                        )}
-                        {copied ? "done" : "copy"}
-                    </button>
-                    <pre className="pr-14">{getSnippet(codeTab)}</pre>
-                </div>
-            </div>
 
             <div className="py-3.5">
                 <div className="mb-2 text-xs font-semibold text-foreground">Admin Password</div>

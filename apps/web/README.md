@@ -18,7 +18,6 @@ The dashboard currently exposes these main areas:
 | `/keys`                  | Virtual API key management              |
 | `/logs`                  | Request audit logs                      |
 | `/settings`              | Gateway configuration                   |
-| `/token-saver`           | Token Saver controls and test lab       |
 | `/combo`                 | Combined tooling / workflow view        |
 
 The app uses TanStack Router for file-based routing and TanStack Query for server state. The dashboard is designed to talk to the SRouter API rather than providers directly.
