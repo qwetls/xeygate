@@ -5,8 +5,59 @@ import type { LinkResult, ToolConfigContext, ToolStatus } from "../types/index.j
 import { ConfigStore, defaultStore } from "../lib/configStore.js";
 import { getOpenCodeConfigPath, isExecutableInPath } from "../lib/platform.js";
 import { fetchAvailableModels } from "../lib/srouterClient.js";
+import { getModelMetadata } from "@srouter/pricing";
+
+export interface OpenCodeModelConfig {
+    id?: string;
+    name: string;
+    attachment?: boolean;
+    modalities?: {
+        input?: string[];
+        output?: string[];
+    };
+}
+
+function createOpenCodeModelConfig(id: string, name?: string): OpenCodeModelConfig {
+    const displayName = name || formatModelDisplayName(id);
+    const config: OpenCodeModelConfig = {
+        id,
+        name: displayName
+    };
+
+    // Check metadata from @srouter/pricing (pricing.jsonc / models.jsonc)
+    const meta = getModelMetadata(id);
+    if (meta?.modalities?.input?.includes("image") || meta?.attachment) {
+        config.attachment = true;
+        config.modalities = {
+            input: meta.modalities?.input || ["text", "image"],
+            output: meta.modalities?.output || ["text"]
+        };
+    } else {
+        // Heuristic fallback for known multimodal model families
+        const lower = id.toLowerCase();
+        const isKnownVision =
+            lower.includes("gemini") ||
+            lower.includes("vision") ||
+            lower.includes("gpt-4o") ||
+            lower.includes("claude-3") ||
+            lower.includes("claude-sonnet") ||
+            lower.includes("claude-opus") ||
+            lower.includes("pixtral");
+
+        if (isKnownVision) {
+            config.attachment = true;
+            config.modalities = {
+                input: ["text", "image"],
+                output: ["text"]
+            };
+        }
+    }
+
+    return config;
+}
 
 export const DEFAULT_SROUTER_MODELS: Array<{ id: string; name: string }> = [
+
     { id: "anthropic/claude-3-7-sonnet", name: "Claude 3.7 Sonnet (Anthropic)" },
     { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet" },
     { id: "anthropic/claude-3-5-sonnet", name: "Claude 3.5 Sonnet (Anthropic)" },
@@ -206,20 +257,24 @@ export class OpenCodeAdapter extends AbstractToolAdapter {
         const existingSrouter = data.provider.srouter || {};
         const existingModels = existingSrouter.models || {};
 
-        const modelsMap: Record<string, { id?: string; name: string }> = {};
+        const modelsMap: Record<string, OpenCodeModelConfig> = {};
 
         // 1. Seed with default catalog
         for (const m of DEFAULT_SROUTER_MODELS) {
-            modelsMap[m.id] = {
-                id: m.id,
-                name: m.name
-            };
+            modelsMap[m.id] = createOpenCodeModelConfig(m.id, m.name);
         }
 
-        // 2. Retain existing models from user config
+        // 2. Retain existing models from user config (enriching with vision/capabilities if missing)
         for (const [key, val] of Object.entries(existingModels)) {
             if (val && typeof val === "object") {
-                modelsMap[key] = val as { id?: string; name: string };
+                const existingVal = val as OpenCodeModelConfig;
+                const fresh = createOpenCodeModelConfig(key, existingVal.name);
+                modelsMap[key] = {
+                    ...fresh,
+                    ...existingVal,
+                    ...(fresh.attachment !== undefined && { attachment: fresh.attachment }),
+                    ...(fresh.modalities !== undefined && { modalities: fresh.modalities })
+                };
             }
         }
 
@@ -235,10 +290,7 @@ export class OpenCodeAdapter extends AbstractToolAdapter {
                 const cleanId = rawId.startsWith("srouter/")
                     ? rawId.replace(/^srouter\//, "")
                     : rawId;
-                modelsMap[cleanId] = {
-                    id: cleanId,
-                    name: formatModelDisplayName(cleanId)
-                };
+                modelsMap[cleanId] = createOpenCodeModelConfig(cleanId);
             }
         } catch {
             // Silently fall back to default catalog
@@ -250,10 +302,10 @@ export class OpenCodeAdapter extends AbstractToolAdapter {
             ? rawModel.replace(/^srouter\//, "")
             : rawModel;
 
-        modelsMap[cleanModelId] = {
-            id: cleanModelId,
-            name: modelsMap[cleanModelId]?.name || formatModelDisplayName(cleanModelId)
-        };
+        modelsMap[cleanModelId] = createOpenCodeModelConfig(
+            cleanModelId,
+            modelsMap[cleanModelId]?.name
+        );
 
         data.provider.srouter = {
             name: "SRouter",

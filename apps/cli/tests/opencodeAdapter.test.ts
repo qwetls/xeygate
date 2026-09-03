@@ -55,10 +55,17 @@ test("OpenCodeAdapter - link and unlink lifecycle", async () => {
         const models = savedConfig.provider.srouter.models;
         assert.ok(models["claude-3-7-sonnet"]);
         assert.equal(models["claude-3-7-sonnet"].name, "Claude 3.7 Sonnet");
+        assert.equal(models["claude-3-7-sonnet"].attachment, true);
+        assert.deepEqual(models["claude-3-7-sonnet"].modalities, {
+            input: ["text", "image", "pdf"],
+            output: ["text"]
+        });
         assert.ok(models["antigravity/gemini-2.5-pro"]);
         assert.equal(models["antigravity/gemini-2.5-pro"].name, "Gemini 2.5 Pro (Antigravity)");
+        assert.equal(models["antigravity/gemini-2.5-pro"].attachment, true);
         assert.ok(models["openai_codex/gpt-4o"]);
         assert.equal(models["openai_codex/gpt-4o"].name, "GPT-4o (OpenAI Codex)");
+        assert.equal(models["openai_codex/gpt-4o"].attachment, true);
         assert.ok(models["nemotron-3.5-lightning-free"]);
         assert.equal(models["nemotron-3.5-lightning-free"].name, "Nemotron 3.5 Lightning Free");
 
