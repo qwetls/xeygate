@@ -377,21 +377,41 @@ export class ProviderRegistry {
             }
         }
 
-        // 2. Prefix matching for provider ID or alias (e.g., qd/*, qoder/*, antigravity/*, openai/*)
+        // 2. Prefix matching for provider ID or alias (e.g., qd/*, qoder/*, antigravity/*, openai/*).
+        // Custom provider aliases are first-class routing keys and must win over
+        // any built-in provider namespace — a custom alias is matched before
+        // falling back to built-in provider type resolution.
         if (candidates.length === 0) {
             const prefix = modelId.includes("/") ? (modelId.split("/")[0] ?? modelId) : modelId;
-            const targetBaseId = providerTypeForAlias(prefix) ?? prefix;
-            for (const [id, provider] of this.providers.entries()) {
-                if (id === "default") continue;
-                const baseId = providerBaseId(id);
-                const alias = providerAliasFor(provider);
-                if (
-                    isProviderBaseId(id, prefix) ||
-                    isProviderBaseId(id, targetBaseId) ||
-                    prefix === alias ||
-                    targetBaseId === baseId
-                ) {
-                    candidates.push(provider);
+            const exactAlias = Array.from(this.providers.values()).find(
+                (provider) =>
+                    provider.id !== "default" && provider.alias && provider.alias === prefix
+            );
+            if (exactAlias) {
+                candidates.push(exactAlias);
+            } else {
+                // Fallback: derived alias (via constants catalog) or base ID matching
+                const derivedAlias = Array.from(this.providers.values()).find(
+                    (provider) =>
+                        provider.id !== "default" && providerAliasFor(provider) === prefix
+                );
+                if (derivedAlias) {
+                    candidates.push(derivedAlias);
+                } else {
+                    const targetBaseId = providerTypeForAlias(prefix) ?? prefix;
+                    for (const [id, provider] of this.providers.entries()) {
+                        if (id === "default") continue;
+                        const baseId = providerBaseId(id);
+                        const alias = providerAliasFor(provider);
+                        if (
+                            isProviderBaseId(id, prefix) ||
+                            isProviderBaseId(id, targetBaseId) ||
+                            prefix === alias ||
+                            targetBaseId === baseId
+                        ) {
+                            candidates.push(provider);
+                        }
+                    }
                 }
             }
         }

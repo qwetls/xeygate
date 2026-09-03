@@ -2,7 +2,8 @@ import {
     DEFAULT_PROVIDER_MAP,
     isProviderCategory,
     isSeedProvider,
-    providerAlias
+    providerAlias,
+    providerBaseId
 } from "@srouter/constants";
 import type {
     CreateProviderZod,
@@ -149,6 +150,12 @@ async function CatalogWithSavedProviders(): Promise<ProviderDefinition[]> {
     }
 
     return Catalog;
+}
+
+function RuntimeAliasFor(ProviderId: string): string {
+    const Registered = registry.getAllProviders().get(ProviderId);
+    if (Registered?.alias) return Registered.alias;
+    return providerAlias(providerBaseId(ProviderId));
 }
 
 export class ProvidersLogic {
@@ -308,9 +315,9 @@ export class ProvidersLogic {
             );
 
         await addCustomModelDB(Id, Trimmed);
-        const FullId = `${providerAlias(Id)}/${Trimmed}`;
+        const FullId = `${RuntimeAliasFor(Id)}/${Trimmed}`;
         registry.clearModelsCache();
-        return { id: FullId, object: "model", owned_by: providerAlias(Id) };
+        return { id: FullId, object: "model", owned_by: RuntimeAliasFor(Id) };
     }
 
     public static async DeleteCustomModel(ProviderId: string, ModelId: string): Promise<void> {
@@ -337,7 +344,7 @@ export class ProvidersLogic {
     }
 
     public static async ListCustomModels(ProviderId: string): Promise<ModelObject[]> {
-        const Alias = providerAlias(ProviderId.toLowerCase());
+        const Alias = RuntimeAliasFor(ProviderId.toLowerCase());
         return (await getCustomModelsByProviderDB(ProviderId.toLowerCase())).map((Row) => ({
             id: `${Alias}/${Row.modelId}`,
             object: "model" as const,

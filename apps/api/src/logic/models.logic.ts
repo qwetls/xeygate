@@ -62,7 +62,7 @@ export class ModelsLogic {
             Merged.set(M.id.toLowerCase(), M);
         }
         for (const Row of Rows) {
-            const Alias = providerAlias(providerBaseId(Row.providerId));
+            const Alias = this.AliasForProviderId(Row.providerId);
             const Id = `${Alias}/${Row.modelId}`;
             if (ProviderFilter && !Alias.toLowerCase().startsWith(ProviderFilter.toLowerCase())) {
                 continue;
@@ -75,6 +75,18 @@ export class ModelsLogic {
             });
         }
         return Array.from(Merged.values());
+    }
+
+    /**
+     * Resolve the human-facing model prefix for a provider id. Custom providers
+     * carry UUID ids whose base identity is the UUID itself, so the runtime
+     * alias (registered executor's alias) must win over the built-in alias
+     * lookup, which would otherwise echo the UUID back as the model prefix.
+     */
+    private static AliasForProviderId(ProviderId: string): string {
+        const Registered = registry.getAllProviders().get(ProviderId);
+        if (Registered?.alias) return Registered.alias;
+        return providerAlias(providerBaseId(ProviderId));
     }
 
     public static async GetModelById(
