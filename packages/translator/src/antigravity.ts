@@ -973,6 +973,15 @@ export function parseRetryFromErrorMessage(errorMessage?: string): number | null
 // Strip any {alias}/ or {providerId}/ prefix and map to Google CloudCode internal model names
 export function parseAntigravityModelName(rawModel: string): string {
     const model = rawModel.includes("/") ? (rawModel.split("/")[1] ?? rawModel) : rawModel;
+    if (model === "gemini-3.8-flash-high") {
+        return "gemini-3.8-flash-tiered";
+    }
+    if (model === "gemini-3.8-flash-medium") {
+        return "gemini-3.8-flash-tiered";
+    }
+    if (model === "gemini-3.8-flash-low") {
+        return "gemini-3.8-flash-tiered";
+    }
     if (model === "gemini-3.7-flash-high") {
         return "gemini-3.7-flash-tiered";
     }

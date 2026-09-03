@@ -172,7 +172,7 @@ oauthApp.route("/v1", ChatRouter);
 oauthApp.route("/v1", ModelsRouter);
 
 const oauthPort = Number(process.env.OAUTH_PORT) || 1455;
-const oauthHost = process.env.OAUTH_HOST || "127.0.0.1";
+const oauthHost = process.env.OAUTH_HOST || "0.0.0.0";
 
 async function boot(): Promise<void> {
     // Postgres schema init is async — await it before serving any request

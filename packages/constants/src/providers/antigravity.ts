@@ -19,6 +19,9 @@ export interface AntigravityModelDefinition {
 }
 
 export const ANTIGRAVITY_MODELS: AntigravityModelDefinition[] = [
+    { id: "gemini-3.8-flash-high", name: "Gemini 3.8 Flash (High)" },
+    { id: "gemini-3.8-flash-medium", name: "Gemini 3.8 Flash (Medium)" },
+    { id: "gemini-3.8-flash-low", name: "Gemini 3.8 Flash (Low)" },
     { id: "gemini-3.7-flash-high", name: "Gemini 3.7 Flash (High)" },
     { id: "gemini-3.7-flash-medium", name: "Gemini 3.7 Flash (Medium)" },
     { id: "gemini-3.7-flash-low", name: "Gemini 3.7 Flash (Low)" },
