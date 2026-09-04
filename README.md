@@ -237,6 +237,14 @@ pnpm build
 
 ---
 
+## 💬 Community & Updates
+
+For the latest news, updates, and community discussions, follow our official WhatsApp Channel:
+
+👉 [**Follow SRouter WhatsApp Channel**](https://whatsapp.com/channel/0029VbDF7112P59gQ8Z3D43K)
+
+---
+
 ## 📄 License
 
 Distributed under the [MIT License](LICENSE).
