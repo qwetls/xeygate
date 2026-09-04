@@ -39,6 +39,9 @@
   - Implement `ImageGenerationRequestSchema`:
     - `prompt`: `z.string().min(1).max(32000)`
     - `model`: `z.string().optional().default("dall-e-3")`
+    - `image`: `z.union([z.string(), z.array(z.string())]).optional()` (img2img input image base64 or URL)
+    - `images`: `z.array(z.string()).optional()` (multi-reference img2img input)
+    - `mask`: `z.string().optional()` (in-painting mask)
     - `n`: `z.number().int().min(1).max(10).optional().default(1)`
     - `quality`: `z.enum(["standard", "hd", "low", "medium", "high", "auto"]).optional().default("auto")`
     - `response_format`: `z.enum(["url", "b64_json"]).optional().default("url")`

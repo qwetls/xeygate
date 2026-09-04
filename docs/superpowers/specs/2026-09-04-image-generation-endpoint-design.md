@@ -29,6 +29,8 @@ This specification outlines adding standard OpenAI-compatible image generation r
 {
   "prompt": "A futuristic city in watercolor style",
   "model": "dall-e-3",
+  "image": "data:image/png;base64,...",
+  "mask": "data:image/png;base64,...",
   "n": 1,
   "quality": "standard",
   "response_format": "url",
@@ -41,6 +43,8 @@ This specification outlines adding standard OpenAI-compatible image generation r
 #### Fields & Constraints (OpenAI OpenAPI Standard):
 - `prompt` (string, required): Text description of the desired image(s). Max 1000 characters for `dall-e-2`, 4000 for `dall-e-3`, up to 32000 for GPT image models.
 - `model` (string, optional, default: `"dall-e-2"` or `"dall-e-3"`): ID or alias of the model to use. Supports model mapping / provider prefix (e.g. `openai/dall-e-3`, `openrouter/stabilityai/stable-diffusion-3`).
+- `image` (string | array of string, optional): Input image for **img2img / image editing**. Accepts base64 data URL (`data:image/png;base64,...`), raw base64 string, or external image URL (`https://...`). Also supports array of image references (`images`) for multi-reference models.
+- `mask` (string, optional): Transparent mask image for inpainting / selective image editing (base64 data URL or external URL).
 - `n` (integer, optional, default: `1`): Number of images to generate (1 to 10). Note: `dall-e-3` only supports `n=1`.
 - `quality` (string, optional, default: `"auto"` or `"standard"`): `"standard"`, `"hd"` (`dall-e-3`), or `"low"`, `"medium"`, `"high"`, `"auto"` (GPT image models).
 - `response_format` (string, optional, default: `"url"`): `"url"` or `"b64_json"`.
