@@ -4,6 +4,10 @@ import type {
     ChatCompletionResponse,
     ModelObject
 } from "./openai.js";
+import type {
+    ImageGenerationRequest,
+    ImageGenerationResponse
+} from "./images.js";
 
 // --- Provider Spectrum & Catalog Types ---
 export type ProviderCategory = "oauth" | "free_tier" | "api_key" | "custom_provider";
@@ -69,4 +73,5 @@ export interface AIProvider {
     chatCompletionStream(
         req: ChatCompletionRequest
     ): AsyncGenerator<ChatCompletionChunk, void, void>;
+    generateImage?(req: ImageGenerationRequest): Promise<ImageGenerationResponse>;
 }

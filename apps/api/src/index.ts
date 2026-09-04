@@ -15,6 +15,7 @@ import { ProvidersRouter } from "@/routes/v1/providers.js";
 import { QuotaRouter } from "@/routes/v1/quota.js";
 import { SettingsRouter } from "@/routes/v1/settings.js";
 import { TunnelRouter } from "@/routes/v1/tunnel.js";
+import imagesRouter from "@/routes/v1/images.js";
 import { CreateCorsMiddleware, ParseAllowedOrigins } from "@/middleware/Cors.js";
 import { CreateCsrfOriginGuard } from "@/middleware/CsrfOrigin.js";
 import { CreateBodyLimitMiddleware } from "@/middleware/BodyLimit.js";
@@ -129,6 +130,7 @@ app.route("/v1", LogsRouter);
 app.route("/v1", AuthRouter);
 app.route("/v1", QuotaRouter);
 app.route("/v1", SettingsRouter);
+app.route("/v1/images", imagesRouter);
 
 // Cloudflare Tunnel management (admin-only; guard lives inside TunnelRouter)
 app.route("/v1", TunnelRouter);

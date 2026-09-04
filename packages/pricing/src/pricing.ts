@@ -246,6 +246,27 @@ export function calculateCostBreakdownFromTokens(
 }
 
 /**
+ * Checks whether a given model supports image generation (and optionally img2img input),
+ * querying metadata directly from models.jsonc.
+ */
+export function isImageGenerationSupported(model: string, hasInputImage: boolean = false): boolean {
+    if (!model) return false;
+
+    const metadata = getModelMetadata(model);
+    if (metadata?.modalities?.output) {
+        const outputSupportsImage = metadata.modalities.output.includes("image");
+        if (!outputSupportsImage) return false;
+
+        if (hasInputImage && metadata.modalities.input) {
+            return metadata.modalities.input.includes("image");
+        }
+        return true;
+    }
+
+    return false;
+}
+
+/**
  * Formats cost for display (e.g. "$0.00").
  */
 export function formatCost(cost: number): string {
