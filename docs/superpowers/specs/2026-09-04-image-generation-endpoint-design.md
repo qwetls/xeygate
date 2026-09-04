@@ -57,7 +57,12 @@ This specification outlines adding standard OpenAI-compatible image generation r
       "url": "https://oaidalleapiprodscus.blob.core.windows.net/...",
       "revised_prompt": "A modern watercolor painting of a towering futuristic metropolis with neon accents..."
     }
-  ]
+  ],
+  "usage": {
+    "total_tokens": 0,
+    "input_tokens": 0,
+    "output_tokens": 0
+  }
 }
 ```
 
