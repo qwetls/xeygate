@@ -2,7 +2,7 @@
 
 - **Author**: Seaavey & Hermes
 - **Date**: 2026-09-04
-- **Status**: Draft — awaiting approval
+- **Status**: Approved — ready for implementation
 
 ---
 
