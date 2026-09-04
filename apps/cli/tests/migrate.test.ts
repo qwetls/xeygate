@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { DatabaseSync } from "node:sqlite";
+import { getDatabasePath } from "@srouter/db";
 import { migrateCommand } from "../src/commands/migrate.js";
 
 test("9Router database migration imports SQLite tables safely", async () => {
@@ -36,7 +37,8 @@ test("9Router database migration imports SQLite tables safely", async () => {
         yes: true
     });
 
-    const targetDbPath = path.join(os.homedir(), ".srouter", "srouter.db");
+    // Isolated test database (redirected by tests/setup.ts) — never production.
+    const targetDbPath = getDatabasePath();
     assert.equal(fs.existsSync(targetDbPath), true);
 
     const targetDb = new DatabaseSync(targetDbPath);
@@ -107,7 +109,8 @@ test("9Router JSON backup export imports providers, apiKeys and customModels saf
         yes: true
     });
 
-    const targetDbPath = path.join(os.homedir(), ".srouter", "srouter.db");
+    // Isolated test database (redirected by tests/setup.ts) — never production.
+    const targetDbPath = getDatabasePath();
     const targetDb = new DatabaseSync(targetDbPath);
 
     const provider1 = targetDb.prepare("SELECT * FROM providers WHERE id = ?").get("conn-123") as Record<string, unknown>;

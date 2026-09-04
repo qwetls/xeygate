@@ -20,13 +20,14 @@ afterEach(async () => {
 /**
  * Seeds `rows` into the 1h analytics window at a deterministic `created_at`
  * inside a fresh minute-bucket. Uses raw SQL so the timestamp is controlled —
- * `logRequestDB` forces `created_at = Date.now()`, which can collide with live
- * traffic in a shared dev DB. Skips backward in 1-min steps until it finds an
- * empty bucket, so the exact token sums asserted below are hermetic.
+ * `logRequestDB` forces `created_at = Date.now()`, which can collide with
+ * other tests sharing this isolated test database (see tests/setup.ts).
+ * Skips backward in 1-min steps until it finds an empty bucket, so the
+ * exact token sums asserted below are hermetic.
  */
 async function seedIntoEmptyBucket(rows: Array<Omit<RequestLogEntry, "id" | "createdAt">>) {
-    // Clear all existing logs so we always find an empty bucket (avoids flaky
-    // race with other tests that share the same global DB).
+    // Clear test-database logs so we always find an empty bucket (avoids flaky
+    // race with other tests that share the same isolated test DB).
     await db.prepare("DELETE FROM request_logs").run();
 
     const BucketSizeMs = 60_000;
