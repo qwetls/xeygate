@@ -17,7 +17,7 @@
         "build": "tsup",
         "clean": "rm -rf dist",
         "start": "node dist/index.js",
-        "test": "tsx --test --test-concurrency=1 tests/**/*.test.ts"
+        "test": "NODE_ENV=test tsx --test --test-concurrency=1 --import ./tests/setup.ts tests/**/*.test.ts"
     },
     "dependencies": {
         "@hono/node-server": "^2.1.0",

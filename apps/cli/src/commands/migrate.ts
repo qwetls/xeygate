@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import * as p from "@clack/prompts";
 import { DatabaseSync } from "node:sqlite";
-import { DEFAULT_DB_PATH, initDatabase, LEGACY_DB_LOCATIONS, SROUTER_DIR } from "@srouter/db";
+import { getDatabasePath, initDatabase, LEGACY_DB_LOCATIONS } from "@srouter/db";
 import { formatError, formatInfo, formatSuccess, formatWarning, pc } from "../lib/ui.js";
 
 type SqliteValue = string | number | bigint | Uint8Array | null;
@@ -214,8 +214,16 @@ export interface MigrateCommandOptions {
     action?: "copy" | "merge" | "backup_and_replace";
 }
 
-const TargetDbPath = DEFAULT_DB_PATH;
-const BackupDir = path.join(SROUTER_DIR, "backups");
+/** Resolved lazily (not at import) so tests can redirect via `DATABASE_PATH`
+ * to an isolated file instead of the production database. */
+function getTargetDbPath(): string {
+    return getDatabasePath();
+}
+
+/** Backups live next to the target database (isolated automatically in tests). */
+function getBackupDir(targetDbPath: string): string {
+    return path.join(path.dirname(targetDbPath), "backups");
+}
 
 const NineRouterDbLocations = [
     path.join(os.homedir(), ".9router", "srouter.db"),
@@ -234,14 +242,14 @@ function fileKb(filePath: string): string {
     return `${(fs.statSync(filePath).size / 1024).toFixed(2)} KB`;
 }
 
-function ensureDirs(): void {
-    fs.mkdirSync(SROUTER_DIR, { recursive: true, mode: 0o700 });
-    fs.mkdirSync(BackupDir, { recursive: true, mode: 0o755 });
+function ensureDirs(targetDbPath: string): void {
+    fs.mkdirSync(path.dirname(targetDbPath), { recursive: true, mode: 0o700 });
+    fs.mkdirSync(getBackupDir(targetDbPath), { recursive: true, mode: 0o755 });
 }
 
-function backupDb(source: string, label: string): string {
+function backupDb(source: string, label: string, targetDbPath: string): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const backupPath = path.join(BackupDir, `${label}-backup-${timestamp}.db`);
+    const backupPath = path.join(getBackupDir(targetDbPath), `${label}-backup-${timestamp}.db`);
     fs.copyFileSync(source, backupPath);
     p.log.step(`Backed up to ${pc.dim(backupPath)}`);
     return backupPath;
@@ -327,9 +335,10 @@ function findDatabase(candidates: string[], label: string): string | null {
 
 async function migrateDb(options: MigrateCommandOptions): Promise<void> {
     p.intro("SRouter Database Migration");
+    const targetDbPath = getTargetDbPath();
 
-    if (fs.existsSync(TargetDbPath)) {
-        p.log.warn(`Database already exists at ${TargetDbPath} (${fileKb(TargetDbPath)})`);
+    if (fs.existsSync(targetDbPath)) {
+        p.log.warn(`Database already exists at ${targetDbPath} (${fileKb(targetDbPath)})`);
         p.outro("No migration needed — already using the new location.");
         return;
     }
@@ -342,13 +351,13 @@ async function migrateDb(options: MigrateCommandOptions): Promise<void> {
     if (!source) {
         p.log.error("No existing database found.");
         p.outro(
-            `Start SRouter and a fresh database will be created at ${TargetDbPath}, ` +
+            `Start SRouter and a fresh database will be created at ${targetDbPath}, ` +
                 "or pass --source /path/to/srouter.db."
         );
         return;
     }
 
-    ensureDirs();
+    ensureDirs(targetDbPath);
     const proceed =
         options.yes || (await p.confirm({ message: `Migrate database from ${source}?` })) === true;
 
@@ -358,10 +367,10 @@ async function migrateDb(options: MigrateCommandOptions): Promise<void> {
     }
 
     try {
-        backupDb(source, "srouter");
-        fs.copyFileSync(source, TargetDbPath);
-        fs.chmodSync(TargetDbPath, 0o600);
-        p.log.success(`Database moved to ${TargetDbPath}`);
+        backupDb(source, "srouter", targetDbPath);
+        fs.copyFileSync(source, targetDbPath);
+        fs.chmodSync(targetDbPath, 0o600);
+        p.log.success(`Database moved to ${targetDbPath}`);
         p.outro("Restart SRouter to use the migrated database.");
     } catch (error) {
         p.log.error(formatError(`Migration failed: ${(error as Error).message}`));
@@ -432,14 +441,15 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
         return;
     }
 
-    const existingTarget = fs.existsSync(TargetDbPath);
+    const targetDbPath = getTargetDbPath();
+    const existingTarget = fs.existsSync(targetDbPath);
     let action: "copy" | "merge" | "backup_and_replace" = options.action ?? "copy";
 
     if (existingTarget && !options.action) {
         if (options.yes) {
             action = "merge";
         } else {
-            p.log.warn(`Existing SRouter database found at ${TargetDbPath} (${fileKb(TargetDbPath)})`);
+            p.log.warn(`Existing SRouter database found at ${targetDbPath} (${fileKb(targetDbPath)})`);
             const choice = await p.select({
                 message: "How should the existing SRouter database be handled?",
                 options: [
@@ -465,12 +475,12 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
         return;
     }
 
-    ensureDirs();
-    const sourceBackup = backupDb(source, "9router");
+    ensureDirs(targetDbPath);
+    const sourceBackup = backupDb(source, "9router", targetDbPath);
 
     let targetBackup: string | null = null;
     if (action === "backup_and_replace") {
-        targetBackup = backupDb(TargetDbPath, "srouter");
+        targetBackup = backupDb(targetDbPath, "srouter", targetDbPath);
     }
 
     const s = p.spinner();
@@ -478,7 +488,7 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
         s.start("Preparing target database");
         await initDatabase();
 
-        const targetDb = new DatabaseSync(TargetDbPath);
+        const targetDb = new DatabaseSync(targetDbPath);
         targetDb.exec("PRAGMA foreign_keys = OFF;");
 
         let inserted = 0;
@@ -581,7 +591,7 @@ async function migrateNineRouter(options: MigrateCommandOptions): Promise<void> 
                 `Rows/Items inserted: ${inserted}`,
                 `Rows/Items skipped: ${skipped}`,
                 `Source: ${source}`,
-                `Target: ${TargetDbPath}`
+                `Target: ${targetDbPath}`
             ].join("\n")
         );
 
