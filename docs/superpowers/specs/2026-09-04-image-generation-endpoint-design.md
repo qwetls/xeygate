@@ -96,10 +96,14 @@ apps/api/src/routes/v1/images.ts
   └── ImagesController.Generate
         └── ImagesLogic.generate()
               ├── ApiKeyAuth / RateLimit Check
+              ├── Model capability validation (@srouter/pricing getModelMetadata)
+              │     └── Verify `modalities.output` includes `"image"`
+              │     └── If not supported: raise 400 HTTPException ("Model '<model>' does not support image generation.")
               ├── Model resolution & provider routing (resolveProvider)
               ├── Fallback chain execution
               ├── Packages:
               │     ├── @srouter/types: ImageGenerationRequest & Response schemas
+              │     ├── @srouter/pricing: getModelMetadata / modalities output validation
               │     ├── @srouter/translator: translateImageRequest / translateImageResponse
               │     ├── @srouter/executors: ImageExecutor or ProviderExecutor.generateImage()
               │     └── @srouter/db: request_logs persistence
@@ -116,6 +120,21 @@ apps/api/src/routes/v1/images.ts
    - Calls `ImagesLogic.generate()`.
    - Returns standard JSON response or raises `HTTPException`.
 3. **`apps/api/src/logic/images.logic.ts`**:
+   - **Model Modality Validation**:
+     - Uses `getModelMetadata(model)` from `@srouter/pricing` (which queries `models.jsonc`).
+     - Checks if `metadata.modalities.output` contains `"image"`.
+     - For known image models not yet cataloged (e.g. `dall-e-2`, `dall-e-3`), provides a known fallback allowlist.
+     - If the requested model does NOT support image output (e.g. text-only model like `deepseek-chat`, `gpt-4o`, `claude-sonnet-4`), immediately throws a `400 Bad Request`:
+       ```json
+       {
+         "error": {
+           "message": "Model 'claude-sonnet-4' does not support image generation. Output modalities do not include 'image'.",
+           "type": "invalid_request_error",
+           "param": "model",
+           "code": "model_not_supported"
+         }
+       }
+       ```
    - Resolves provider based on model prefix or default catalog.
    - Executes image generation request with fallback retry runner.
    - Records request log into SQLite `request_logs`.
