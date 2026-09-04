@@ -38,14 +38,16 @@ This specification outlines adding standard OpenAI-compatible image generation r
 }
 ```
 
-#### Fields & Constraints:
-- `prompt` (string, required): Text description of the desired image(s). Max 1000 characters for dall-e-2, 4000 for dall-e-3.
-- `model` (string, optional, default: `"dall-e-3"`): ID or alias of the model to use. Supports model mapping / provider prefix (e.g. `openai/dall-e-3`, `openrouter/stabilityai/stable-diffusion-3`).
-- `n` (integer, optional, default: `1`): Number of images to generate. Must be between 1 and 10.
-- `quality` (string, optional, default: `"standard"`): `"standard"` or `"hd"` (model-dependent).
+#### Fields & Constraints (OpenAI OpenAPI Standard):
+- `prompt` (string, required): Text description of the desired image(s). Max 1000 characters for `dall-e-2`, 4000 for `dall-e-3`, up to 32000 for GPT image models.
+- `model` (string, optional, default: `"dall-e-2"` or `"dall-e-3"`): ID or alias of the model to use. Supports model mapping / provider prefix (e.g. `openai/dall-e-3`, `openrouter/stabilityai/stable-diffusion-3`).
+- `n` (integer, optional, default: `1`): Number of images to generate (1 to 10). Note: `dall-e-3` only supports `n=1`.
+- `quality` (string, optional, default: `"auto"` or `"standard"`): `"standard"`, `"hd"` (`dall-e-3`), or `"low"`, `"medium"`, `"high"`, `"auto"` (GPT image models).
 - `response_format` (string, optional, default: `"url"`): `"url"` or `"b64_json"`.
-- `size` (string, optional, default: `"1024x1024"`): Dimensions of the generated images (`256x256`, `512x512`, `1024x1024`, `1024x1792`, `1792x1024`).
-- `style` (string, optional, default: `"vivid"`): `"vivid"` or `"natural"`.
+- `size` (string, optional, default: `"1024x1024"`): Dimensions of the generated images (`256x256`, `512x512`, `1024x1024`, `1024x1536`, `1536x1024`, `1024x1792`, `1792x1024`, or arbitrary for newer models).
+- `style` (string, optional, default: `"vivid"`): `"vivid"` or `"natural"` (`dall-e-3` only).
+- `user` (string, optional): Unique end-user identifier for abuse detection.
+- `partial_images` (integer, optional, min 0, max 3): Number of partial images to generate for streaming responses.
 
 ### 2.4 Response Payload (`ImageGenerationResponse`)
 
