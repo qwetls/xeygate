@@ -24,7 +24,7 @@
     "scripts": {
         "build": "tsup",
         "clean": "rm -rf dist",
-        "test": "tsx --test tests/**/*.test.ts"
+        "test": "NODE_ENV=test tsx --test --import ./tests/setup.ts tests/**/*.test.ts"
     },
     "dependencies": {
         "@clack/prompts": "^0.9.1",

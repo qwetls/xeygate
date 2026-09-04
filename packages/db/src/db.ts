@@ -1,33 +1,16 @@
-import path from "node:path";
-import fs from "node:fs";
-import os from "node:os";
 import { sqliteDb } from "./sqlite.js";
 import { type DbClient, type DbResult, getDbClient } from "./client.js";
 
-/** Directory holding the SRouter database (and backups) in the user's home directory. */
-export const SROUTER_DIR = path.join(os.homedir(), ".srouter");
-
-/** Default database location: ~/.srouter/srouter.db */
-export const DEFAULT_DB_PATH = path.join(SROUTER_DIR, "srouter.db");
-
-/** Legacy database locations checked for backward compatibility (relative to cwd). */
-export const LEGACY_DB_LOCATIONS = [
-    path.resolve(process.cwd(), "apps/api/srouter.db"),
-    path.resolve(process.cwd(), "srouter.db")
-];
-
-export function getDatabasePath(): string {
-    // Allow explicit override via DATABASE_PATH environment variable
-    if (process.env.DATABASE_PATH) return process.env.DATABASE_PATH;
-
-    // Fallback for legacy installations (keep existing for backward compatibility)
-    for (const legacyPath of LEGACY_DB_LOCATIONS) {
-        if (fs.existsSync(legacyPath)) return legacyPath;
-    }
-
-    // Return new default path and create directory if needed
-    return DEFAULT_DB_PATH;
-}
+// Single source of truth for database locations lives in sqlite.ts
+// (re-exported here so existing `@srouter/db` importers keep working).
+export {
+    SROUTER_DIR,
+    DEFAULT_DB_PATH,
+    LEGACY_DB_LOCATIONS,
+    getDatabasePath,
+    getOpenDatabasePath,
+    closeSqliteDb
+} from "./sqlite.js";
 
 // ─────────────────────────────────────────────────────────────
 // Compat wrapper — mirrors the node:sqlite statement API but is
