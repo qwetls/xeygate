@@ -4,6 +4,8 @@ import type {
     ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ImageGenerationRequest,
+    ImageGenerationResponse,
     ModelListResponse,
     ModelObject
 } from "@srouter/types";
@@ -139,5 +141,24 @@ export class OpenAIExecutor implements AIProvider {
                 // ignore malformed JSON chunk
             }
         }
+    }
+
+    async generateImage(req: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+        const targetModel = stripProviderPrefix(req.model);
+        const payload = { ...req, model: targetModel };
+
+        // If img2img parameters (image or mask) are provided, upstream may route to /images/edits
+        const endpoint = req.image || req.images || req.mask
+            ? `${this.baseUrl}/images/edits`
+            : `${this.baseUrl}/images/generations`;
+
+        const res = await fetchWithRetry(endpoint, payload, this.getHeaders());
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`OpenAI Provider Image Error (${res.status}): ${errorText}`);
+        }
+
+        return (await res.json()) as ImageGenerationResponse;
     }
 }

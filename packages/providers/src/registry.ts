@@ -9,6 +9,8 @@ import type {
     ChatCompletionChunk,
     ChatCompletionRequest,
     ChatCompletionResponse,
+    ImageGenerationRequest,
+    ImageGenerationResponse,
     ModelObject,
     ProviderDefinition
 } from "@srouter/types";
@@ -569,5 +571,31 @@ export class ProviderRegistry {
         }
 
         if (lastError) throw lastError;
+    }
+
+    async generateImage(req: ImageGenerationRequest): Promise<ImageGenerationResponse> {
+        const candidates = await this.getCandidateProvidersForModel(req.model);
+        let lastError: unknown = null;
+
+        for (let i = 0; i < candidates.length; i++) {
+            const candidate = candidates[i]!;
+            if (!candidate.generateImage) {
+                continue;
+            }
+            try {
+                const response = await candidate.generateImage(req);
+                this.circuitBreaker.recordSuccess(candidate.id);
+                return response;
+            } catch (err) {
+                lastError = err;
+                this.circuitBreaker.recordFailure(candidate.id, err);
+                if (i < candidates.length - 1) {
+                    continue;
+                }
+            }
+        }
+
+        if (lastError) throw lastError;
+        throw new Error(`No provider available supporting image generation for model '${req.model}'`);
     }
 }
