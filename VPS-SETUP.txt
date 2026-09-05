@@ -1,0 +1,79 @@
+========================================
+  XEYGATE VPS SETUP
+========================================
+
+=== BLOK 1: Bersihkan repo broken ===
+
+mkdir -p /etc/apt/sources.list.d/backup
+for f in /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do
+  [ -f "$f" ] && mv "$f" /etc/apt/sources.list.d/backup/ 2>/dev/null
+done
+apt-get update
+
+=== BLOK 2: Install Node.js 22 (WAJIB v22, bukan v20) ===
+
+# Hapus Node.js lama dulu
+apt-get remove -y nodejs npm 2>/dev/null
+rm -rf /usr/local/lib/node_modules /usr/lib/node_modules
+
+# Install Node.js 22 dari nodesource
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+
+# Verify harus v22+
+node -v
+# Harus output: v22.x.x
+
+npm install -g pnpm@latest
+pnpm -v
+
+=== BLOK 3: Enable SSH password login ===
+
+sed -i 's/^PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/^#PermitRootLogin.*/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/^PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/^#PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+systemctl restart sshd
+
+=== BLOK 4: Clone & build XEYGATE ===
+
+apt-get install -y git build-essential
+rm -rf /opt/xeygate
+git clone --depth 1 https://github.com/qwetls/xeygate.git /opt/xeygate
+cd /opt/xeygate
+pnpm install
+pnpm build
+mkdir -p data
+
+=== BLOK 5: Buat service & jalankan ===
+
+cat > /etc/systemd/system/xeygate.service << 'EOF'
+[Unit]
+Description=XEYGATE AI Gateway
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/xeygate
+ExecStart=/usr/bin/node apps/api/dist/index.js
+Restart=on-failure
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=4000
+Environment=DATABASE_PATH=/opt/xeygate/data/xeygate.db
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable xeygate
+systemctl restart xeygate
+systemctl status xeygate
+
+=== SELESAI ===
+
+Akses:
+  - Landing page: http://38.47.90.86:4000
+  - Dashboard:    http://38.47.90.86:4000/dashboard
+  - API Health:   http://38.47.90.86:4000/v1/health
