@@ -1,4 +1,5 @@
 import { type DbClient, type DbResult, getDbClient } from "./client.js";
+import type { DatabaseSync } from "node:sqlite";
 
 // Single source of truth for database locations lives in sqlite.ts
 // (re-exported here so existing `@srouter/db` importers keep working).
@@ -12,7 +13,7 @@ export {
 } from "./sqlite.js";
 
 // Lazy sqliteDb accessor — avoids importing node:sqlite when DATABASE_URL is set
-let _sqliteDbLazy: ReturnType<typeof import("./sqlite.js")["sqliteDb"]> | null = null;
+let _sqliteDbLazy: DatabaseSync | null = null;
 let _sqlitePragmasDone = false;
 function getSqliteDbLazy() {
     if (!_sqliteDbLazy) {

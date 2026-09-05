@@ -1,9 +1,10 @@
 import type { Pool as PgPool } from "pg";
+import type { DatabaseSync } from "node:sqlite";
 
 // Lazy-load SQLite — only when DATABASE_URL is NOT set
-function getSqliteDbLazy(): InstanceType<typeof import("node:sqlite").DatabaseSync> {
+function getSqliteDbLazy(): DatabaseSync {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+    const { DatabaseSync: DS } = require("node:sqlite") as { DatabaseSync: abstract new (...args: unknown[]) => DatabaseSync };
     const path = require("node:path") as typeof import("node:path");
     const os = require("node:os") as typeof import("node:os");
     const fs = require("node:fs") as typeof import("node:fs");
@@ -15,7 +16,7 @@ function getSqliteDbLazy(): InstanceType<typeof import("node:sqlite").DatabaseSy
         fs.mkdirSync(path.dirname(dbPath), { recursive: true });
     }
 
-    const db = new DatabaseSync(dbPath);
+    const db = new DS(dbPath);
     db.exec("PRAGMA busy_timeout = 5000;");
     db.exec("PRAGMA journal_mode = WAL;");
     return db;
@@ -46,7 +47,7 @@ export interface DbClient {
 type SQLInputValue = string | number | null | bigint | Uint8Array;
 
 export class SqliteClient implements DbClient {
-    constructor(private readonly db: InstanceType<typeof import("node:sqlite").DatabaseSync>) {}
+    constructor(private readonly db: DatabaseSync) {}
 
     /** Normalize undefined → null (node:sqlite previously tolerated undefined; pg needs null). */
     private normalizeParams(params: unknown[]): SQLInputValue[] {

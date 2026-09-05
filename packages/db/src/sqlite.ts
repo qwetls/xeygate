@@ -1,14 +1,17 @@
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
+import type { DatabaseSync } from "node:sqlite";
 
 // Lazy-load node:sqlite — only when DATABASE_URL is NOT set
-let DatabaseSyncClass: typeof import("node:sqlite").DatabaseSync | null = null;
-function getDatabaseSync() {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let DatabaseSyncClass: (abstract new (...args: any[]) => DatabaseSync) | null = null;
+function getDatabaseSync(): abstract new (...args: unknown[]) => DatabaseSync {
     if (!DatabaseSyncClass) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         DatabaseSyncClass = require("node:sqlite").DatabaseSync;
     }
+    if (!DatabaseSyncClass) throw new Error("node:sqlite not available — set DATABASE_URL to use PostgreSQL mode");
     return DatabaseSyncClass;
 }
 
@@ -58,7 +61,7 @@ function assertNotProductionDatabaseInTests(dbPath: string): void {
     }
 }
 
-function openDatabase(dbPath: string): InstanceType<typeof DatabaseSyncClass> {
+function openDatabase(dbPath: string): DatabaseSync {
     assertNotProductionDatabaseInTests(dbPath);
 
     // Ensure parent folder exists if path contains subdirectories
@@ -68,6 +71,7 @@ function openDatabase(dbPath: string): InstanceType<typeof DatabaseSyncClass> {
     }
 
     const DS = getDatabaseSync();
+    if (!DS) throw new Error("node:sqlite not available — set DATABASE_URL to use PostgreSQL mode");
     const db = new DS(dbPath);
 
     // Wait up to 5s instead of failing immediately when another connection
