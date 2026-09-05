@@ -59,7 +59,7 @@ function ProviderDetailPage() {
     const { copied, copy } = useCopy();
     const { isFavorite } = useFavorites();
 
-    const storageKey = `srouter_deleted_models_${providerId}`;
+    const storageKey = `xeygate_deleted_models_${providerId}`;
     const [deletedModelIds, setDeletedModelIds] = useState<string[]>(() => {
         try {
             const saved = localStorage.getItem(storageKey);
@@ -321,7 +321,7 @@ function ProviderDetailPage() {
                 <div className="flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs leading-relaxed text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="size-4 shrink-0 mt-0.5 text-amber-500" />
                     <div>
-                        <strong>OAuth Refresh Notice:</strong> SRouter manages token lifecycle and
+                        <strong>OAuth Refresh Notice:</strong> XEYGATE manages token lifecycle and
                         background refresh sweeper automatically for this provider account.
                     </div>
                 </div>

@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: AppSettings = {
     maskSensitiveHeaders: true
 };
 
-const STORAGE_KEY = "srouter_app_settings";
+const STORAGE_KEY = "xeygate_app_settings";
 
 export function useSettings() {
     const [settings, setSettings] = useState<AppSettings>(() => {
@@ -88,7 +88,7 @@ export function useSettings() {
         downloadAnchor.setAttribute("href", dataStr);
         downloadAnchor.setAttribute(
             "download",
-            `srouter-settings-${new Date().toISOString().slice(0, 10)}.json`
+            `xeygate-settings-${new Date().toISOString().slice(0, 10)}.json`
         );
         document.body.appendChild(downloadAnchor);
         downloadAnchor.click();

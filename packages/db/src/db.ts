@@ -4,7 +4,7 @@ import { type DbClient, type DbResult, getDbClient } from "./client.js";
 // Single source of truth for database locations lives in sqlite.ts
 // (re-exported here so existing `@srouter/db` importers keep working).
 export {
-    SROUTER_DIR,
+    XEYGATE_DIR,
     DEFAULT_DB_PATH,
     LEGACY_DB_LOCATIONS,
     getDatabasePath,

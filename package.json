@@ -1,13 +1,13 @@
 {
-    "name": "srouter",
-    "version": "0.1.5",
-    "description": "High-performance multi-provider AI Gateway and LLM proxy router built with Hono, TypeScript, and SQLite WAL",
-    "author": "Muhammad Adriansyah",
+    "name": "xeygate",
+    "version": "1.0.0",
+    "description": "XEYGATE — Cloud-first multi-provider AI Gateway and LLM proxy router",
+    "author": "XeyCompany Group",
     "license": "MIT",
     "type": "module",
     "repository": {
         "type": "git",
-        "url": "https://github.com/seaavey/SRouter.git"
+        "url": "https://github.com/XeyCompany/xeygate.git"
     },
     "keywords": [
         "ai-gateway",
@@ -16,15 +16,14 @@
         "anthropic-compatible",
         "hono",
         "sqlite",
-        "antigravity",
-        "gemini",
+        "xeygate",
         "claude",
-        "chatgpt",
-        "router"
+        "gpt",
+        "gemini"
     ],
-    "homepage": "https://github.com/seaavey/SRouter#readme",
+    "homepage": "https://github.com/XeyCompany/xeygate#readme",
     "bugs": {
-        "url": "https://github.com/seaavey/SRouter/issues"
+        "url": "https://github.com/XeyCompany/xeygate/issues"
     },
     "scripts": {
         "dev": "turbo dev",
@@ -35,7 +34,7 @@
         "format:check": "prettier --check .",
         "lint": "turbo lint",
         "test": "turbo test",
-        "srouter": "pnpm --filter @srouter/cli exec tsx src/index.ts"
+        "xeygate": "pnpm --filter @xeygate/cli exec tsx src/index.ts"
     },
     "engines": {
         "node": ">=22.0.0"

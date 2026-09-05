@@ -3,16 +3,16 @@ import fs from "node:fs";
 import os from "node:os";
 import { DatabaseSync } from "node:sqlite";
 
-/** Directory holding the SRouter database (and backups) in the user's home directory. */
-export const SROUTER_DIR = path.join(os.homedir(), ".srouter");
+/** Directory holding the XEYGATE database (and backups) in the user's home directory. */
+export const XEYGATE_DIR = path.join(os.homedir(), ".xeygate");
 
-/** Default database location: ~/.srouter/srouter.db */
-export const DEFAULT_DB_PATH = path.join(SROUTER_DIR, "srouter.db");
+/** Default database location: ~/.xeygate/xeygate.db */
+export const DEFAULT_DB_PATH = path.join(XEYGATE_DIR, "xeygate.db");
 
 /** Legacy database locations checked for backward compatibility (relative to cwd). */
 export const LEGACY_DB_LOCATIONS = [
-    path.resolve(process.cwd(), "apps/api/srouter.db"),
-    path.resolve(process.cwd(), "srouter.db")
+    path.resolve(process.cwd(), "apps/api/xeygate.db"),
+    path.resolve(process.cwd(), "xeygate.db")
 ];
 
 /** Resolve the SQLite file path. Reads `DATABASE_PATH` lazily so test
@@ -34,7 +34,7 @@ export function getDatabasePath(): string {
 /**
  * Fail fast when a test process accidentally targets the production
  * database. Test runners must redirect via `DATABASE_PATH`
- * (see `apps/api/tests/setup.ts`); wiping `~/.srouter/srouter.db`
+ * (see `apps/api/tests/setup.ts`); wiping `~/.xeygate/xeygate.db`
  * from a test run deleted real API keys before this guard existed.
  */
 function assertNotProductionDatabaseInTests(dbPath: string): void {

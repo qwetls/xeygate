@@ -77,7 +77,7 @@ export function ComboArchitecture() {
                                 <Cpu className="size-3.5 text-muted-foreground" />
                             </div>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                If an account hits 429 quota exhaustion, SRouter automatically
+                                If an account hits 429 quota exhaustion, XEYGATE automatically
                                 rotates to the next available connected provider key.
                             </p>
                         </div>
@@ -99,7 +99,7 @@ export function ComboArchitecture() {
                                 <Zap className="size-3.5 text-muted-foreground" />
                             </div>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                When a primary model encounters complete provider downtime, SRouter
+                                When a primary model encounters complete provider downtime, XEYGATE
                                 cascades down your configured combo fallback chain seamlessly.
                             </p>
                         </div>

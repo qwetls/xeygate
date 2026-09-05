@@ -1,6 +1,6 @@
 # Security Policy
 
-The SRouter team and community take the security of our gateway, credentials, and routing infrastructure seriously.
+The XEYGATE team takes the security of our gateway, credentials, and routing infrastructure seriously.
 
 ---
 
@@ -15,11 +15,11 @@ The SRouter team and community take the security of our gateway, credentials, an
 ## 🔒 Security Architecture Highlights
 
 1. **Local-First Credential Isolation**:
-    - OAuth tokens, refresh keys, and provider secrets are stored exclusively in your local SQLite database (`srouter.db`) on your own infrastructure or device.
-    - SRouter never phones home, collects telemetry, or sends your API keys to third-party tracking servers.
+    - OAuth tokens, refresh keys, and provider secrets are stored exclusively in your local SQLite database (`xeygate.db`) on your own infrastructure or device.
+    - XEYGATE never phones home, collects telemetry, or sends your API keys to third-party tracking servers.
 
 2. **Virtual Client Keys (`sr-live-...`)**:
-    - Clients and downstream applications interact with SRouter using virtual API keys, completely isolating your upstream master provider keys.
+    - Clients and downstream applications interact with XEYGATE using virtual API keys, completely isolating your upstream master provider keys.
 
 3. **Opt-in Enforced Authentication**:
     - You can enforce Bearer authentication on all gateway endpoints via `/settings` (`Require API Key: Required`).
@@ -28,11 +28,11 @@ The SRouter team and community take the security of our gateway, credentials, an
 
 ## 🚨 Reporting a Vulnerability
 
-If you discover a potential security vulnerability or sensitive information exposure in SRouter, please do **NOT** disclose it in a public GitHub issue.
+If you discover a potential security vulnerability or sensitive information exposure in XEYGATE, please do **NOT** disclose it in a public GitHub issue.
 
 Please report it privately via:
 
-- **Email**: `security@srouter.dev` (or open a private GitHub Security Advisory)
+- **Email**: `security@xeycompany.com` (or open a private GitHub Security Advisory)
 
 ### What to include in your report:
 

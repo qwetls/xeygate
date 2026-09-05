@@ -1,5 +1,5 @@
 # ==============================================================================
-# SRouter Production Multi-Stage Dockerfile
+# XEYGATE Production Multi-Stage Dockerfile
 # ==============================================================================
 
 # --- Stage 1: Base image with Node 22 & PNPM ---
@@ -53,7 +53,7 @@ RUN apk add --no-cache tzdata
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV OAUTH_PORT=1455
-ENV DATABASE_PATH=/app/data/srouter.db
+ENV DATABASE_PATH=/app/data/xeygate.db
 ENV WEB_DIST_PATH=/app/apps/web/dist
 
 # Create persistent storage directory for SQLite WAL database

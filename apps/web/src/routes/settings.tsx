@@ -139,7 +139,7 @@ function SettingsPage() {
                         </div>
                         <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
                             Fine-tune routing policies, security gates, logging pipelines, and client
-                            environment preferences across your SRouter mesh instance.
+                            environment preferences across your XEYGATE mesh instance.
                         </p>
                     </div>
 

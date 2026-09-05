@@ -121,7 +121,7 @@ export function ConnectOAuthModal({ provider, open, onOpenChange }: ConnectOAuth
             if (
                 event.data &&
                 typeof event.data === "object" &&
-                event.data.type === "SROUTER_OAUTH_SUCCESS"
+                event.data.type === "XEYGATE_OAUTH_SUCCESS"
             ) {
                 if (popupRef.current && !popupRef.current.closed) {
                     popupRef.current.close();

@@ -47,7 +47,7 @@ export function KeyTable({
                 </div>
                 <h3 className="text-sm font-semibold text-foreground">No API Keys</h3>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground leading-relaxed">
-                    Generate an API key to authenticate requests against SRouter from your client
+                    Generate an API key to authenticate requests against XEYGATE from your client
                     SDKs and applications.
                 </p>
                 <Button

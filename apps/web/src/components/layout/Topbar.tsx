@@ -52,7 +52,7 @@ export function Topbar() {
                 <div className="flex items-center gap-1.5 text-xs">
                     <span className="hidden sm:inline-flex items-center gap-1 text-[10.5px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
                         <Terminal className="size-3 text-muted-foreground/60" />
-                        <span>SROUTER</span>
+                        <span>XEYGATE</span>
                         <span className="text-muted-foreground/40">/</span>
                     </span>
 

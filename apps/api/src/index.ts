@@ -15,6 +15,7 @@ import { ProvidersRouter } from "@/routes/v1/providers.js";
 import { QuotaRouter } from "@/routes/v1/quota.js";
 import { SettingsRouter } from "@/routes/v1/settings.js";
 import { TunnelRouter } from "@/routes/v1/tunnel.js";
+import { UserAuthRouter } from "@/routes/v1/users.js";
 import imagesRouter from "@/routes/v1/images.js";
 import { CreateCorsMiddleware, ParseAllowedOrigins } from "@/middleware/Cors.js";
 import { CreateCsrfOriginGuard } from "@/middleware/CsrfOrigin.js";
@@ -35,7 +36,7 @@ const app = new Hono();
 // Security Headers & Version Middleware
 app.use("/*", async (c, next) => {
     await next();
-    c.header("X-Powered-By", "Seaavey");
+    c.header("X-Powered-By", "XEYGATE");
     c.header("X-Version", API_VERSION);
     c.header("X-Content-Type-Options", "nosniff");
     c.header("X-Frame-Options", "DENY");
@@ -61,10 +62,10 @@ app.use("/v1/*", CreateBodyLimitMiddleware());
 // (Moved into boot() — queries DB, must run after PG schema init.)
 
 const apiInfo = () => ({
-    name: "SRouter API",
+    name: "XEYGATE API",
     status: "ok",
     version: API_VERSION,
-    documentation: "Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
+    documentation: "Cloud-first Multi-Provider OpenAI & Anthropic Compatible LLM Gateway"
 });
 
 // Shared error handler: renders the OpenAI-style error envelope for both servers.
@@ -128,6 +129,7 @@ app.route("/v1", ProvidersRouter);
 app.route("/v1", KeysRouter);
 app.route("/v1", LogsRouter);
 app.route("/v1", AuthRouter);
+app.route("/v1", UserAuthRouter);
 app.route("/v1", QuotaRouter);
 app.route("/v1", SettingsRouter);
 app.route("/v1/images", imagesRouter);
@@ -150,8 +152,14 @@ if (hasWebDist) {
     app.use("/*", serveStatic({ root: relWebDist }));
     app.get("*", serveStatic({ path: path.join(relWebDist, "index.html") }));
 } else {
-    // API Welcome / Health info when web dist is not present
+    // Serve landing page when web dashboard dist is not present
+    const landingPath = path.join(import.meta.dirname || process.cwd(), "public", "landing.html");
+    const hasLanding = fs.existsSync(landingPath);
     app.get("/", (c) => {
+        if (hasLanding) {
+            const html = fs.readFileSync(landingPath, "utf-8");
+            return c.html(html);
+        }
         return c.json(apiInfo());
     });
 }
@@ -198,7 +206,7 @@ async function boot(): Promise<void> {
             port
         },
         (info) => {
-            console.log(`🚀 SRouter Server running at http://localhost:${info.port}`);
+            console.log(`🚀 XEYGATE Server running at http://localhost:${info.port}`);
             if (hasWebDist) {
                 console.log(`🌐 Web Dashboard & API live at http://localhost:${info.port}`);
             } else {

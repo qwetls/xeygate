@@ -1,0 +1,51 @@
+# XEYGATE Cloud Deployment — PostgreSQL + API Server
+# Usage: docker compose -f docker-compose.cloud.yml up -d
+
+services:
+    xeygate-db:
+        image: postgres:16-alpine
+        container_name: xeygate-db
+        restart: unless-stopped
+        environment:
+            POSTGRES_DB: xeygate
+            POSTGRES_USER: xeygate
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+        volumes:
+            - xeygate_pgdata:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U xeygate"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    xeygate:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: xeygate
+        restart: unless-stopped
+        depends_on:
+            xeygate-db:
+                condition: service_healthy
+        ports:
+            - "${PORT:-3000}:3000"
+        environment:
+            - NODE_ENV=production
+            - PORT=3000
+            - DATABASE_URL=postgresql://xeygate:${POSTGRES_PASSWORD:-changeme}@xeygate-db:5432/xeygate
+            - PUBLIC_URL=${PUBLIC_URL:-http://localhost:3000}
+            - JWT_SECRET=${JWT_SECRET:-change-this-secret}
+            - SROUTER_ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+        healthcheck:
+            test:
+                - "CMD"
+                - "node"
+                - "-e"
+                - "fetch('http://localhost:3000/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"
+            interval: 30s
+            timeout: 5s
+            retries: 3
+
+volumes:
+    xeygate_pgdata:
+        name: xeygate_pgdata

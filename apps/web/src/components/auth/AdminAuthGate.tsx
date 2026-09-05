@@ -46,10 +46,10 @@ function AdminAuthForm({ setupRequired, onAuthenticated }: AdminAuthFormProps) {
             <Card className="w-full max-w-md">
                 <CardHeader>
                     <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        SRouter control plane
+                        XEYGATE control plane
                     </p>
                     <CardTitle>
-                        {setupRequired ? "Create your admin password" : "Sign in to SRouter"}
+                        {setupRequired ? "Create your admin password" : "Sign in to XEYGATE"}
                     </CardTitle>
                     <CardDescription>
                         {setupRequired
@@ -129,7 +129,7 @@ function AuthUnavailableScreen({ onRetry }: { onRetry: () => void }) {
                 <CardHeader>
                     <CardTitle>Gateway unavailable</CardTitle>
                     <CardDescription>
-                        SRouter could not verify the admin session. Make sure the API is running and
+                        XEYGATE could not verify the admin session. Make sure the API is running and
                         try again.
                     </CardDescription>
                 </CardHeader>

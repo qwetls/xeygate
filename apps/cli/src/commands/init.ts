@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import * as p from "@clack/prompts";
-import { SROUTER_DIR } from "@srouter/db";
+import { XEYGATE_DIR } from "@srouter/db";
 import { formatError, formatInfo, formatSuccess, formatWarning, pc } from "../lib/ui.js";
 import { isExecutableInPath } from "../lib/platform.js";
 
@@ -110,7 +110,7 @@ async function initDocker(port: string, detached: boolean): Promise<void> {
         return;
     }
 
-    const dataDir = path.join(SROUTER_DIR, "data");
+    const dataDir = path.join(XEYGATE_DIR, "data");
     fs.mkdirSync(dataDir, { recursive: true, mode: 0o700 });
 
     s.message(`Pulling latest SRouter Docker image (${DOCKER_IMAGE})`);

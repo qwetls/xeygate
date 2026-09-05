@@ -1,0 +1,97 @@
+name: Deploy XEYGATE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+  DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+  DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+  APP_DIR: /opt/xeygate
+  PORT: 4000
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Install & Build
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ env.DEPLOY_KEY }}
+          script: |
+            set -e
+
+            # Install Node.js 22 if missing
+            if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 22 ]]; then
+              curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+              apt-get install -y -qq nodejs
+            fi
+
+            # Install pnpm
+            command -v pnpm &>/dev/null || npm install -g pnpm@latest
+
+            # Update code
+            if [ -d "${{ env.APP_DIR }}/.git" ]; then
+              cd ${{ env.APP_DIR }}
+              git fetch origin main
+              git reset --hard origin/main
+            else
+              git clone --branch main --depth 1 https://github.com/XeyCompany/xeygate.git ${{ env.APP_DIR }}
+              cd ${{ env.APP_DIR }}
+            fi
+
+            # Build
+            pnpm install --frozen-lockfile 2>/dev/null || pnpm install
+            pnpm build
+
+            # Setup systemd
+            mkdir -p ${{ env.APP_DIR }}/data
+            cat > /etc/systemd/system/xeygate.service << 'SERVICE'
+            [Unit]
+            Description=XEYGATE AI Gateway
+            After=network.target
+
+            [Service]
+            Type=simple
+            WorkingDirectory=${{ env.APP_DIR }}
+            ExecStart=$(which node) apps/api/dist/index.js
+            Restart=on-failure
+            RestartSec=5
+            Environment=NODE_ENV=production
+            Environment=PORT=${{ env.PORT }}
+            Environment=DATABASE_PATH=${{ env.APP_DIR }}/data/xeygate.db
+
+            [Install]
+            WantedBy=multi-user.target
+            SERVICE
+
+            systemctl daemon-reload
+            systemctl enable xeygate
+            systemctl restart xeygate
+
+            echo "✅ XEYGATE deployed on port ${{ env.PORT }}"
+
+      - name: Health check
+        run: |
+          sleep 5
+          curl -sf http://${{ env.DEPLOY_HOST }}:${{ env.PORT }}/health || echo "⚠️ Health check failed — server may still be starting"

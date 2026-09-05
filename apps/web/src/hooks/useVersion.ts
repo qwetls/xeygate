@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { APP_VERSION } from "@srouter/constants";
 
 export const CURRENT_VERSION = `v${APP_VERSION}`;
-export const GITHUB_REPO = "seaavey/SRouter";
+export const GITHUB_REPO = "XeyCompany/xeygate";
 
 export interface GitHubTag {
     name: string;

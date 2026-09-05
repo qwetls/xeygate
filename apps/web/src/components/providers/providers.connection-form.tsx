@@ -144,7 +144,7 @@ export function ConnectionForm({
                     <DialogTitle className="sr-only">Add API Key for {providerName}</DialogTitle>
                     <DialogDescription className="text-xs text-[var(--ink-3)]">
                         Masukkan API Key / Access Token untuk menghubungkan {providerName} ke
-                        SRouter, lalu uji koneksinya sebelum menyimpan.
+                        XEYGATE, lalu uji koneksinya sebelum menyimpan.
                     </DialogDescription>
                 </DialogHeader>
 

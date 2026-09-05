@@ -120,7 +120,7 @@ function CentralCoreHubNode({ data, selected }: NodeProps<Node<CoreNodeData, "ce
                             Central Hub
                         </span>
                         <h3 className="text-xs font-bold text-foreground truncate">
-                            SRouter Core
+                            XEYGATE Core
                         </h3>
                     </div>
                 </div>
@@ -262,7 +262,7 @@ function NodeDetailInspector({
                             <div className="flex items-center gap-2">
                                 <Zap className="size-3.5 text-foreground" />
                                 <span className="text-xs font-bold text-foreground">
-                                    SRouter Core Gateway
+                                    XEYGATE Core Gateway
                                 </span>
                             </div>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
@@ -444,7 +444,7 @@ function ProviderMatrixView({
                         <Zap className="size-3.5" />
                     </div>
                     <div>
-                        <div className="text-xs font-bold text-foreground">SRouter Core Gateway</div>
+                        <div className="text-xs font-bold text-foreground">XEYGATE Core Gateway</div>
                         <div className="text-[10px] text-muted-foreground truncate max-w-sm">
                             {apiBase}
                         </div>
@@ -773,7 +773,7 @@ function GatewayTopologyCanvas() {
                             )}
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5">
-                            Hub-and-spoke radial constellation of SRouter Core dispatching directly to all connected providers.
+                            Hub-and-spoke radial constellation of XEYGATE Core dispatching directly to all connected providers.
                         </p>
                     </div>
                 </div>

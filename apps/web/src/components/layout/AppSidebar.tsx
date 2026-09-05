@@ -51,7 +51,7 @@ export function AppSidebar() {
                     <SidebarMenuItem className="w-full">
                         <SidebarMenuButton
                             size="lg"
-                            render={<Link to="/" aria-label="SRouter dashboard" />}
+                            render={<Link to="/" aria-label="XEYGATE dashboard" />}
                             className="group h-10 w-full rounded-lg px-2 text-foreground transition-all duration-150 hover:bg-secondary/60 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0! cursor-pointer"
                         >
                             {/* Logo Mark: Double-bezel Machined Emblem with Beacon */}
@@ -81,10 +81,10 @@ export function AppSidebar() {
                             <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden text-left pl-1">
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-[13px] font-bold tracking-tight text-foreground leading-tight">
-                                        SRouter
+                                        XEYGATE
                                     </span>
                                     <span className="rounded-xs border border-border/70 bg-secondary/70 px-1 py-0.2 font-mono text-[8px] font-semibold text-muted-foreground/80 leading-none">
-                                        MESH
+                                        CLOUD
                                     </span>
                                 </div>
                                 <span className="text-[9px] font-mono font-medium text-muted-foreground/75 tracking-[0.14em] uppercase mt-0.5 truncate">

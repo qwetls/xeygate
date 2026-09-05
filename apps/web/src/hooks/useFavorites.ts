@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-const STORAGE_KEY = "srouter_favorite_models";
-const EVENT_NAME = "srouter:favorites-updated";
+const STORAGE_KEY = "xeygate_favorite_models";
+const EVENT_NAME = "xeygate:favorites-updated";
 
 function loadFavorites(): string[] {
     try {

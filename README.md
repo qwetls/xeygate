@@ -1,29 +1,21 @@
 <div align="center">
 
-# ⚡ SRouter
+# ⚡ XEYGATE
 
-**Local-first AI gateway & LLM proxy for OpenAI, Anthropic, and custom models.**
+**Cloud-first AI gateway & LLM proxy for OpenAI, Anthropic, and custom models.**
 
-Keep a single stable endpoint while SRouter routes requests, refreshes OAuth tokens, enforces quotas, and monitors live telemetry.
+One stable API key. Every provider. Automatic routing, OAuth refresh, failover, and live telemetry.
 
 <p>
-  <a href="https://github.com/seaavey/SRouter/releases"><img src="https://img.shields.io/badge/version-v0.1.4-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/XeyCompany/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.0.0-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
-  <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4.13-e36002?style=flat-square" alt="Hono"></a>
+  <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4-e36002?style=flat-square" alt="Hono"></a>
   <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-v19-61dafb?style=flat-square&logo=react&logoColor=black" alt="React"></a>
   <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-WAL-003b57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
 </p>
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/demo-dark.gif">
-    <source media="(prefers-color-scheme: light)" srcset="docs/images/demo-light.gif">
-    <img src="docs/images/demo-dark.gif" alt="SRouter Dashboard Walkthrough" width="100%">
-  </picture>
-</p>
-
-[Quick Start](#-quick-start) • [Providers](#-supported-providers) • [Coding Tools](#-connect-coding-tools) • [Integrations](#-integrate) • [API](#-api-endpoints) • [Docker](#-docker)
+[Quick Start](#-quick-start) • [Providers](#-supported-providers) • [Coding Tools](#-connect-coding-tools) • [Integrate](#-integrate) • [API](#-api-endpoints) • [Docker](#-docker)
 
 </div>
 
@@ -31,27 +23,25 @@ Keep a single stable endpoint while SRouter routes requests, refreshes OAuth tok
 
 ## ⚡ Quick Start
 
-Get SRouter running locally in under a minute.
+Get XEYGATE running locally in under a minute.
 
 ### Option A: Docker (Recommended)
 
 ```bash
 docker run -d \
-  --name srouter \
+  --name xeygate \
   --restart unless-stopped \
   -p 3000:3000 \
   -p 1455:1455 \
-  -v $HOME/.srouter:/root/.srouter \
-  ghcr.io/seaavey/srouter:latest
+  -v $HOME/.xeygate:/root/.xeygate \
+  ghcr.io/xeycompany/xeygate:latest
 ```
-
-> Data is persisted on the host at `~/.srouter` (`$HOME/.srouter`). Using a named volume like `srouter_data:/root/.srouter` will store data inside Docker at `/var/lib/docker/volumes/srouter_data/_data` instead of on the host.
 
 ### Option B: Local Node.js
 
 ```bash
-git clone https://github.com/seaavey/SRouter.git
-cd SRouter
+git clone https://github.com/XeyCompany/xeygate.git
+cd xeygate
 pnpm install
 pnpm build
 pnpm start
@@ -63,24 +53,24 @@ Open **`http://localhost:3000`** to access the dashboard. Configure your provide
 
 ## 🔌 Connect Coding Tools
 
-Use `@srouter/cli` to configure AI developer tools with one command:
+Use `@xeygate/cli` to configure AI developer tools with one command:
 
 ```bash
 # Interactive setup wizard
-npx @srouter/cli setup
+npx @xeygate/cli setup
 
 # Check status & link tools
-npx @srouter/cli doctor
-npx @srouter/cli link claude --model claude-3-7-sonnet
-npx @srouter/cli link opencode --model antigravity/gemini-3.7-flash-high
+npx @xeygate/cli doctor
+npx @xeygate/cli link claude --model claude-3-7-sonnet
+npx @xeygate/cli link opencode --model antigravity/gemini-3.7-flash-high
 
-# Run tools directly wrapped in SRouter environment
-npx @srouter/cli run claude
+# Run tools directly wrapped in XEYGATE environment
+npx @xeygate/cli run claude
 ```
 
 ### Manual Configuration (Cursor / Windsurf / Cline / Continue)
 
-Point your editor or extension to your local SRouter instance:
+Point your editor or extension to your local XEYGATE instance:
 - **Base URL:** `http://localhost:3000/v1`
 - **API Key:** `sr-live-your_key` (or your master admin key)
 - **Model:** Any model from `http://localhost:3000/v1/models` (e.g. `antigravity/gemini-3.7-flash-high`, `openai_codex/gpt-4o`)
@@ -89,7 +79,7 @@ Point your editor or extension to your local SRouter instance:
 
 ## 🌐 Supported Providers
 
-SRouter normalizes authentication and protocol differences across all major model providers:
+XEYGATE normalizes authentication and protocol differences across all major model providers:
 
 | Provider | Model Prefix | Auth Method | Streaming | Live Quota |
 | :--- | :--- | :--- | :---: | :---: |
@@ -108,7 +98,7 @@ SRouter normalizes authentication and protocol differences across all major mode
 
 ## 💻 Integrate
 
-SRouter exposes standard OpenAI and Anthropic compatible interfaces.
+XEYGATE exposes standard OpenAI and Anthropic compatible interfaces.
 
 ### OpenAI SDK (Python)
 
@@ -143,7 +133,7 @@ const client = new Anthropic({
 const message = await client.messages.create({
     model: "anthropic/claude-3-7-sonnet",
     max_tokens: 1024,
-    messages: [{ role: "user", content: "Hello from SRouter!" }]
+    messages: [{ role: "user", content: "Hello from XEYGATE!" }]
 });
 
 console.log(message.content[0].text);
@@ -166,13 +156,13 @@ curl -N http://localhost:3000/v1/chat/completions \
 
 ## 🎯 Core Features
 
-- **Unified Protocol Translation:** Translate between OpenAI `chat/completions` and Anthropic `messages` formats dynamically.
-- **Automated OAuth Refresh:** Background daemon automatically keeps short-lived OAuth sessions refreshed without downtime.
-- **Failover & Smart Combo Routing:** Define cascade fallback chains to automatically recover from rate limits (`429`) or provider outages.
-- **Token Saver Engine:** System-level prompt compression and concise coding rules to cut inference cost.
-- **Virtual API Keys:** Issue scoped keys (`sr-live-*`) with individual rate limits, token quotas, and expiration windows.
-- **Built-in Cloudflare Tunnel:** Expose your local gateway securely to the internet with zero open ports directly from the UI.
-- **Embedded Observability:** Track exact token usage, cache efficiency, and estimated costs locally in SQLite WAL mode.
+- **Unified Protocol Translation:** OpenAI `chat/completions` ↔ Anthropic `messages` format translation.
+- **Automated OAuth Refresh:** Background sweeper keeps short-lived OAuth sessions alive.
+- **Failover & Smart Combo Routing:** Cascade fallback chains recover from rate limits (`429`) or provider outages.
+- **Token Saver Engine:** Prompt compression and tool output optimization to cut inference cost.
+- **Virtual API Keys:** Scoped keys (`sr-live-*`) with rate limits, token quotas, and credit limits.
+- **Cloudflare Tunnel:** Expose your gateway securely with zero open ports.
+- **Embedded Observability:** Track token usage, cache efficiency, and estimated costs in real-time.
 
 ---
 
@@ -204,15 +194,15 @@ All gateway endpoints are served under `/v1`:
 
 ```yaml
 services:
-  srouter:
-    image: ghcr.io/seaavey/srouter:latest
-    container_name: srouter
+  xeygate:
+    image: ghcr.io/xeycompany/xeygate:latest
+    container_name: xeygate
     restart: unless-stopped
     ports:
       - "3000:3000"
       - "1455:1455"
     volumes:
-      - ${HOME}/.srouter:/root/.srouter
+      - ${HOME}/.xeygate:/root/.xeygate
     environment:
       - PORT=3000
       - NODE_ENV=production
@@ -237,14 +227,10 @@ pnpm build
 
 ---
 
-## 💬 Community & Updates
-
-For the latest news, updates, and community discussions, follow our official WhatsApp Channel:
-
-👉 [**Follow SRouter WhatsApp Channel**](https://whatsapp.com/channel/0029VbDF7112P59gQ8Z3D43K)
-
----
-
 ## 📄 License
 
 Distributed under the [MIT License](LICENSE).
+
+---
+
+Built by **XeyCompany Group** — [xeycompany.com](https://xeycompany.com)

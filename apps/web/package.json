@@ -1,15 +1,15 @@
 {
     "name": "web",
-    "version": "0.1.5",
+    "version": "1.0.0",
     "type": "module",
     "repository": {
         "type": "git",
-        "url": "https://github.com/seaavey/SRouter.git",
+        "url": "https://github.com/XeyCompany/xeygate.git",
         "directory": "apps/web"
     },
-    "homepage": "https://github.com/seaavey/SRouter#readme",
+    "homepage": "https://github.com/XeyCompany/xeygate#readme",
     "bugs": {
-        "url": "https://github.com/seaavey/SRouter/issues"
+        "url": "https://github.com/XeyCompany/xeygate/issues"
     },
     "license": "MIT",
     "scripts": {

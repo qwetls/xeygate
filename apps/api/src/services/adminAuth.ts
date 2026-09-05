@@ -2,7 +2,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 import { adminAuthStore, type AdminAuthStore } from "@srouter/db";
 
 export const ADMIN_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const ADMIN_SESSION_COOKIE = "srouter_admin_session";
+export const ADMIN_SESSION_COOKIE = "xeygate_admin_session";
 
 const PASSWORD_HASH_ALGORITHM = "scrypt";
 const PASSWORD_HASH_LENGTH = 64;
