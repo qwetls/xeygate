@@ -95,7 +95,7 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=$APP_DIR
-ExecStart=$NODE_PATH apps/api/dist/index.js
+ExecStart=$NODE_PATH --experimental-sqlite apps/api/dist/index.js
 Restart=on-failure
 RestartSec=5
 Environment=NODE_ENV=production
