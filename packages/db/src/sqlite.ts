@@ -2,6 +2,8 @@ import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
 import type { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
+const _require = createRequire(import.meta.url);
 
 // Lazy-load node:sqlite — only when DATABASE_URL is NOT set
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -9,7 +11,7 @@ let DatabaseSyncClass: (new (...args: any[]) => DatabaseSync) | null = null;
 function getDatabaseSync(): new (...args: unknown[]) => DatabaseSync {
     if (!DatabaseSyncClass) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        DatabaseSyncClass = require("node:sqlite").DatabaseSync;
+        DatabaseSyncClass = _require("node:sqlite").DatabaseSync;
     }
     if (!DatabaseSyncClass) throw new Error("node:sqlite not available — set DATABASE_URL to use PostgreSQL mode");
     return DatabaseSyncClass;

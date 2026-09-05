@@ -1,5 +1,7 @@
 import { type DbClient, type DbResult, getDbClient } from "./client.js";
 import type { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
+const _require = createRequire(import.meta.url);
 
 // Single source of truth for database locations lives in sqlite.ts
 // (re-exported here so existing `@srouter/db` importers keep working).
@@ -18,7 +20,7 @@ let _sqlitePragmasDone = false;
 function getSqliteDbLazy(): DatabaseSync {
     if (!_sqliteDbLazy) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        _sqliteDbLazy = require("./sqlite.js").sqliteDb;
+        _sqliteDbLazy = _require("./sqlite.js").sqliteDb;
     }
     if (!_sqliteDbLazy) throw new Error("SQLite not available — set DATABASE_URL for PostgreSQL mode");
     if (!_sqlitePragmasDone) {

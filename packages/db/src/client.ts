@@ -1,13 +1,15 @@
 import type { Pool as PgPool } from "pg";
 import type { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
+const _require = createRequire(import.meta.url);
 
 // Lazy-load SQLite — only when DATABASE_URL is NOT set
 function getSqliteDbLazy(): DatabaseSync {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { DatabaseSync: DS } = require("node:sqlite") as { DatabaseSync: new (...args: unknown[]) => DatabaseSync };
-    const path = require("node:path") as typeof import("node:path");
-    const os = require("node:os") as typeof import("node:os");
-    const fs = require("node:fs") as typeof import("node:fs");
+    const { DatabaseSync: DS } = _require("node:sqlite") as { DatabaseSync: new (...args: unknown[]) => DatabaseSync };
+    const path = _require("node:path") as typeof import("node:path");
+    const os = _require("node:os") as typeof import("node:os");
+    const fs = _require("node:fs") as typeof import("node:fs");
 
     const XEYGATE_DIR = path.join(os.homedir(), ".xeygate");
     const dbPath = process.env.DATABASE_PATH || path.join(XEYGATE_DIR, "xeygate.db");
