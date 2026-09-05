@@ -1,6 +1,25 @@
-import { type DatabaseSync, type SQLInputValue } from "node:sqlite";
-import { sqliteDb } from "./sqlite.js";
 import type { Pool as PgPool } from "pg";
+
+// Lazy-load SQLite — only when DATABASE_URL is NOT set
+function getSqliteDbLazy(): InstanceType<typeof import("node:sqlite").DatabaseSync> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { DatabaseSync } = require("node:sqlite") as typeof import("node:sqlite");
+    const path = require("node:path") as typeof import("node:path");
+    const os = require("node:os") as typeof import("node:os");
+    const fs = require("node:fs") as typeof import("node:fs");
+
+    const XEYGATE_DIR = path.join(os.homedir(), ".xeygate");
+    const dbPath = process.env.DATABASE_PATH || path.join(XEYGATE_DIR, "xeygate.db");
+
+    if (!fs.existsSync(path.dirname(dbPath))) {
+        fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+    }
+
+    const db = new DatabaseSync(dbPath);
+    db.exec("PRAGMA busy_timeout = 5000;");
+    db.exec("PRAGMA journal_mode = WAL;");
+    return db;
+}
 
 // ──────────────────────────────────────────────────
 // DbClient interface — async so it works for both
@@ -24,8 +43,10 @@ export interface DbClient {
 // SQLite implementation (wraps node:sqlite DatabaseSync)
 // ──────────────────────────────────────────────────
 
+type SQLInputValue = string | number | null | bigint | Uint8Array;
+
 export class SqliteClient implements DbClient {
-    constructor(private readonly db: DatabaseSync) {}
+    constructor(private readonly db: InstanceType<typeof import("node:sqlite").DatabaseSync>) {}
 
     /** Normalize undefined → null (node:sqlite previously tolerated undefined; pg needs null). */
     private normalizeParams(params: unknown[]): SQLInputValue[] {
@@ -178,7 +199,7 @@ export function getDbClient(): DbClient {
     if (process.env.DATABASE_URL) {
         _client = new PgClient();
     } else {
-        _client = new SqliteClient(sqliteDb);
+        _client = new SqliteClient(getSqliteDbLazy());
     }
 
     return _client;
@@ -189,6 +210,6 @@ export function setDbClient(client: DbClient): void {
 }
 
 /** Expose the raw SQLite DatabaseSync for tests/legacy paths. */
-export function getSqliteDb(): DatabaseSync {
-    return sqliteDb;
+export function getSqliteDb() {
+    return getSqliteDbLazy();
 }

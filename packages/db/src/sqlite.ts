@@ -1,7 +1,16 @@
 import path from "node:path";
 import fs from "node:fs";
 import os from "node:os";
-import { DatabaseSync } from "node:sqlite";
+
+// Lazy-load node:sqlite — only when DATABASE_URL is NOT set
+let DatabaseSyncClass: typeof import("node:sqlite").DatabaseSync | null = null;
+function getDatabaseSync() {
+    if (!DatabaseSyncClass) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        DatabaseSyncClass = require("node:sqlite").DatabaseSync;
+    }
+    return DatabaseSyncClass;
+}
 
 /** Directory holding the XEYGATE database (and backups) in the user's home directory. */
 export const XEYGATE_DIR = path.join(os.homedir(), ".xeygate");
@@ -49,7 +58,7 @@ function assertNotProductionDatabaseInTests(dbPath: string): void {
     }
 }
 
-function openDatabase(dbPath: string): DatabaseSync {
+function openDatabase(dbPath: string): InstanceType<typeof DatabaseSyncClass> {
     assertNotProductionDatabaseInTests(dbPath);
 
     // Ensure parent folder exists if path contains subdirectories
@@ -58,7 +67,8 @@ function openDatabase(dbPath: string): DatabaseSync {
         fs.mkdirSync(dbDir, { recursive: true });
     }
 
-    const db = new DatabaseSync(dbPath);
+    const DS = getDatabaseSync();
+    const db = new DS(dbPath);
 
     // Wait up to 5s instead of failing immediately when another connection
     // (e.g. a parallel test process or the CLI) holds the write lock.

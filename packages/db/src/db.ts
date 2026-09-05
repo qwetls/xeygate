@@ -1,4 +1,3 @@
-import { sqliteDb } from "./sqlite.js";
 import { type DbClient, type DbResult, getDbClient } from "./client.js";
 
 // Single source of truth for database locations lives in sqlite.ts
@@ -11,6 +10,24 @@ export {
     getOpenDatabasePath,
     closeSqliteDb
 } from "./sqlite.js";
+
+// Lazy sqliteDb accessor — avoids importing node:sqlite when DATABASE_URL is set
+let _sqliteDbLazy: ReturnType<typeof import("./sqlite.js")["sqliteDb"]> | null = null;
+let _sqlitePragmasDone = false;
+function getSqliteDbLazy() {
+    if (!_sqliteDbLazy) {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        _sqliteDbLazy = require("./sqlite.js").sqliteDb;
+    }
+    if (!_sqlitePragmasDone) {
+        _sqlitePragmasDone = true;
+        _sqliteDbLazy.exec("PRAGMA busy_timeout = 5000;");
+        _sqliteDbLazy.exec("PRAGMA journal_mode = WAL;");
+        _sqliteDbLazy.exec("PRAGMA foreign_keys = ON;");
+        _sqliteDbLazy.exec("PRAGMA synchronous = NORMAL;");
+    }
+    return _sqliteDbLazy;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Compat wrapper — mirrors the node:sqlite statement API but is
@@ -62,17 +79,12 @@ export const db = makeCompatDb();
 // boot semantics and avoids test races).
 // ─────────────────────────────────────────────────────────────
 
-// Wait up to 5s instead of failing immediately when another connection
-// (e.g. a parallel test process or the CLI) holds the write lock.
-sqliteDb.exec("PRAGMA busy_timeout = 5000;");
+// PRAGMAs are set lazily in getSqliteDbLazy() — only when SQLite is actually used
 
-// Enable WAL mode for high performance concurrency.
-// Retry briefly — concurrent processes initializing on the same DB file
-// (CI runs app test suites in parallel) can transiently hold the lock.
 function execWithRetry(sql: string, attempts = 5): void {
     for (let i = 0; i < attempts; i++) {
         try {
-            sqliteDb.exec(sql);
+            getSqliteDbLazy().exec(sql);
             return;
         } catch (error) {
             const code = (error as { code?: string }).code;
@@ -85,11 +97,7 @@ function execWithRetry(sql: string, attempts = 5): void {
     }
 }
 
-execWithRetry("PRAGMA journal_mode = WAL;");
-execWithRetry("PRAGMA foreign_keys = ON;");
-execWithRetry("PRAGMA synchronous = NORMAL;");
-execWithRetry("PRAGMA temp_store = MEMORY;");
-execWithRetry("PRAGMA cache_size = -20000;");
+// PRAGMAs are handled in getSqliteDbLazy() — no top-level calls needed
 
 // ─────────────────────────────────────────────────────────────
 // Schema — dialect-aware so PG timestamps use BIGINT (INTEGER
@@ -279,7 +287,7 @@ export function initDatabase(): Promise<void> | void {
 }
 
 function initSqliteSchemaSync(): void {
-    const raw = sqliteDb;
+    const raw = getSqliteDbLazy();
     for (const table of TABLES) {
         raw.exec(tableSql(table, false));
     }
