@@ -95,3 +95,39 @@ UserAuthRouter.post("/users/credits/topup", RequireUserAuth, async (c) => {
     if (!updated) return Err(c, "User not found", 404);
     return Ok(c, { credits: updated.credits });
 });
+
+// ── List user's API keys ──
+UserAuthRouter.get("/users/keys", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const keys = await userAuthStore.getUserKeys(userId);
+    return Ok(c, { keys });
+});
+
+// ── Create API key ──
+UserAuthRouter.post("/users/keys", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const body = await c.req.json<{ name?: string }>().catch(() => ({}));
+    const name = body.name?.trim();
+    if (!name || name.length < 1 || name.length > 64) {
+        return Err(c, "Key name must be 1-64 characters", 400);
+    }
+    const key = await userAuthStore.createUserKey(userId, name);
+    if (!key) return Err(c, "Failed to create key", 500);
+    return Ok(c, key);
+});
+
+// ── Delete API key ──
+UserAuthRouter.delete("/users/keys/:keyId", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const keyId = c.req.param("keyId");
+    const deleted = await userAuthStore.deleteUserKey(userId, keyId);
+    if (!deleted) return Err(c, "Key not found", 404);
+    return Ok(c, { message: "Key deleted" });
+});
+
+// ── User usage stats ──
+UserAuthRouter.get("/users/usage", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const usage = await userAuthStore.getUserUsage(userId);
+    return Ok(c, usage);
+});

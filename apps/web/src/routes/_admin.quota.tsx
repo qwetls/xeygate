@@ -18,7 +18,7 @@ import { api } from "@/lib/api";
 import type { QuotaResponse } from "@srouter/types";
 import { QuotaSummaryMetrics, QuotaProviderCard, type QuotaAccountItem } from "@/components/quota";
 
-export const Route = createFileRoute("/quota")({
+export const Route = createFileRoute("/_admin/quota")({
     staticData: { title: "Quotas & Limits" },
     component: QuotaPage
 });

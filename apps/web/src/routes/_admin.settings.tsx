@@ -27,7 +27,7 @@ import {
 } from "@/components/settings";
 import { SettingsSkeleton } from "@/components/skeletons";
 
-export const Route = createFileRoute("/settings")({
+export const Route = createFileRoute("/_admin/settings")({
     staticData: { title: "Settings" },
     component: SettingsPage
 });

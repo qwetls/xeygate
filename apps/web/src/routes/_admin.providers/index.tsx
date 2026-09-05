@@ -6,7 +6,7 @@ import { useCatalog } from "@/hooks/useCatalog";
 import { Catalog, CatalogToolbar, CustomProviderDialog } from "@/components/providers";
 import { ProvidersSkeleton } from "@/components/skeletons";
 
-export const Route = createFileRoute("/providers/")({
+export const Route = createFileRoute("/_admin/providers/")({
     staticData: { title: "Providers" },
     component: ProvidersPage
 });

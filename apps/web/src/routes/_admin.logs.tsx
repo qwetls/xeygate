@@ -24,7 +24,7 @@ interface ServerSettingsResponse {
     requireApiKey?: boolean;
 }
 
-export const Route = createFileRoute("/logs")({
+export const Route = createFileRoute("/_admin/logs")({
     staticData: { title: "Logs" },
     component: LogsPage
 });

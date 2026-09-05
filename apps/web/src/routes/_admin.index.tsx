@@ -19,7 +19,7 @@ import { GatewayTopologyMap, ModelUsageOverview, NetworkStatus, UsageByModelTabl
 import { Button } from "@/components/ui/button";
 import { DashboardSkeleton } from "@/components/skeletons";
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_admin/")({
     staticData: { title: "Dashboard" },
     component: DashboardPage
 });

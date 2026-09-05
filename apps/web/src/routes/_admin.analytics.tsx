@@ -13,7 +13,7 @@ import {
 import type { AnalyticsWindow } from "@srouter/types";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
-export const Route = createFileRoute("/analytics")({
+export const Route = createFileRoute("/_admin/analytics")({
     staticData: { title: "Analytics" },
     component: AnalyticsPage
 });

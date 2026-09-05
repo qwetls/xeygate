@@ -31,7 +31,7 @@ import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
-export const Route = createFileRoute("/providers/$providerId")({
+export const Route = createFileRoute("/_admin/providers/$providerId")({
     staticData: { title: "Providers" },
     component: ProviderDetailPage
 });

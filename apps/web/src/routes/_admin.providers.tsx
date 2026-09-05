@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/providers")({
+export const Route = createFileRoute("/_admin/providers")({
     staticData: { title: "Providers" },
     component: ProvidersLayout
 });
