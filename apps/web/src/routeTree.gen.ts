@@ -9,103 +9,168 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
-import { Route as ComboRouteImport } from './routes/combo'
-import { Route as KeysRouteImport } from './routes/keys'
-import { Route as LogsRouteImport } from './routes/logs'
-import { Route as ProvidersRouteImport } from './routes/providers'
-import { Route as QuotaRouteImport } from './routes/quota'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as ProvidersIndexRouteImport } from './routes/providers/index'
-import { Route as ProvidersProviderIdRouteImport } from './routes/providers/$providerId'
+import { Route as AdminRouteImport } from './routes/_admin'
+import { Route as ClientRouteImport } from './routes/_client'
+import { Route as AdminIndexRouteImport } from './routes/_admin.index'
+import { Route as AdminAnalyticsRouteImport } from './routes/_admin.analytics'
+import { Route as AdminComboRouteImport } from './routes/_admin.combo'
+import { Route as AdminKeysRouteImport } from './routes/_admin.keys'
+import { Route as AdminLogsRouteImport } from './routes/_admin.logs'
+import { Route as AdminProvidersRouteImport } from './routes/_admin.providers'
+import { Route as AdminQuotaRouteImport } from './routes/_admin.quota'
+import { Route as AdminSettingsRouteImport } from './routes/_admin.settings'
+import { Route as ClientLoginRouteImport } from './routes/_client.login'
+import { Route as ClientRegisterRouteImport } from './routes/_client.register'
+import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
+import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashboard.index'
+import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
+import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
+import { Route as AdminProvidersIndexRouteImport } from './routes/_admin.providers/index'
+import { Route as AdminProvidersProviderIdRouteImport } from './routes/_admin.providers/$providerId'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/_admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
+const ClientRoute = ClientRouteImport.update({
+  id: '/_client',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAnalyticsRoute = AdminAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const ComboRoute = ComboRouteImport.update({
+const AdminComboRoute = AdminComboRouteImport.update({
   id: '/combo',
   path: '/combo',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const KeysRoute = KeysRouteImport.update({
+const AdminKeysRoute = AdminKeysRouteImport.update({
   id: '/keys',
   path: '/keys',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const LogsRoute = LogsRouteImport.update({
+const AdminLogsRoute = AdminLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const ProvidersRoute = ProvidersRouteImport.update({
+const AdminProvidersRoute = AdminProvidersRouteImport.update({
   id: '/providers',
   path: '/providers',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const QuotaRoute = QuotaRouteImport.update({
+const AdminQuotaRoute = AdminQuotaRouteImport.update({
   id: '/quota',
   path: '/quota',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AdminRoute,
 } as any)
-const ProvidersIndexRoute = ProvidersIndexRouteImport.update({
+const ClientLoginRoute = ClientLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => ClientRoute,
+} as any)
+const ClientRegisterRoute = ClientRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => ClientRoute,
+} as any)
+const ClientDashboardRoute = ClientDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => ClientRoute,
+} as any)
+const ClientDashboardIndexRoute = ClientDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ProvidersRoute,
+  getParentRoute: () => ClientDashboardRoute,
 } as any)
-const ProvidersProviderIdRoute = ProvidersProviderIdRouteImport.update({
+const ClientDashboardKeysRoute = ClientDashboardKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
+const ClientDashboardUsageRoute = ClientDashboardUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
+const AdminProvidersIndexRoute = AdminProvidersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminProvidersRoute,
+} as any)
+const AdminProvidersProviderIdRoute = AdminProvidersProviderIdRouteImport.update({
   id: '/$providerId',
   path: '/$providerId',
-  getParentRoute: () => ProvidersRoute,
+  getParentRoute: () => AdminProvidersRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/combo': typeof ComboRoute
-  '/keys': typeof KeysRoute
-  '/logs': typeof LogsRoute
-  '/providers': typeof ProvidersRouteWithChildren
-  '/quota': typeof QuotaRoute
-  '/settings': typeof SettingsRoute
-  '/providers/$providerId': typeof ProvidersProviderIdRoute
-  '/providers/': typeof ProvidersIndexRoute
+  '/': typeof AdminIndexRoute
+  '/analytics': typeof AdminAnalyticsRoute
+  '/combo': typeof AdminComboRoute
+  '/keys': typeof AdminKeysRoute
+  '/logs': typeof AdminLogsRoute
+  '/providers': typeof AdminProvidersRouteWithChildren
+  '/quota': typeof AdminQuotaRoute
+  '/settings': typeof AdminSettingsRoute
+  '/login': typeof ClientLoginRoute
+  '/register': typeof ClientRegisterRoute
+  '/dashboard': typeof ClientDashboardRouteWithChildren
+  '/providers/$providerId': typeof AdminProvidersProviderIdRoute
+  '/providers/': typeof AdminProvidersIndexRoute
+  '/dashboard/': typeof ClientDashboardIndexRoute
+  '/dashboard/keys': typeof ClientDashboardKeysRoute
+  '/dashboard/usage': typeof ClientDashboardUsageRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/combo': typeof ComboRoute
-  '/keys': typeof KeysRoute
-  '/logs': typeof LogsRoute
-  '/quota': typeof QuotaRoute
-  '/settings': typeof SettingsRoute
-  '/providers/$providerId': typeof ProvidersProviderIdRoute
-  '/providers': typeof ProvidersIndexRoute
+  '/': typeof AdminIndexRoute
+  '/analytics': typeof AdminAnalyticsRoute
+  '/combo': typeof AdminComboRoute
+  '/keys': typeof AdminKeysRoute
+  '/logs': typeof AdminLogsRoute
+  '/quota': typeof AdminQuotaRoute
+  '/settings': typeof AdminSettingsRoute
+  '/login': typeof ClientLoginRoute
+  '/register': typeof ClientRegisterRoute
+  '/providers/$providerId': typeof AdminProvidersProviderIdRoute
+  '/providers': typeof AdminProvidersIndexRoute
+  '/dashboard': typeof ClientDashboardIndexRoute
+  '/dashboard/keys': typeof ClientDashboardKeysRoute
+  '/dashboard/usage': typeof ClientDashboardUsageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/combo': typeof ComboRoute
-  '/keys': typeof KeysRoute
-  '/logs': typeof LogsRoute
-  '/providers': typeof ProvidersRouteWithChildren
-  '/quota': typeof QuotaRoute
-  '/settings': typeof SettingsRoute
-  '/providers/$providerId': typeof ProvidersProviderIdRoute
-  '/providers/': typeof ProvidersIndexRoute
+  '/_admin': typeof AdminRouteWithChildren
+  '/_admin/': typeof AdminIndexRoute
+  '/_admin/analytics': typeof AdminAnalyticsRoute
+  '/_admin/combo': typeof AdminComboRoute
+  '/_admin/keys': typeof AdminKeysRoute
+  '/_admin/logs': typeof AdminLogsRoute
+  '/_admin/providers': typeof AdminProvidersRouteWithChildren
+  '/_admin/quota': typeof AdminQuotaRoute
+  '/_admin/settings': typeof AdminSettingsRoute
+  '/_client': typeof ClientRouteWithChildren
+  '/_client/login': typeof ClientLoginRoute
+  '/_client/register': typeof ClientRegisterRoute
+  '/_client/dashboard': typeof ClientDashboardRouteWithChildren
+  '/_client/dashboard/': typeof ClientDashboardIndexRoute
+  '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
+  '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
+  '/_admin/providers/': typeof AdminProvidersIndexRoute
+  '/_admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -118,8 +183,14 @@ export interface FileRouteTypes {
     | '/providers'
     | '/quota'
     | '/settings'
+    | '/login'
+    | '/register'
+    | '/dashboard'
     | '/providers/$providerId'
     | '/providers/'
+    | '/dashboard/'
+    | '/dashboard/keys'
+    | '/dashboard/usage'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,131 +200,242 @@ export interface FileRouteTypes {
     | '/logs'
     | '/quota'
     | '/settings'
+    | '/login'
+    | '/register'
     | '/providers/$providerId'
     | '/providers'
+    | '/dashboard'
+    | '/dashboard/keys'
+    | '/dashboard/usage'
   id:
     | '__root__'
-    | '/'
-    | '/analytics'
-    | '/combo'
-    | '/keys'
-    | '/logs'
-    | '/providers'
-    | '/quota'
-    | '/settings'
-    | '/providers/$providerId'
-    | '/providers/'
+    | '/_admin'
+    | '/_admin/'
+    | '/_admin/analytics'
+    | '/_admin/combo'
+    | '/_admin/keys'
+    | '/_admin/logs'
+    | '/_admin/providers'
+    | '/_admin/quota'
+    | '/_admin/settings'
+    | '/_client'
+    | '/_client/login'
+    | '/_client/register'
+    | '/_client/dashboard'
+    | '/_client/dashboard/'
+    | '/_client/dashboard/keys'
+    | '/_client/dashboard/usage'
+    | '/_admin/providers/'
+    | '/_admin/providers/$providerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AnalyticsRoute: typeof AnalyticsRoute
-  ComboRoute: typeof ComboRoute
-  KeysRoute: typeof KeysRoute
-  LogsRoute: typeof LogsRoute
-  ProvidersRoute: typeof ProvidersRouteWithChildren
-  QuotaRoute: typeof QuotaRoute
-  SettingsRoute: typeof SettingsRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  ClientRoute: typeof ClientRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_admin/': {
+      id: '/_admin/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/analytics': {
-      id: '/analytics'
+    '/_admin/analytics': {
+      id: '/_admin/analytics'
       path: '/analytics'
       fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminAnalyticsRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/combo': {
-      id: '/combo'
+    '/_admin/combo': {
+      id: '/_admin/combo'
       path: '/combo'
       fullPath: '/combo'
-      preLoaderRoute: typeof ComboRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminComboRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/keys': {
-      id: '/keys'
+    '/_admin/keys': {
+      id: '/_admin/keys'
       path: '/keys'
       fullPath: '/keys'
-      preLoaderRoute: typeof KeysRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminKeysRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/logs': {
-      id: '/logs'
+    '/_admin/logs': {
+      id: '/_admin/logs'
       path: '/logs'
       fullPath: '/logs'
-      preLoaderRoute: typeof LogsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/providers': {
-      id: '/providers'
+    '/_admin/providers': {
+      id: '/_admin/providers'
       path: '/providers'
       fullPath: '/providers'
-      preLoaderRoute: typeof ProvidersRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminProvidersRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/quota': {
-      id: '/quota'
+    '/_admin/quota': {
+      id: '/_admin/quota'
       path: '/quota'
       fullPath: '/quota'
-      preLoaderRoute: typeof QuotaRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminQuotaRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/settings': {
-      id: '/settings'
+    '/_admin/settings': {
+      id: '/_admin/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
     }
-    '/providers/': {
-      id: '/providers/'
+    '/_admin/providers/': {
+      id: '/_admin/providers/'
       path: '/'
       fullPath: '/providers/'
-      preLoaderRoute: typeof ProvidersIndexRouteImport
-      parentRoute: typeof ProvidersRoute
+      preLoaderRoute: typeof AdminProvidersIndexRouteImport
+      parentRoute: typeof AdminProvidersRoute
     }
-    '/providers/$providerId': {
-      id: '/providers/$providerId'
+    '/_admin/providers/$providerId': {
+      id: '/_admin/providers/$providerId'
       path: '/$providerId'
       fullPath: '/providers/$providerId'
-      preLoaderRoute: typeof ProvidersProviderIdRouteImport
-      parentRoute: typeof ProvidersRoute
+      preLoaderRoute: typeof AdminProvidersProviderIdRouteImport
+      parentRoute: typeof AdminProvidersRoute
+    }
+    '/_client': {
+      id: '/_client'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ClientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_client/login': {
+      id: '/_client/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof ClientLoginRouteImport
+      parentRoute: typeof ClientRoute
+    }
+    '/_client/register': {
+      id: '/_client/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof ClientRegisterRouteImport
+      parentRoute: typeof ClientRoute
+    }
+    '/_client/dashboard': {
+      id: '/_client/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof ClientDashboardRouteImport
+      parentRoute: typeof ClientRoute
+    }
+    '/_client/dashboard/': {
+      id: '/_client/dashboard/'
+      path: '/'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof ClientDashboardIndexRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
+    '/_client/dashboard/keys': {
+      id: '/_client/dashboard/keys'
+      path: '/keys'
+      fullPath: '/dashboard/keys'
+      preLoaderRoute: typeof ClientDashboardKeysRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
+    '/_client/dashboard/usage': {
+      id: '/_client/dashboard/usage'
+      path: '/usage'
+      fullPath: '/dashboard/usage'
+      preLoaderRoute: typeof ClientDashboardUsageRouteImport
+      parentRoute: typeof ClientDashboardRoute
     }
   }
 }
 
-interface ProvidersRouteChildren {
-  ProvidersProviderIdRoute: typeof ProvidersProviderIdRoute
-  ProvidersIndexRoute: typeof ProvidersIndexRoute
+interface AdminProvidersRouteChildren {
+  AdminProvidersIndexRoute: typeof AdminProvidersIndexRoute
+  AdminProvidersProviderIdRoute: typeof AdminProvidersProviderIdRoute
 }
 
-const ProvidersRouteChildren: ProvidersRouteChildren = {
-  ProvidersProviderIdRoute: ProvidersProviderIdRoute,
-  ProvidersIndexRoute: ProvidersIndexRoute,
+const AdminProvidersRouteChildren: AdminProvidersRouteChildren = {
+  AdminProvidersIndexRoute: AdminProvidersIndexRoute,
+  AdminProvidersProviderIdRoute: AdminProvidersProviderIdRoute,
 }
 
-const ProvidersRouteWithChildren = ProvidersRoute._addFileChildren(
-  ProvidersRouteChildren,
+const AdminProvidersRouteWithChildren = AdminProvidersRoute._addFileChildren(
+  AdminProvidersRouteChildren,
 )
 
+interface AdminRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminComboRoute: typeof AdminComboRoute
+  AdminKeysRoute: typeof AdminKeysRoute
+  AdminLogsRoute: typeof AdminLogsRoute
+  AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
+  AdminQuotaRoute: typeof AdminQuotaRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminComboRoute: AdminComboRoute,
+  AdminKeysRoute: AdminKeysRoute,
+  AdminLogsRoute: AdminLogsRoute,
+  AdminProvidersRoute: AdminProvidersRouteWithChildren,
+  AdminQuotaRoute: AdminQuotaRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface ClientDashboardRouteChildren {
+  ClientDashboardIndexRoute: typeof ClientDashboardIndexRoute
+  ClientDashboardKeysRoute: typeof ClientDashboardKeysRoute
+  ClientDashboardUsageRoute: typeof ClientDashboardUsageRoute
+}
+
+const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
+  ClientDashboardIndexRoute: ClientDashboardIndexRoute,
+  ClientDashboardKeysRoute: ClientDashboardKeysRoute,
+  ClientDashboardUsageRoute: ClientDashboardUsageRoute,
+}
+
+const ClientDashboardRouteWithChildren = ClientDashboardRoute._addFileChildren(
+  ClientDashboardRouteChildren,
+)
+
+interface ClientRouteChildren {
+  ClientLoginRoute: typeof ClientLoginRoute
+  ClientRegisterRoute: typeof ClientRegisterRoute
+  ClientDashboardRoute: typeof ClientDashboardRouteWithChildren
+}
+
+const ClientRouteChildren: ClientRouteChildren = {
+  ClientLoginRoute: ClientLoginRoute,
+  ClientRegisterRoute: ClientRegisterRoute,
+  ClientDashboardRoute: ClientDashboardRouteWithChildren,
+}
+
+const ClientRouteWithChildren = ClientRoute._addFileChildren(ClientRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AnalyticsRoute: AnalyticsRoute,
-  ComboRoute: ComboRoute,
-  KeysRoute: KeysRoute,
-  LogsRoute: LogsRoute,
-  ProvidersRoute: ProvidersRouteWithChildren,
-  QuotaRoute: QuotaRoute,
-  SettingsRoute: SettingsRoute,
+  AdminRoute: AdminRouteWithChildren,
+  ClientRoute: ClientRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
