@@ -15,7 +15,7 @@ type BreadcrumbInfo = {
 function useBreadcrumb(): BreadcrumbInfo {
     const matches = useMatches();
 
-    const providerMatch = matches.find((m) => m.routeId === "/providers/$providerId");
+    const providerMatch = matches.find((m) => m.routeId === "/_admin/providers/$providerId");
     const rawId = (providerMatch?.params as { providerId?: string })?.providerId;
     const { data: providerData } = useProvider(rawId ?? "");
 
