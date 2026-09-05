@@ -15,11 +15,12 @@ export {
 // Lazy sqliteDb accessor — avoids importing node:sqlite when DATABASE_URL is set
 let _sqliteDbLazy: DatabaseSync | null = null;
 let _sqlitePragmasDone = false;
-function getSqliteDbLazy() {
+function getSqliteDbLazy(): DatabaseSync {
     if (!_sqliteDbLazy) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         _sqliteDbLazy = require("./sqlite.js").sqliteDb;
     }
+    if (!_sqliteDbLazy) throw new Error("SQLite not available — set DATABASE_URL for PostgreSQL mode");
     if (!_sqlitePragmasDone) {
         _sqlitePragmasDone = true;
         _sqliteDbLazy.exec("PRAGMA busy_timeout = 5000;");

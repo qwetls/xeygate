@@ -4,7 +4,7 @@ import type { DatabaseSync } from "node:sqlite";
 // Lazy-load SQLite — only when DATABASE_URL is NOT set
 function getSqliteDbLazy(): DatabaseSync {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { DatabaseSync: DS } = require("node:sqlite") as { DatabaseSync: abstract new (...args: unknown[]) => DatabaseSync };
+    const { DatabaseSync: DS } = require("node:sqlite") as { DatabaseSync: new (...args: unknown[]) => DatabaseSync };
     const path = require("node:path") as typeof import("node:path");
     const os = require("node:os") as typeof import("node:os");
     const fs = require("node:fs") as typeof import("node:fs");

@@ -5,8 +5,8 @@ import type { DatabaseSync } from "node:sqlite";
 
 // Lazy-load node:sqlite — only when DATABASE_URL is NOT set
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-let DatabaseSyncClass: (abstract new (...args: any[]) => DatabaseSync) | null = null;
-function getDatabaseSync(): abstract new (...args: unknown[]) => DatabaseSync {
+let DatabaseSyncClass: (new (...args: any[]) => DatabaseSync) | null = null;
+function getDatabaseSync(): new (...args: unknown[]) => DatabaseSync {
     if (!DatabaseSyncClass) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         DatabaseSyncClass = require("node:sqlite").DatabaseSync;
