@@ -124,10 +124,9 @@ test("POST /v1/providers/mine creates provider with owner_id", async () => {
             base_url: "https://api.example.com"
         })
     });
-    assert.equal(res.status, 200, `expected 200, got ${res.status}: ${await res.text()}`);
+    const body = (await res.json()) as { id: string };
+    assert.equal(res.status, 200, `expected 200, got ${res.status}`);
     createdProviderIds.push(providerId);
-
-    const body = await res.json() as { id: string };
     assert.equal(body.id, providerId);
 
     // List mine should show it
