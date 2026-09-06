@@ -76,7 +76,7 @@ function MyApisPage() {
                 </div>
             </div>
 
-            {showForm && <AddProviderForm onAdd={(b) => addMut.mutate(b)} isLoading={addMut.isPending} error={addMut.error} />}
+            {showForm && <AddProviderForm onAdd={(b) => addMut.mutate(b)} isLoading={addMut.isPending} error={addMut.error ?? null} />}
 
             {addMut.isSuccess && (
                 <p className="text-xs text-emerald-600">Provider added successfully.</p>
@@ -144,7 +144,7 @@ function AddProviderForm({
 }: {
     onAdd: (body: Record<string, unknown>) => void;
     isLoading: boolean;
-    error: unknown;
+    error: Error | null;
 }) {
     const [providerId, setProviderId] = useState("openai");
     const [name, setName] = useState("");
