@@ -182,8 +182,14 @@ mkdir -p "$APP_DIR/data"
 # ── 5b. Free ports if in use ──
 free_port() {
     local port=$1
-    local pids
-    pids=$(ss -tlnp "sport = :$port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | sort -u)
+    local pids=""
+    # Try ss first, fall back to lsof/fuser
+    if command -v ss &>/dev/null; then
+        pids=$(ss -tlnp "sport = :$port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' 2>/dev/null | sort -u) || true
+    fi
+    if [ -z "$pids" ] && command -v fuser &>/dev/null; then
+        pids=$(fuser "${port}/tcp" 2>/dev/null) || true
+    fi
     if [ -n "$pids" ]; then
         echo "🔓 Port $port in use by PID(s): $pids — killing..."
         for pid in $pids; do
@@ -192,8 +198,8 @@ free_port() {
         sleep 1
     fi
 }
-free_port "$PORT"
-free_port "$OAUTH_PORT"
+free_port "$PORT" || true
+free_port "$OAUTH_PORT" || true
 
 # ── 6. Build & start container ──
 echo ""
