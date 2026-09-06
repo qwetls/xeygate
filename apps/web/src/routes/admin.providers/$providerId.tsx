@@ -31,7 +31,7 @@ import { ProviderDetailSkeleton } from "@/components/skeletons";
 import { CATEGORY_LABELS, getProviderWebsiteUrl } from "@srouter/constants";
 import { Empty, EmptyContent, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 
-export const Route = createFileRoute("/_admin/providers/$providerId")({
+export const Route = createFileRoute("/admin/providers/$providerId")({
     staticData: { title: "Providers" },
     component: ProviderDetailPage
 });
@@ -215,7 +215,7 @@ function ProviderDetailPage() {
                                 type="button"
                                 size="sm"
                                 className="h-8 text-xs cursor-pointer"
-                                render={<Link to="/providers" />}
+                                render={<Link to="/admin/providers" />}
                             >
                                 Back to Catalog
                             </Button>
@@ -236,7 +236,7 @@ function ProviderDetailPage() {
             {/* Top Navigation Back Link */}
             <div>
                 <Link
-                    to="/providers"
+                    to="/admin/providers"
                     className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                     <ArrowLeft className="size-3.5" />

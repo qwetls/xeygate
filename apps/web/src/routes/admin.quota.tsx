@@ -18,7 +18,7 @@ import { api } from "@/lib/api";
 import type { QuotaResponse } from "@srouter/types";
 import { QuotaSummaryMetrics, QuotaProviderCard, type QuotaAccountItem } from "@/components/quota";
 
-export const Route = createFileRoute("/_admin/quota")({
+export const Route = createFileRoute("/admin/quota")({
     staticData: { title: "Quotas & Limits" },
     component: QuotaPage
 });
@@ -203,7 +203,7 @@ function QuotaPage() {
                     </Button>
 
                     <Link
-                        to="/providers"
+                        to="/admin/providers"
                         className={cn(
                             buttonVariants({ size: "sm" }),
                             "h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
@@ -239,7 +239,7 @@ function QuotaPage() {
                     </EmptyHeader>
                     <EmptyContent>
                         <Link
-                            to="/providers"
+                            to="/admin/providers"
                             className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--ink)] text-[var(--canvas)] px-3.5 py-1.5 text-xs font-semibold hover:opacity-90 transition-transform active:scale-[0.98] shadow-xs cursor-pointer"
                         >
                             <Plus className="size-3.5" />

@@ -15,7 +15,7 @@ import {
     KeyTable
 } from "@/components/keys";
 
-export const Route = createFileRoute("/_admin/keys")({
+export const Route = createFileRoute("/admin/keys")({
     staticData: { title: "API Keys" },
     component: KeysPage
 });

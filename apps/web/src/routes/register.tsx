@@ -23,7 +23,7 @@ function RegisterPage() {
         mutationFn: () => api.post<{ id: string }>("/v1/users/register", { email, password, name }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
-            navigate({ to: "/dashboard" });
+            navigate({ to: "/onboarding" });
         },
         onError: (err: Error) => {
             setError(err instanceof ApiError ? err.message : "Registration failed");

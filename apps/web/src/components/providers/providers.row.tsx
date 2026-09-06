@@ -24,7 +24,7 @@ export function ProviderRow({ provider }: { provider: ProviderDefinition }) {
 
     return (
         <Link
-            to="/providers/$providerId"
+            to="/admin/providers/$providerId"
             params={{ providerId: provider.id }}
             className="group flex items-center justify-between gap-3 px-4 py-3 rounded-lg hover:bg-secondary/40 transition-colors font-mono cursor-pointer border-b border-border/40 last:border-b-0"
         >

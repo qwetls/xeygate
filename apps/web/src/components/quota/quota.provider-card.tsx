@@ -97,7 +97,7 @@ export function QuotaProviderCard({
                     </button>
 
                     <Link
-                        to="/providers/$providerId"
+                        to="/admin/providers/$providerId"
                         params={{ providerId: providerName }}
                         className="inline-flex items-center gap-1 text-xs text-amber-500 hover:text-amber-400 transition-colors"
                     >
