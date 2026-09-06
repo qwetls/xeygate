@@ -26,21 +26,30 @@ else
     echo "📦 Installing Docker..."
     export DEBIAN_FRONTEND=noninteractive
 
-    # Repair apt state and make sure required packages are available
+    # Repair apt and make sure basic helpers are present
     apt-get update -qq
     dpkg --configure -a || true
     apt-get -f install -y || true
-
-    # Ensure basic helpers and nftables are available (nftables is required by docker-ce)
     apt-get install -y -qq ca-certificates curl gnupg apt-transport-https lsb-release >/dev/null || true
 
-    # Try installing nftables explicitly so docker-ce dependency can be satisfied
-    if ! apt-get install -y -qq nftables >/dev/null 2>&1; then
-        echo "⚠️  Could not install nftables from apt. Continuing — docker-ce install may fail."
+    # Ensure nftables is available (required by upstream docker-ce)
+    if ! apt-cache policy nftables | grep -q Candidate; then
+        CODENAME=$(. /etc/os-release && echo "$VERSION_CODENAME")
+        cat >/etc/apt/sources.list.d/debian-main.list <<EOF
+deb http://deb.debian.org/debian ${CODENAME} main contrib non-free
+deb http://deb.debian.org/debian ${CODENAME}-updates main contrib non-free
+deb http://security.debian.org/debian-security ${CODENAME}-security main contrib non-free
+EOF
+        apt-get update -qq
     fi
 
-    # Add Docker GPG key + repo (only required for upstream docker-ce)
+    if ! apt-get install -y -qq nftables >/dev/null 2>&1; then
+        echo "⚠️  Could not install nftables from apt; docker-ce may fail. Continuing and will attempt fallback."
+    fi
+
+    # Add Docker GPG key + repo (avoid interactive overwrite)
     install -m 0755 -d /etc/apt/keyrings
+    rm -f /etc/apt/keyrings/docker.gpg
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
     echo \
@@ -50,7 +59,7 @@ else
 
     apt-get update -qq
 
-    # Prefer upstream docker-ce, but fall back to distro docker package if install fails
+    # Try upstream docker-ce first, fall back to docker.io if it fails
     if apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1; then
         echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',')"
     else
