@@ -9,7 +9,7 @@ set -euo pipefail
 
 APP="xeygate"
 APP_DIR="/opt/$APP"
-REPO="https://github.com/XeyCompany/xeygate.git"
+REPO="https://github.com/qwetls/xeygate.git"
 BRANCH="main"
 PORT="${PORT:-4000}"
 NODE_MAJOR=22

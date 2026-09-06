@@ -7,7 +7,7 @@
 One stable API key. Every provider. Automatic routing, OAuth refresh, failover, and live telemetry.
 
 <p>
-  <a href="https://github.com/XeyCompany/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.0.0-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.0.0-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4-e36002?style=flat-square" alt="Hono"></a>
@@ -40,7 +40,7 @@ docker run -d \
 ### Option B: Local Node.js
 
 ```bash
-git clone https://github.com/XeyCompany/xeygate.git
+git clone https://github.com/qwetls/xeygate.git
 cd xeygate
 pnpm install
 pnpm build

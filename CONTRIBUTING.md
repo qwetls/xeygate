@@ -14,7 +14,7 @@ Thank you for your interest in contributing to **XEYGATE**! We welcome contribut
 ### Setup
 
 ```bash
-git clone https://github.com/XeyCompany/xeygate.git
+git clone https://github.com/qwetls/xeygate.git
 cd xeygate
 pnpm install
 pnpm dev
