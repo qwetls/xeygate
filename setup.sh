@@ -179,6 +179,22 @@ fi
 # ── 5. Create data directory ──
 mkdir -p "$APP_DIR/data"
 
+# ── 5b. Free ports if in use ──
+free_port() {
+    local port=$1
+    local pids
+    pids=$(ss -tlnp "sport = :$port" 2>/dev/null | grep -oP 'pid=\K[0-9]+' | sort -u)
+    if [ -n "$pids" ]; then
+        echo "🔓 Port $port in use by PID(s): $pids — killing..."
+        for pid in $pids; do
+            kill "$pid" 2>/dev/null || true
+        done
+        sleep 1
+    fi
+}
+free_port "$PORT"
+free_port "$OAUTH_PORT"
+
 # ── 6. Build & start container ──
 echo ""
 echo "🔨 Building Docker image..."
