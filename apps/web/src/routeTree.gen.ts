@@ -19,12 +19,12 @@ import { Route as AdminLogsRouteImport } from './routes/_admin.logs'
 import { Route as AdminProvidersRouteImport } from './routes/_admin.providers'
 import { Route as AdminQuotaRouteImport } from './routes/_admin.quota'
 import { Route as AdminSettingsRouteImport } from './routes/_admin.settings'
-import { Route as ClientLoginRouteImport } from './routes/_client.login'
-import { Route as ClientRegisterRouteImport } from './routes/_client.register'
 import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
 import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashboard.index'
 import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
 import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AdminProvidersIndexRouteImport } from './routes/_admin.providers/index'
 import { Route as AdminProvidersProviderIdRouteImport } from './routes/_admin.providers/$providerId'
 
@@ -76,15 +76,15 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
-const ClientLoginRoute = ClientLoginRouteImport.update({
+const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => ClientRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-const ClientRegisterRoute = ClientRegisterRouteImport.update({
+const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
-  getParentRoute: () => ClientRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
@@ -126,8 +126,8 @@ export interface FileRoutesByFullPath {
   '/providers': typeof AdminProvidersRouteWithChildren
   '/quota': typeof AdminQuotaRoute
   '/settings': typeof AdminSettingsRoute
-  '/login': typeof ClientLoginRoute
-  '/register': typeof ClientRegisterRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/dashboard': typeof ClientDashboardRouteWithChildren
   '/providers/$providerId': typeof AdminProvidersProviderIdRoute
   '/providers/': typeof AdminProvidersIndexRoute
@@ -143,8 +143,8 @@ export interface FileRoutesByTo {
   '/logs': typeof AdminLogsRoute
   '/quota': typeof AdminQuotaRoute
   '/settings': typeof AdminSettingsRoute
-  '/login': typeof ClientLoginRoute
-  '/register': typeof ClientRegisterRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/providers/$providerId': typeof AdminProvidersProviderIdRoute
   '/providers': typeof AdminProvidersIndexRoute
   '/dashboard': typeof ClientDashboardIndexRoute
@@ -163,12 +163,12 @@ export interface FileRoutesById {
   '/_admin/quota': typeof AdminQuotaRoute
   '/_admin/settings': typeof AdminSettingsRoute
   '/_client': typeof ClientRouteWithChildren
-  '/_client/login': typeof ClientLoginRoute
-  '/_client/register': typeof ClientRegisterRoute
   '/_client/dashboard': typeof ClientDashboardRouteWithChildren
   '/_client/dashboard/': typeof ClientDashboardIndexRoute
   '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
   '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
+  '/login': typeof LoginRoute
+  '/register': typeof RegisterRoute
   '/_admin/providers/': typeof AdminProvidersIndexRoute
   '/_admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
 }
@@ -219,12 +219,12 @@ export interface FileRouteTypes {
     | '/_admin/quota'
     | '/_admin/settings'
     | '/_client'
-    | '/_client/login'
-    | '/_client/register'
     | '/_client/dashboard'
     | '/_client/dashboard/'
     | '/_client/dashboard/keys'
     | '/_client/dashboard/usage'
+    | '/login'
+    | '/register'
     | '/_admin/providers/'
     | '/_admin/providers/$providerId'
   fileRoutesById: FileRoutesById
@@ -232,6 +232,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -320,20 +322,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_client/login': {
-      id: '/_client/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof ClientLoginRouteImport
-      parentRoute: typeof ClientRoute
-    }
-    '/_client/register': {
-      id: '/_client/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof ClientRegisterRouteImport
-      parentRoute: typeof ClientRoute
-    }
     '/_client/dashboard': {
       id: '/_client/dashboard'
       path: '/dashboard'
@@ -361,6 +349,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/usage'
       preLoaderRoute: typeof ClientDashboardUsageRouteImport
       parentRoute: typeof ClientDashboardRoute
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -420,14 +422,10 @@ const ClientDashboardRouteWithChildren = ClientDashboardRoute._addFileChildren(
 )
 
 interface ClientRouteChildren {
-  ClientLoginRoute: typeof ClientLoginRoute
-  ClientRegisterRoute: typeof ClientRegisterRoute
   ClientDashboardRoute: typeof ClientDashboardRouteWithChildren
 }
 
 const ClientRouteChildren: ClientRouteChildren = {
-  ClientLoginRoute: ClientLoginRoute,
-  ClientRegisterRoute: ClientRegisterRoute,
   ClientDashboardRoute: ClientDashboardRouteWithChildren,
 }
 
@@ -436,6 +434,8 @@ const ClientRouteWithChildren = ClientRoute._addFileChildren(ClientRouteChildren
 const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
+  LoginRoute: LoginRoute,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

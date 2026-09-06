@@ -7,33 +7,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Zap } from "lucide-react";
 
-export const Route = createFileRoute("/_client/register")({
-    component: RegisterPage
+export const Route = createFileRoute("/login")({
+    component: LoginPage
 });
 
-function RegisterPage() {
+function LoginPage() {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
-    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
 
-    const registerMutation = useMutation({
-        mutationFn: () => api.post<{ id: string }>("/v1/users/register", { email, password, name }),
+    const loginMutation = useMutation({
+        mutationFn: () => api.post<{ id: string }>("/v1/users/login", { email, password }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
             navigate({ to: "/dashboard" });
         },
         onError: (err: Error) => {
-            setError(err instanceof ApiError ? err.message : "Registration failed");
+            setError(err instanceof ApiError ? err.message : "Login failed");
         }
     });
 
     function handleSubmit(e: FormEvent) {
         e.preventDefault();
         setError(null);
-        registerMutation.mutate();
+        loginMutation.mutate();
     }
 
     return (
@@ -45,32 +44,28 @@ function RegisterPage() {
                             <Zap className="size-5" strokeWidth={2} />
                         </div>
                     </div>
-                    <CardTitle>Create your account</CardTitle>
-                    <CardDescription>Get API keys and start using the XEYGATE gateway</CardDescription>
+                    <CardTitle>Sign in to XEYGATE</CardTitle>
+                    <CardDescription>Access your API keys and usage dashboard</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
                         <label className="flex flex-col gap-1.5 text-xs font-medium">
-                            Name
-                            <Input type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoFocus />
-                        </label>
-                        <label className="flex flex-col gap-1.5 text-xs font-medium">
                             Email
-                            <Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required />
+                            <Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
                         </label>
                         <label className="flex flex-col gap-1.5 text-xs font-medium">
                             Password
-                            <Input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min 8 characters" required minLength={8} />
+                            <Input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" required />
                         </label>
                         {error && (
                             <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{error}</p>
                         )}
-                        <Button type="submit" disabled={registerMutation.isPending} className="w-full">
-                            {registerMutation.isPending ? "Creating account..." : "Create account"}
+                        <Button type="submit" disabled={loginMutation.isPending} className="w-full">
+                            {loginMutation.isPending ? "Signing in..." : "Sign in"}
                         </Button>
                         <p className="text-center text-xs text-muted-foreground">
-                            Already have an account?{" "}
-                            <Link to="/login" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Sign in</Link>
+                            Don&apos;t have an account?{" "}
+                            <Link to="/register" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Register</Link>
                         </p>
                     </form>
                 </CardContent>

@@ -3,13 +3,12 @@ import { SettingsController } from "@/controllers/settings.controller.js";
 import { TokenSaverController } from "@/controllers/tokenSaver.controller.js";
 import { FallbacksController } from "@/controllers/fallbacks.controller.js";
 import { RequireAdmin } from "@/middleware/AdminAuth.js";
-import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
 export const SettingsRouter = new Hono();
 
-SettingsRouter.get("/settings", ApiKeyAuth, SettingsController.GetSettings);
-SettingsRouter.get("/settings/token-saver", ApiKeyAuth, TokenSaverController.GetSettings);
-SettingsRouter.get("/settings/fallbacks", ApiKeyAuth, FallbacksController.GetFallbacks);
+SettingsRouter.get("/settings", RequireAdmin, SettingsController.GetSettings);
+SettingsRouter.get("/settings/token-saver", RequireAdmin, TokenSaverController.GetSettings);
+SettingsRouter.get("/settings/fallbacks", RequireAdmin, FallbacksController.GetFallbacks);
 
 // Mutations require an authenticated admin session
 SettingsRouter.patch("/settings", RequireAdmin, SettingsController.UpdateSettings);
