@@ -58,6 +58,7 @@ export interface ProviderConfig {
     organizationId?: string;
     customHeaders?: Record<string, string>;
     providerSpecificData?: Record<string, string>;
+    ownerId?: string | null;
     enabled: boolean;
     createdAt: number;
 }

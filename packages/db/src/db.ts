@@ -143,6 +143,7 @@ const TABLES: TableDef[] = [
             { name: "custom_headers", definition: "TEXT" },
             { name: "token_expires_at", definition: "INTEGER" },
             { name: "last_refreshed_at", definition: "INTEGER" },
+            { name: "owner_id", definition: "TEXT" },
             { name: "enabled", definition: "INTEGER NOT NULL DEFAULT 1" },
             { name: "created_at", definition: "INTEGER NOT NULL" }
         ]
@@ -327,7 +328,8 @@ function initSqliteSchemaSync(): void {
         { name: "provider_specific_data", definition: "provider_specific_data TEXT" },
         { name: "token_expires_at", definition: "token_expires_at INTEGER" },
         { name: "last_refreshed_at", definition: "last_refreshed_at INTEGER" },
-        { name: "organization_id", definition: "organization_id TEXT" }
+        { name: "organization_id", definition: "organization_id TEXT" },
+        { name: "owner_id", definition: "owner_id TEXT" }
     ]);
     ensureSync("api_keys", [
         { name: "allowed_models", definition: "allowed_models TEXT" },
@@ -364,7 +366,8 @@ async function initPostgresSchema(): Promise<void> {
         { name: "provider_specific_data", definition: "provider_specific_data TEXT" },
         { name: "token_expires_at", definition: "token_expires_at INTEGER" },
         { name: "last_refreshed_at", definition: "last_refreshed_at INTEGER" },
-        { name: "organization_id", definition: "organization_id TEXT" }
+        { name: "organization_id", definition: "organization_id TEXT" },
+        { name: "owner_id", definition: "owner_id TEXT" }
     ]);
     await ensureColumns("api_keys", [
         { name: "allowed_models", definition: "allowed_models TEXT" },
