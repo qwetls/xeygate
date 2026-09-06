@@ -1,19 +1,16 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { createAPIKeyDB, db, deleteAPIKeyDB } from "@srouter/db";
+import { db } from "@srouter/db";
 import { Hono } from "hono";
 import { LogsRouter } from "@/routes/v1/logs.js";
+import { ADMIN_SESSION_COOKIE, createAdminSession } from "@/services/adminAuth.js";
 import type { RequestLogEntry } from "@srouter/types";
 
 const seededIds: string[] = [];
-const seededKeyIds: string[] = [];
 
 afterEach(async () => {
     for (const id of seededIds.splice(0)) {
         await db.prepare("DELETE FROM request_logs WHERE id = ?").run(id);
-    }
-    for (const id of seededKeyIds.splice(0)) {
-        await deleteAPIKeyDB(id);
     }
 });
 
@@ -90,16 +87,10 @@ function createTestApp() {
     return app;
 }
 
-/** Creates a disposable API key and returns its token for the Authorization header. */
-async function createTestAuth(): Promise<string> {
-    const key = await createAPIKeyDB({ name: "Analytics Test Key" });
-    seededKeyIds.push(key.id);
-    return key.key;
-}
-
 async function authedRequest(app: Hono, path: string) {
+    const token = await createAdminSession();
     return app.request(path, {
-        headers: { Authorization: `Bearer ${await createTestAuth()}` }
+        headers: { Cookie: `${ADMIN_SESSION_COOKIE}=${token}` }
     });
 }
 
