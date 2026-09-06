@@ -59,14 +59,76 @@ EOF
 
     apt-get update -qq
 
-    # Try upstream docker-ce first, fall back to docker.io if it fails
+    # Tier 1: upstream docker-ce
+    # Tier 2: distro docker.io
+    # Tier 3: static binary (no apt needed)
+    DOCKER_INSTALLED=false
+
     if apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1; then
-        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',') (docker-ce)"
+        DOCKER_INSTALLED=true
+    elif apt-get install -y -qq docker.io docker-compose-plugin >/dev/null 2>&1; then
+        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',') (docker.io)"
+        DOCKER_INSTALLED=true
     else
-        echo "⚠️  docker-ce install failed; falling back to distro docker package (docker.io)"
-        apt-get update -qq
-        apt-get install -y -qq docker.io docker-compose-plugin >/dev/null
-        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+        echo "⚠️  apt install failed — installing Docker from static binary..."
+        DOCKER_VERSION="27.3.1"
+        COMPOSE_VERSION="2.30.3"
+        ARCH=$(dpkg --print-architecture)
+        case "$ARCH" in
+            amd64) DOCKER_ARCH="x86_64" ;;
+            arm64) DOCKER_ARCH="aarch64" ;;
+            *)     DOCKER_ARCH="armhf" ;;
+        esac
+
+        # Download static binaries
+        curl -fsSL "https://download.docker.com/linux/static/stable/${DOCKER_ARCH}/docker-${DOCKER_VERSION}.tgz" -o /tmp/docker.tgz
+        tar xzf /tmp/docker.tgz -C /tmp
+        cp /tmp/docker/* /usr/local/bin/
+        rm -rf /tmp/docker /tmp/docker.tgz
+
+        # Install docker-compose plugin
+        mkdir -p /usr/local/lib/docker/cli-plugins
+        curl -fsSL "https://github.com/docker/compose/releases/download/v${COMPOSE_VERSION}/docker-compose-linux-${DOCKER_ARCH}" \
+            -o /usr/local/lib/docker/cli-plugins/docker-compose
+        chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+        # containerd + runc systemd services
+        cat >/etc/systemd/system/containerd.service <<'EOF'
+[Unit]
+Description=containerd container runtime
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/containerd
+Restart=always
+RestartSec=5
+Delegate=yes
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+        cat >/etc/systemd/system/docker.service <<'EOF'
+[Unit]
+Description=Docker Application Container Engine
+After=network.target containerd.service
+Requires=containerd.service
+
+[Service]
+ExecStart=/usr/local/bin/dockerd
+Restart=always
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+        systemctl daemon-reload
+        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',') (static binary)"
+        DOCKER_INSTALLED=true
     fi
 
     systemctl enable --now docker || true
