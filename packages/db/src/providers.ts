@@ -41,6 +41,13 @@ export async function getProviderByIdDB(id: string): Promise<ProviderConfig | nu
     return mapProviderRow(Row);
 }
 
+export async function getProvidersByOwnerDB(ownerId: string): Promise<ProviderConfig[]> {
+    const Rows = (await db
+        .prepare("SELECT * FROM providers WHERE owner_id = ? ORDER BY created_at DESC")
+        .all(ownerId)) as unknown as ProviderRow[];
+    return Rows.map(mapProviderRow);
+}
+
 export async function upsertProviderDB(
     config: ProviderConfig & { category: string; protocol: string }
 ): Promise<ProviderConfig> {

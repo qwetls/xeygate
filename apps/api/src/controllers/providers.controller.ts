@@ -1,10 +1,17 @@
 import type { Context } from "hono";
 import type { CreateProviderPayload } from "@/logic/providers.logic.js";
+import type { ProviderConfig } from "@srouter/types";
 import { ProvidersLogic } from "@/logic/providers.logic.js";
-import { deleteProviderDB } from "@srouter/db";
+import { deleteProviderDB, getProviderByIdDB } from "@srouter/db";
 import { AddCustomModelSchema, CreateProviderSchema, ToggleRoundRobinSchema, VerifyProviderSchema } from "@srouter/types";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
+
+function SanitizedProvider(config: ProviderConfig): Record<string, unknown> {
+    const { apiKey, accessToken, refreshToken, ...rest } = config;
+    void apiKey; void accessToken; void refreshToken;
+    return rest as Record<string, unknown>;
+}
 
 export class ProvidersController {
     public static async ListProviders(c: Context): Promise<Response> {
@@ -25,6 +32,13 @@ export class ProvidersController {
         const Provider = await ProvidersLogic.GetProviderById(ProviderId);
         if (!Provider) {
             return Err(c, `Provider '${ProviderId}' not found`, 404);
+        }
+        // Connections carry decrypted credentials for internal routing — never
+        // expose them on the public (ApiKeyAuth) discovery endpoint.
+        if (Array.isArray(Provider.connections)) {
+            Provider.connections = Provider.connections.map(
+                (Conn) => SanitizedProvider(Conn) as unknown as ProviderConfig
+            );
         }
         return Ok(c, Provider);
     }
@@ -116,5 +130,48 @@ export class ProvidersController {
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Failed to toggle round-robin mode", 400);
         }
+    }
+
+    // ── Creator-scoped provider management ──
+
+    public static async ListMyProviders(c: Context): Promise<Response> {
+        const userId = c.get("userId") as string;
+        const providers = await ProvidersLogic.ListMyProviders(userId);
+        return Ok(c, { object: "list", data: providers.map(SanitizedProvider) });
+    }
+
+    public static async AddMyProvider(c: Context): Promise<Response> {
+        const userId = c.get("userId") as string;
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = CreateProviderSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid provider payload", 400);
+        }
+
+        try {
+            const Created = await ProvidersLogic.AddProvider(
+                Parsed.data as CreateProviderPayload,
+                userId
+            );
+            return Ok(c, Created);
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Invalid provider payload", 400);
+        }
+    }
+
+    public static async DeleteMyProvider(c: Context): Promise<Response> {
+        const userId = c.get("userId") as string;
+        const Id = c.req.param("id");
+        if (!Id) return Err(c, "Connection ID is required", 400);
+
+        const Existing = await getProviderByIdDB(Id);
+        if (!Existing || Existing.ownerId !== userId) {
+            return Err(c, `Connection '${Id}' not found`, 404);
+        }
+
+        await deleteProviderDB(Id);
+        registry.unregisterProvider(Id);
+        await loadSavedProvidersFromDB();
+        return Ok(c, { message: "Connection deleted" });
     }
 }

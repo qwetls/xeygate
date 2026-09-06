@@ -19,6 +19,7 @@ import {
     deleteCustomModelDB,
     getAllProvidersDB,
     getCustomModelsByProviderDB,
+    getProvidersByOwnerDB,
     getRoundRobinDB,
     setRoundRobinDB,
     upsertProviderDB
@@ -239,7 +240,10 @@ export class ProvidersLogic {
         };
     }
 
-    public static async AddProvider(Payload: CreateProviderPayload): Promise<ProviderDefinition> {
+    public static async AddProvider(
+        Payload: CreateProviderPayload,
+        OwnerId?: string
+    ): Promise<ProviderDefinition> {
         const Name = Payload.name?.trim();
         if (!Name) throw new Error("Provider name is required");
         if (!isProviderCategory(Payload.category)) throw new Error("Invalid provider category");
@@ -289,6 +293,7 @@ export class ProvidersLogic {
             refreshToken: Payload.refresh_token,
             providerSpecificData: Payload.provider_specific_data,
             customHeaders: Payload.custom_headers,
+            ownerId: OwnerId ?? null,
             enabled: true,
             createdAt: Date.now()
         };
@@ -297,6 +302,10 @@ export class ProvidersLogic {
         await loadSavedProvidersFromDB();
 
         return ProviderDefinitionFromConfig(Config);
+    }
+
+    public static async ListMyProviders(OwnerId: string): Promise<ProviderConfig[]> {
+        return getProvidersByOwnerDB(OwnerId);
     }
 
     public static async AddCustomModel(ProviderId: string, ModelId: string): Promise<ModelObject> {

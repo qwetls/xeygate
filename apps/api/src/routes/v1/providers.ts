@@ -1,9 +1,16 @@
 import { Hono } from "hono";
 import { ProvidersController } from "@/controllers/providers.controller.js";
 import { RequireAdmin } from "@/middleware/AdminAuth.js";
+import { RequireCreator } from "@/middleware/CreatorAuth.js";
 import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 
 export const ProvidersRouter = new Hono();
+
+// Creator-scoped management (session cookie + creator role).
+// Registered before the ":providerId" wildcard so "mine" is not captured as an ID.
+ProvidersRouter.get("/providers/mine", RequireCreator, ProvidersController.ListMyProviders);
+ProvidersRouter.post("/providers/mine", RequireCreator, ProvidersController.AddMyProvider);
+ProvidersRouter.delete("/providers/mine/:id", RequireCreator, ProvidersController.DeleteMyProvider);
 
 // Provider catalog is model-discovery data (same sensitivity as GET /models),
 // so it stays on ApiKeyAuth — clients need it to discover routable models.
