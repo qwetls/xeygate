@@ -78,8 +78,10 @@ if docker compose version &>/dev/null; then
 else
     echo "📦 Installing Docker Compose plugin..."
     apt-get update -qq
-    apt-get install -y -qq docker-compose-plugin >/dev/null
-    echo "✅ Docker Compose $(docker compose version --short)"
+    apt-get install -y -qq docker-compose-plugin >/dev/null 2>&1 \
+        || apt-get install -y -qq docker-compose-v2 >/dev/null 2>&1 \
+        || { echo "   ⚠️  Compose plugin unavailable — trying standalone..."; apt-get install -y -qq docker-compose >/dev/null; }
+    echo "✅ Docker Compose $(docker compose version --short 2>/dev/null || docker-compose --version)"
 fi
 
 # ── 3. Clone or pull repo ──
