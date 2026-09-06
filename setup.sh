@@ -25,10 +25,21 @@ if command -v docker &>/dev/null; then
 else
     echo "📦 Installing Docker..."
     export DEBIAN_FRONTEND=noninteractive
-    apt-get update -qq
-    apt-get install -y -qq ca-certificates curl gnupg >/dev/null
 
-    # Add Docker GPG key + repo
+    # Repair apt state and make sure required packages are available
+    apt-get update -qq
+    dpkg --configure -a || true
+    apt-get -f install -y || true
+
+    # Ensure basic helpers and nftables are available (nftables is required by docker-ce)
+    apt-get install -y -qq ca-certificates curl gnupg apt-transport-https lsb-release >/dev/null || true
+
+    # Try installing nftables explicitly so docker-ce dependency can be satisfied
+    if ! apt-get install -y -qq nftables >/dev/null 2>&1; then
+        echo "⚠️  Could not install nftables from apt. Continuing — docker-ce install may fail."
+    fi
+
+    # Add Docker GPG key + repo (only required for upstream docker-ce)
     install -m 0755 -d /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     chmod a+r /etc/apt/keyrings/docker.gpg
@@ -38,9 +49,18 @@ else
         > /etc/apt/sources.list.d/docker.list
 
     apt-get update -qq
-    apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null
-    systemctl enable --now docker
-    echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+
+    # Prefer upstream docker-ce, but fall back to distro docker package if install fails
+    if apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin >/dev/null 2>&1; then
+        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+    else
+        echo "⚠️  docker-ce install failed; falling back to distro docker package (docker.io)"
+        apt-get update -qq
+        apt-get install -y -qq docker.io docker-compose-plugin >/dev/null
+        echo "✅ Docker $(docker --version | awk '{print $3}' | tr -d ',')"
+    fi
+
+    systemctl enable --now docker || true
 fi
 
 # ── 2. Install Docker Compose plugin (if missing) ──
