@@ -39,6 +39,14 @@ export async function setRequireApiKeyDB(required: boolean): Promise<void> {
     await setSettingDB("require_api_key", required ? "true" : "false");
 }
 
+export async function getRequireRegistrationApprovalDB(): Promise<boolean> {
+    return (await getSettingDB("require_registration_approval", "false")) === "true";
+}
+
+export async function setRequireRegistrationApprovalDB(required: boolean): Promise<void> {
+    await setSettingDB("require_registration_approval", required ? "true" : "false");
+}
+
 export async function getRoundRobinDB(providerId: string): Promise<boolean> {
     return (await getSettingDB(`round_robin_${providerId}`, "false")) === "true";
 }

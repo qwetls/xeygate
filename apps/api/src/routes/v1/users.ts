@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
-import { userAuthStore, getUserTransactionsDB, countUserTransactionsDB } from "@srouter/db";
+import {
+    userAuthStore,
+    getUserTransactionsDB,
+    countUserTransactionsDB,
+    getRequireRegistrationApprovalDB,
+    getPublicPlatformStatsDB
+} from "@srouter/db";
 import {
     validateEmail,
     validateUserPassword,
@@ -37,17 +43,42 @@ UserAuthRouter.post("/users/register", async (c) => {
     const existing = await userAuthStore.getUserByEmail(body.email!);
     if (existing) return Err(c, "Email already registered", 409, { code: "email_exists" });
 
+    const requiresApproval = await getRequireRegistrationApprovalDB();
     const user = await userAuthStore.createUser({
         email: body.email!,
         passwordHash: hashUserPassword(body.password!),
-        name: body.name
+        name: body.name,
+        status: requiresApproval ? "pending" : "active"
     });
     if (!user) return Err(c, "Registration failed", 500);
+
+    // When registration requires admin approval, the account is created as
+    // "pending" and can't sign in until an admin approves it.
+    if (requiresApproval) {
+        return Ok(c, {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            status: user.status,
+            creatorStatus: user.creatorStatus,
+            requiresApproval: true,
+            message: "Account created. An admin must approve your registration before you can sign in."
+        });
+    }
 
     const token = await createUserSession(userAuthStore, user.id);
     setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
 
-    return Ok(c, { id: user.id, email: user.email, name: user.name, role: user.role, credits: user.credits });
+    return Ok(c, {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        creatorStatus: user.creatorStatus,
+        credits: user.credits
+    });
 });
 
 // ── Login ──
@@ -61,10 +92,29 @@ UserAuthRouter.post("/users/login", async (c) => {
         return Err(c, "Invalid email or password", 401, { code: "invalid_credentials" });
     }
 
+    if (user.status === "banned") {
+        return Err(c, "This account has been banned. Contact support for assistance.", 403, {
+            code: "account_banned"
+        });
+    }
+    if (user.status === "pending") {
+        return Err(c, "Your account is pending admin approval. Please try again later.", 403, {
+            code: "account_pending"
+        });
+    }
+
     const token = await createUserSession(userAuthStore, user.id);
     setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
 
-    return Ok(c, { id: user.id, email: user.email, name: user.name, role: user.role, credits: user.credits });
+    return Ok(c, {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        creatorStatus: user.creatorStatus,
+        credits: user.credits
+    });
 });
 
 // ── Logout ──
@@ -80,7 +130,15 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const user = await userAuthStore.getUserById(userId);
     if (!user) return Err(c, "User not found", 404);
-    return Ok(c, { id: user.id, email: user.email, name: user.name, role: user.role, credits: user.credits });
+    return Ok(c, {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status,
+        creatorStatus: user.creatorStatus,
+        credits: user.credits
+    });
 });
 
 // ── Role ──
@@ -88,7 +146,7 @@ UserAuthRouter.get("/users/role", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const user = await userAuthStore.getUserById(userId);
     if (!user) return Err(c, "User not found", 404);
-    return Ok(c, { role: user.role });
+    return Ok(c, { role: user.role, status: user.status, creatorStatus: user.creatorStatus });
 });
 
 UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
@@ -97,9 +155,49 @@ UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
     if (body.role !== "buyer" && body.role !== "creator") {
         return Err(c, "Role must be 'buyer' or 'creator'", 400);
     }
-    const updated = await userAuthStore.updateRole(userId, body.role);
+    const user = await userAuthStore.getUserById(userId);
+    if (!user) return Err(c, "User not found", 404);
+
+    // Buyer is always instant — the account is (re)activated to the buyer role.
+    if (body.role === "buyer") {
+        const updated = await userAuthStore.updateRole(userId, "buyer");
+        if (!updated) return Err(c, "User not found", 404);
+        return Ok(c, { id: updated.id, role: updated.role, status: updated.status, creatorStatus: updated.creatorStatus });
+    }
+
+    // Creator upgrade is gated behind admin approval.
+    if (user.status !== "active") {
+        return Err(c, "Your account must be active to request creator access.", 403, {
+            code: "account_not_active"
+        });
+    }
+    if (user.creatorStatus === "pending") {
+        return Ok(c, {
+            id: user.id,
+            role: user.role,
+            status: user.status,
+            creatorStatus: user.creatorStatus,
+            requiresApproval: true
+        });
+    }
+    if (user.creatorStatus === "approved" && user.role === "creator") {
+        return Ok(c, {
+            id: user.id,
+            role: user.role,
+            status: user.status,
+            creatorStatus: user.creatorStatus
+        });
+    }
+    // First request (none/rejected) → pending; role stays 'buyer' until approved.
+    const updated = await userAuthStore.setCreatorApproval(userId, "pending");
     if (!updated) return Err(c, "User not found", 404);
-    return Ok(c, { id: updated.id, role: updated.role });
+    return Ok(c, {
+        id: updated.id,
+        role: updated.role,
+        status: updated.status,
+        creatorStatus: updated.creatorStatus,
+        requiresApproval: true
+    });
 });
 
 // ── Top up credits (simulated for MVP) ──
@@ -161,4 +259,11 @@ UserAuthRouter.get("/users/usage", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const usage = await userAuthStore.getUserUsage(userId);
     return Ok(c, usage);
+});
+
+// ── Platform stats (authenticated portal users) ──
+// Lightweight, non-sensitive aggregate counters shared with all dashboard users.
+UserAuthRouter.get("/users/platform-stats", RequireUserAuth, async (c) => {
+    const stats = await getPublicPlatformStatsDB();
+    return Ok(c, stats);
 });

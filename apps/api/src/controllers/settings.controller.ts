@@ -2,7 +2,9 @@ import type { Context } from "hono";
 import {
     getAllSettingsDB,
     getRequireApiKeyDB,
+    getRequireRegistrationApprovalDB,
     setRequireApiKeyDB,
+    setRequireRegistrationApprovalDB,
     setSettingDB
 } from "@srouter/db";
 import { UpdateSettingsSchema } from "@srouter/types";
@@ -13,6 +15,7 @@ export class SettingsController {
         return Ok(c, {
             require_api_key: await getRequireApiKeyDB(),
             requireApiKey: await getRequireApiKeyDB(),
+            require_registration_approval: await getRequireRegistrationApprovalDB(),
             settings: await getAllSettingsDB()
         });
     }
@@ -28,6 +31,9 @@ export class SettingsController {
             if (typeof Parsed.data.require_api_key === "boolean") {
                 await setRequireApiKeyDB(Parsed.data.require_api_key);
             }
+            if (typeof Parsed.data.require_registration_approval === "boolean") {
+                await setRequireRegistrationApprovalDB(Parsed.data.require_registration_approval);
+            }
             if (Parsed.data.settings) {
                 for (const [key, value] of Object.entries(Parsed.data.settings)) {
                     if (typeof value === "string") {
@@ -40,6 +46,7 @@ export class SettingsController {
                 message: "Settings updated successfully",
                 require_api_key: await getRequireApiKeyDB(),
                 requireApiKey: await getRequireApiKeyDB(),
+                require_registration_approval: await getRequireRegistrationApprovalDB(),
                 settings: await getAllSettingsDB()
             });
         } catch (error) {

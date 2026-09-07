@@ -16,6 +16,8 @@ interface UserInfo {
     name: string;
     credits: number;
     role: "buyer" | "creator";
+    status: "active" | "pending" | "banned";
+    creatorStatus: "none" | "pending" | "approved" | "rejected";
 }
 
 function ClientLayout() {
@@ -39,6 +41,10 @@ function ClientLayout() {
     }
 
     const user = statusQuery.data;
+
+    if (user.status === "banned") {
+        return <BannedRedirect />;
+    }
 
     return (
         <TooltipProvider>
@@ -75,6 +81,26 @@ function UnauthenticatedRedirect() {
                     <Link to="/register" className="inline-flex items-center justify-center rounded-md border border-border px-4 py-2 text-xs font-medium hover:bg-secondary transition-colors">
                         Register
                     </Link>
+                </div>
+            </div>
+        </main>
+    );
+}
+
+function BannedRedirect() {
+    return (
+        <main className="flex min-h-svh items-center justify-center bg-background px-4">
+            <div className="text-center space-y-4">
+                <div className="flex justify-center">
+                    <div className="flex size-12 items-center justify-center rounded-xl border border-destructive/30 bg-destructive/10">
+                        <Zap className="size-6 text-destructive" strokeWidth={2} />
+                    </div>
+                </div>
+                <div>
+                    <h1 className="text-lg font-bold text-foreground">Account suspended</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        This account has been banned. Contact support if you believe this is a mistake.
+                    </p>
                 </div>
             </div>
         </main>

@@ -23,6 +23,7 @@ import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
 import { Route as AdminQuotaRouteImport } from './routes/admin.quota'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
 import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashboard.index'
 import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
@@ -104,6 +105,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -177,6 +183,7 @@ export interface FileRoutesByFullPath {
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/admin/': typeof AdminIndexRoute
   '/dashboard/': typeof ClientDashboardIndexRoute
   '/dashboard/keys': typeof ClientDashboardKeysRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
@@ -228,6 +236,7 @@ export interface FileRoutesById {
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/users': typeof AdminUsersRoute
   '/_client/dashboard': typeof ClientDashboardRouteWithChildren
   '/_client/dashboard/': typeof ClientDashboardIndexRoute
   '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
@@ -256,6 +265,7 @@ export interface FileRouteTypes {
     | '/admin/providers'
     | '/admin/quota'
     | '/admin/settings'
+    | '/admin/users'
     | '/admin/'
     | '/dashboard/'
     | '/dashboard/keys'
@@ -281,6 +291,7 @@ export interface FileRouteTypes {
     | '/admin/pricing'
     | '/admin/quota'
     | '/admin/settings'
+    | '/admin/users'
     | '/dashboard/keys'
     | '/dashboard/usage'
     | '/dashboard/my-apis'
@@ -306,6 +317,7 @@ export interface FileRouteTypes {
     | '/admin/providers'
     | '/admin/quota'
     | '/admin/settings'
+    | '/admin/users'
     | '/_client/dashboard'
     | '/_client/dashboard/'
     | '/_client/dashboard/keys'
@@ -426,6 +438,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_client/dashboard': {
       id: '/_client/dashboard'
       path: '/dashboard'
@@ -531,6 +550,7 @@ interface AdminRouteChildren {
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
   AdminQuotaRoute: typeof AdminQuotaRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -544,6 +564,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
   AdminQuotaRoute: AdminQuotaRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminUsersRoute: AdminUsersRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

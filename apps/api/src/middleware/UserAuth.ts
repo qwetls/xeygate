@@ -17,6 +17,15 @@ export async function RequireUserAuth(c: Context, next: Next): Promise<Response 
             code: "unauthorized"
         });
     }
+
+    const user = await userAuthStore.getUserById(userId);
+    if (!user) return Err(c, "User not found", 404);
+    if (user.status === "banned") {
+        return Err(c, "This account has been banned. Contact support for assistance.", 403, {
+            code: "account_banned"
+        });
+    }
+
     c.set("userId", userId);
     return await next();
 }

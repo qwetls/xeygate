@@ -3,6 +3,8 @@ import { getDbClient, type DbClient } from "./client.js";
 import { num, str } from "./row-utils.js";
 
 export type UserRole = "buyer" | "creator";
+export type UserStatus = "active" | "pending" | "banned";
+export type CreatorStatus = "none" | "pending" | "approved" | "rejected";
 
 export interface User {
     id: string;
@@ -11,6 +13,8 @@ export interface User {
     name: string;
     credits: number;
     role: UserRole;
+    status: UserStatus;
+    creatorStatus: CreatorStatus;
     createdAt: number;
     updatedAt: number;
 }
@@ -29,6 +33,8 @@ interface UserRow {
     name: string;
     credits: number;
     role: string;
+    status: string;
+    creator_status: string;
     created_at: number;
     updated_at: number;
 }
@@ -60,6 +66,8 @@ export class UserAuthStore {
                 name TEXT NOT NULL DEFAULT '',
                 credits ${pg ? "DOUBLE PRECISION" : "REAL"} NOT NULL DEFAULT 0,
                 role TEXT NOT NULL DEFAULT 'buyer',
+                status TEXT NOT NULL DEFAULT 'active',
+                creator_status TEXT NOT NULL DEFAULT 'none',
                 created_at ${integer} NOT NULL,
                 updated_at ${integer} NOT NULL
             );
@@ -80,6 +88,26 @@ export class UserAuthStore {
         // Migrate role column for pre-existing users tables
         try {
             await this.client.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'buyer'`);
+        } catch {
+            // Column already exists
+        }
+        // Migrate status column (active/pending/banned). Existing users stay active.
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`
+            );
+        } catch {
+            // Column already exists
+        }
+        // Migrate creator_status column (none/pending/approved/rejected).
+        // Existing creators keep working: their approval is backfilled as 'approved'.
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN creator_status TEXT NOT NULL DEFAULT 'none'`
+            );
+            await this.client.exec(
+                `UPDATE users SET creator_status = 'approved' WHERE role = 'creator'`
+            );
         } catch {
             // Column already exists
         }
@@ -110,17 +138,19 @@ export class UserAuthStore {
         email: string;
         passwordHash: string;
         name?: string;
+        status?: UserStatus;
     }): Promise<User | null> {
         await this.ensureTables();
         const id = `user_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
         const now = Date.now();
         const email = data.email.toLowerCase().trim();
+        const status = data.status ?? "active";
 
         try {
             await this.client.run(
-                `INSERT INTO users (id, email, password_hash, name, credits, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, 0, ?, ?)`,
-                id, email, data.passwordHash, data.name ?? "", now, now
+                `INSERT INTO users (id, email, password_hash, name, credits, role, status, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?)`,
+                id, email, data.passwordHash, data.name ?? "", status, now, now
             );
         } catch {
             // Duplicate email
@@ -164,6 +194,97 @@ export class UserAuthStore {
             role, Date.now(), userId
         );
         return this.getUserById(userId);
+    }
+
+    // ── Admin user management ──
+
+    public async listUsers(): Promise<User[]> {
+        await this.ensureTables();
+        const Rows = (await this.client.all(
+            "SELECT * FROM users ORDER BY created_at DESC"
+        )) as unknown as UserRow[];
+        return Rows.map(mapUserRow);
+    }
+
+    public async updateStatus(
+        userId: string,
+        status: UserStatus
+    ): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET status = ?, updated_at = ? WHERE id = ?`,
+            status, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    public async setCreatorApproval(
+        userId: string,
+        creatorStatus: CreatorStatus
+    ): Promise<User | null> {
+        await this.ensureTables();
+        // Role flips to creator only when the request is approved; any other
+        // outcome (pending/rejected) keeps the account on the buyer role.
+        if (creatorStatus === "approved") {
+            await this.client.run(
+                `UPDATE users SET creator_status = 'approved', role = 'creator', updated_at = ? WHERE id = ?`,
+                Date.now(), userId
+            );
+        } else {
+            await this.client.run(
+                `UPDATE users SET creator_status = ?, updated_at = ? WHERE id = ?`,
+                creatorStatus, Date.now(), userId
+            );
+        }
+        return this.getUserById(userId);
+    }
+
+    public async revokeApiKeys(userId: string): Promise<number> {
+        await this.ensureTables();
+        const Result = await this.client.run(
+            "DELETE FROM api_keys WHERE user_id = ?", userId
+        );
+        return num(Result.changes);
+    }
+
+    public async countByStatus(): Promise<{
+        active: number;
+        pending: number;
+        banned: number;
+        total: number;
+    }> {
+        await this.ensureTables();
+        const Rows = (await this.client.all(
+            `SELECT status, COUNT(*) as count FROM users GROUP BY status`
+        )) as unknown as Array<{ status: string; count: number }>;
+        let active = 0;
+        let pending = 0;
+        let banned = 0;
+        let total = 0;
+        for (const r of Rows) {
+            const count = num(r.count);
+            total += count;
+            if (r.status === "active") active += count;
+            else if (r.status === "pending") pending += count;
+            else if (r.status === "banned") banned += count;
+            else active += count; // legacy/null rows count as active
+        }
+        return { active, pending, banned, total };
+    }
+
+    public async countCreators(): Promise<{ approved: number; pending: number }> {
+        await this.ensureTables();
+        const Rows = (await this.client.all(
+            `SELECT creator_status, COUNT(*) as count FROM users GROUP BY creator_status`
+        )) as unknown as Array<{ creator_status: string; count: number }>;
+        let approved = 0;
+        let pending = 0;
+        for (const r of Rows) {
+            const count = num(r.count);
+            if (r.creator_status === "approved") approved += count;
+            else if (r.creator_status === "pending") pending += count;
+        }
+        return { approved, pending };
     }
 
     // ── Sessions ──
@@ -290,6 +411,13 @@ function mapUserRow(row: UserRow): User {
         name: str(row.name),
         credits: num(row.credits),
         role: row.role === "creator" ? "creator" : "buyer",
+        status: row.status === "pending" || row.status === "banned" ? row.status : "active",
+        creatorStatus:
+            row.creator_status === "pending" ||
+            row.creator_status === "approved" ||
+            row.creator_status === "rejected"
+                ? row.creator_status
+                : "none",
         createdAt: num(row.created_at),
         updatedAt: num(row.updated_at)
     };

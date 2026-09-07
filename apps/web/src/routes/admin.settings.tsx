@@ -35,6 +35,7 @@ export const Route = createFileRoute("/admin/settings")({
 interface ServerSettingsResponse {
     require_api_key?: boolean;
     requireApiKey?: boolean;
+    require_registration_approval?: boolean;
     settings?: Record<string, string>;
 }
 
@@ -71,6 +72,8 @@ function SettingsPage() {
         });
 
     const [requireApiKey, setRequireApiKey] = useState<boolean>(false);
+    const [requireRegistrationApproval, setRequireRegistrationApproval] =
+        useState<boolean>(false);
 
     useEffect(() => {
         if (serverSettings) {
@@ -78,17 +81,29 @@ function SettingsPage() {
             if (typeof val === "boolean") {
                 setRequireApiKey(val);
             }
+            if (typeof serverSettings.require_registration_approval === "boolean") {
+                setRequireRegistrationApproval(serverSettings.require_registration_approval);
+            }
         }
     }, [serverSettings]);
 
     const updateServerMutation = useMutation({
-        mutationFn: (newRequireApiKey: boolean) =>
-            api.post("/v1/settings", { require_api_key: newRequireApiKey }),
-        onSuccess: (_data, newRequireApiKey) => {
+        mutationFn: (payload: Record<string, boolean>) => api.post("/v1/settings", payload),
+        onSuccess: (_data, payload) => {
             queryClient.invalidateQueries({ queryKey: ["server_settings"] });
-            toast.success(
-                newRequireApiKey ? "API Key Authentication Required" : "Open Access Mode Enabled"
-            );
+            if ("require_registration_approval" in payload) {
+                toast.success(
+                    payload.require_registration_approval
+                        ? "New registrations now require admin approval"
+                        : "Open registration enabled"
+                );
+            } else {
+                toast.success(
+                    payload.require_api_key
+                        ? "API Key Authentication Required"
+                        : "Open Access Mode Enabled"
+                );
+            }
         },
         onError: (err) => {
             toast.error("Failed to update security setting", {
@@ -99,7 +114,12 @@ function SettingsPage() {
 
     const handleToggleRequireApiKey = (value: boolean) => {
         setRequireApiKey(value);
-        updateServerMutation.mutate(value);
+        updateServerMutation.mutate({ require_api_key: value });
+    };
+
+    const handleToggleRequireRegistrationApproval = (value: boolean) => {
+        setRequireRegistrationApproval(value);
+        updateServerMutation.mutate({ require_registration_approval: value });
     };
 
     const scrollToSection = (id: string) => {
@@ -195,6 +215,8 @@ function SettingsPage() {
                 <SecuritySettings
                     requireApiKey={requireApiKey}
                     onToggleRequireApiKey={handleToggleRequireApiKey}
+                    requireRegistrationApproval={requireRegistrationApproval}
+                    onToggleRequireRegistrationApproval={handleToggleRequireRegistrationApproval}
                     isUpdating={updateServerMutation.isPending}
                     apiBase={apiBase}
                 />

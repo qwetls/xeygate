@@ -6,6 +6,7 @@ import { Hono, type Context } from "hono";
 import { AuthRouter } from "@/routes/v1/auth.js";
 import { AuthController } from "@/controllers/auth.controller.js";
 import { adminRoute } from "@/routes/v1/admin.js";
+import { AdminUsersRouter } from "@/routes/v1/adminUsers.js";
 import { ChatRouter } from "@/routes/v1/chat.js";
 import { KeysRouter } from "@/routes/v1/keys.js";
 import { LogsRouter } from "@/routes/v1/logs.js";
@@ -125,6 +126,7 @@ app.get("/v1", (c) => {
 // Mount OpenAI & Anthropic v1 API routes
 app.route("/v1", ModelsRouter);
 app.route("/v1", adminRoute);
+app.route("/v1", AdminUsersRouter);
 app.route("/v1", ChatRouter);
 app.route("/v1", MessagesRouter);
 app.route("/v1", ProvidersRouter);

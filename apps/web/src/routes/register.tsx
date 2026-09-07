@@ -5,11 +5,18 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Zap } from "lucide-react";
+import { Clock, Zap } from "lucide-react";
 
 export const Route = createFileRoute("/register")({
     component: RegisterPage
 });
+
+interface RegisterResponse {
+    id?: string;
+    status?: string;
+    requiresApproval?: boolean;
+    message?: string;
+}
 
 function RegisterPage() {
     const queryClient = useQueryClient();
@@ -18,11 +25,17 @@ function RegisterPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [pendingApproval, setPendingApproval] = useState(false);
 
     const registerMutation = useMutation({
-        mutationFn: () => api.post<{ id: string }>("/v1/users/register", { email, password, name }),
-        onSuccess: () => {
+        mutationFn: () =>
+            api.post<RegisterResponse>("/v1/users/register", { email, password, name }),
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
+            if (data?.requiresApproval) {
+                setPendingApproval(true);
+                return;
+            }
             navigate({ to: "/onboarding" });
         },
         onError: (err: Error) => {
@@ -34,6 +47,35 @@ function RegisterPage() {
         e.preventDefault();
         setError(null);
         registerMutation.mutate();
+    }
+
+    if (pendingApproval) {
+        return (
+            <main className="flex min-h-svh items-center justify-center bg-background px-4 py-8">
+                <Card className="w-full max-w-md text-center">
+                    <CardHeader>
+                        <div className="flex justify-center mb-2">
+                            <div className="flex size-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10">
+                                <Clock className="size-5 text-amber-500" strokeWidth={2} />
+                            </div>
+                        </div>
+                        <CardTitle>Account created — pending approval</CardTitle>
+                        <CardDescription>
+                            An admin must approve your registration before you can sign in. You&apos;ll
+                            be able to log in once your account is activated.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-3">
+                        <Link
+                            to="/login"
+                            className="inline-flex items-center justify-center rounded-md bg-foreground text-background px-4 py-2 text-xs font-medium hover:bg-foreground/90 transition-colors"
+                        >
+                            Back to sign in
+                        </Link>
+                    </CardContent>
+                </Card>
+            </main>
+        );
     }
 
     return (

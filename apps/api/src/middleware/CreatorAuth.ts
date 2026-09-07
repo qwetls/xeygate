@@ -20,10 +20,17 @@ export async function RequireCreator(c: Context, next: Next): Promise<Response |
 
     const user = await userAuthStore.getUserById(userId);
     if (!user) return Err(c, "User not found", 404);
-    if (user.role !== "creator") {
+    if (user.status === "banned") {
+        return Err(c, "This account has been banned. Contact support for assistance.", 403, {
+            code: "account_banned"
+        });
+    }
+    if (user.role !== "creator" || user.creatorStatus !== "approved") {
         return Err(
             c,
-            "Creator access required. Upgrade your account to start selling APIs.",
+            user.creatorStatus === "pending"
+                ? "Your creator request is pending admin approval."
+                : "Creator access required. Upgrade your account to start selling APIs.",
             403,
             { code: "creator_only" }
         );

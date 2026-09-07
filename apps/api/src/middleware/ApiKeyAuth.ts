@@ -104,6 +104,15 @@ export function CreateApiKeyAuth(Options: ApiKeyAuthOptions = {}) {
 
                 // Block marketplace requests if the user has zero or negative credits.
                 if (ApiKeyRow.user_id) {
+                    const owner = await userAuthStore.getUserById(ApiKeyRow.user_id);
+                    if (owner && owner.status === "banned") {
+                        return Err(
+                            c,
+                            "This API key belongs to a banned account.",
+                            403,
+                            { type: "invalid_request_error", code: "account_banned" }
+                        );
+                    }
                     const credits = await userAuthStore.getUserCredits(ApiKeyRow.user_id);
                     if (credits <= 0) {
                         return Err(

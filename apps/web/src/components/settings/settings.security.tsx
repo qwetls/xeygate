@@ -9,6 +9,8 @@ import { SettingsSection, SettingsRow, SegmentedControl } from "./settings.ui";
 interface SecuritySettingsProps {
     requireApiKey: boolean;
     onToggleRequireApiKey: (required: boolean) => void;
+    requireRegistrationApproval: boolean;
+    onToggleRequireRegistrationApproval: (required: boolean) => void;
     isUpdating: boolean;
     apiBase?: string;
 }
@@ -16,6 +18,8 @@ interface SecuritySettingsProps {
 export function SecuritySettings({
     requireApiKey,
     onToggleRequireApiKey,
+    requireRegistrationApproval,
+    onToggleRequireRegistrationApproval,
     isUpdating
 }: SecuritySettingsProps) {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -94,6 +98,38 @@ export function SecuritySettings({
                             ]}
                             value={requireApiKey}
                             onChange={onToggleRequireApiKey}
+                            disabled={isUpdating}
+                        />
+                    </div>
+                }
+            />
+
+            <SettingsRow
+                title="Require Admin Approval for New Registrations"
+                description={
+                    requireRegistrationApproval
+                        ? "New accounts are created as 'pending' and cannot sign in until an admin approves them."
+                        : "Anyone can register and sign in instantly."
+                }
+                control={
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className={[
+                                "hidden sm:inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-mono font-medium border",
+                                requireRegistrationApproval
+                                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                    : "bg-muted/50 text-muted-foreground border-border/60"
+                            ].join(" ")}
+                        >
+                            {requireRegistrationApproval ? "Pending Gate" : "Open"}
+                        </span>
+                        <SegmentedControl
+                            options={[
+                                { value: false, label: "OFF" },
+                                { value: true, label: "ON" }
+                            ]}
+                            value={requireRegistrationApproval}
+                            onChange={onToggleRequireRegistrationApproval}
                             disabled={isUpdating}
                         />
                     </div>

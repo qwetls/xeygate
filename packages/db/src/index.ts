@@ -15,3 +15,4 @@ export * from "./client.js";
 export * from "./transactions.js";
 export * from "./creatorEarnings.js";
 export * from "./modelPricing.js";
+export * from "./platform.js";

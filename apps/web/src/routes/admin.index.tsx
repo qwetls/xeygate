@@ -1,16 +1,16 @@
 import type { ComponentType } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
     Activity,
     Boxes,
     Coins,
     CircleDollarSign,
-    Cpu,
-    Radio,
     RefreshCw,
+    Store,
     TriangleAlert,
-    Zap
+    UserCheck,
+    Users
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/utils";
@@ -69,6 +69,21 @@ function StatCard({ label, value, detail, icon: Icon, tooltip, subValue }: StatC
     );
 }
 
+interface PlatformSummary {
+    users: { total: number; active: number; pending: number; banned: number };
+    creators: { approved: number; pending: number };
+    usage: { totalRequests: number; totalTokens: number; totalCost: number };
+    topUsers: Array<{
+        userId: string;
+        name: string;
+        email: string;
+        totalRequests: number;
+        totalTokens: number;
+        totalCost: number;
+    }>;
+    generatedAt: number;
+}
+
 function DashboardPage() {
     const {
         data: stats,
@@ -80,6 +95,19 @@ function DashboardPage() {
         queryFn: () => api.get<UsageStats>("/v1/logs/stats"),
         refetchInterval: 30_000,
         refetchIntervalInBackground: false
+    });
+
+    const {
+        data: platform,
+        isPending: platformPending,
+        error: platformError,
+        refetch: refetchPlatform
+    } = useQuery({
+        queryKey: ["platform-summary"],
+        queryFn: () => api.get<PlatformSummary>("/v1/admin/platform-analytics"),
+        refetchInterval: 60_000,
+        refetchIntervalInBackground: false,
+        retry: false
     });
 
     if (isPending || !stats) {
@@ -176,6 +204,160 @@ function DashboardPage() {
                     icon={Boxes}
                 />
             </section>
+
+            {/* Platform Analytics — user/creator marketplace summary */}
+            {platform && (
+                <section
+                    aria-label="Platform summary"
+                    className="rounded-xl border border-border/80 bg-card/40 p-4 sm:p-5 shadow-2xs"
+                >
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                            <h2 className="text-sm font-bold tracking-tight text-foreground flex items-center gap-2">
+                                <Users className="size-4 text-muted-foreground" strokeWidth={1.75} />
+                                Platform Overview
+                            </h2>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                Marketplace growth, creator approvals, and platform revenue.
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => void refetchPlatform()}
+                            className="h-7 gap-1.5 text-[11px] cursor-pointer text-muted-foreground"
+                        >
+                            <RefreshCw className="size-3" />
+                            Refresh
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                        <div className="rounded-lg border border-border/70 bg-card/60 p-3.5">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                <Users className="size-3" strokeWidth={1.75} />
+                                Users
+                            </div>
+                            <div className="mt-1.5 text-xl font-bold text-foreground">
+                                {platform.users.total.toLocaleString()}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                {platform.users.active.toLocaleString()} active ·{" "}
+                                {platform.users.pending.toLocaleString()} pending ·{" "}
+                                {platform.users.banned.toLocaleString()} banned
+                            </div>
+                        </div>
+                        <div className="rounded-lg border border-border/70 bg-card/60 p-3.5">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                <Store className="size-3" strokeWidth={1.75} />
+                                Creators
+                            </div>
+                            <div className="mt-1.5 text-xl font-bold text-foreground">
+                                {platform.creators.approved.toLocaleString()}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                {platform.creators.pending.toLocaleString()} pending approval
+                            </div>
+                        </div>
+                        <div className="rounded-lg border border-border/70 bg-card/60 p-3.5">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                <Activity className="size-3" strokeWidth={1.75} />
+                                Requests / Tokens
+                            </div>
+                            <div className="mt-1.5 text-xl font-bold text-foreground">
+                                {formatCompactNumber(platform.usage.totalRequests)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                {formatCompactNumber(platform.usage.totalTokens)} tokens
+                            </div>
+                        </div>
+                        <div className="rounded-lg border border-border/70 bg-card/60 p-3.5">
+                            <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                <CircleDollarSign className="size-3" strokeWidth={1.75} />
+                                Platform Cost
+                            </div>
+                            <div className="mt-1.5 text-xl font-bold text-foreground">
+                                ${platform.usage.totalCost.toFixed(2)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                                All recorded estimated cost
+                            </div>
+                        </div>
+                    </div>
+
+                    {(platform.creators.pending > 0 || platform.users.pending > 0) && (
+                        <Link
+                            to="/admin/users"
+                            className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 transition-colors hover:bg-amber-500/15"
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <UserCheck className="size-4 text-amber-500" strokeWidth={1.75} />
+                                <span className="text-xs font-semibold text-foreground">
+                                    {platform.users.pending + platform.creators.pending} approval
+                                    request{platform.users.pending + platform.creators.pending === 1 ? "" : "s"} waiting
+                                </span>
+                            </div>
+                            <span className="text-[11px] font-medium text-muted-foreground underline underline-offset-2">
+                                Review in User Management →
+                            </span>
+                        </Link>
+                    )}
+
+                    {platform.topUsers.length > 0 && (
+                        <div className="mt-4">
+                            <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                                Top Users by Requests
+                            </h3>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead>
+                                        <tr className="border-b border-border/60 text-muted-foreground">
+                                            <th className="py-2 pr-4 font-medium">User</th>
+                                            <th className="py-2 pr-4 font-medium">Requests</th>
+                                            <th className="py-2 pr-4 font-medium">Tokens</th>
+                                            <th className="py-2 font-medium">Cost</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/40">
+                                        {platform.topUsers.map((u) => (
+                                            <tr key={u.userId}>
+                                                <td className="py-2 pr-4">
+                                                    <div className="font-semibold text-foreground truncate max-w-52">
+                                                        {u.name || "Unnamed"}
+                                                    </div>
+                                                    <div className="text-[10px] text-muted-foreground truncate max-w-52">
+                                                        {u.email}
+                                                    </div>
+                                                </td>
+                                                <td className="py-2 pr-4 tabular-nums text-muted-foreground">
+                                                    {u.totalRequests.toLocaleString()}
+                                                </td>
+                                                <td className="py-2 pr-4 tabular-nums text-muted-foreground">
+                                                    {formatCompactNumber(u.totalTokens)}
+                                                </td>
+                                                <td className="py-2 tabular-nums text-muted-foreground">
+                                                    ${u.totalCost.toFixed(2)}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </section>
+            )}
+
+            {!platform && platformError && (
+                <p className="text-[11px] text-destructive">
+                    Platform analytics unavailable:{" "}
+                    {platformError instanceof Error ? platformError.message : "Unknown error"}
+                </p>
+            )}
+            {!platform && platformPending && (
+                <p className="text-[11px] text-muted-foreground">Loading platform overview…</p>
+            )}
 
             {/* Overview & Live Network Status */}
             <section

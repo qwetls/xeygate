@@ -10,6 +10,13 @@ interface UserInfo {
     email: string;
     name: string;
     credits: number;
+    role: "buyer" | "creator";
+    status: "active" | "pending" | "banned";
+    creatorStatus: "none" | "pending" | "approved" | "rejected";
+}
+
+interface RegisterResponse {
+    requiresApproval?: boolean;
 }
 
 interface UserAuthFormProps {
@@ -23,6 +30,7 @@ function UserAuthForm({ mode, onAuthenticated, onSwitchMode }: UserAuthFormProps
     const [password, setPassword] = useState("");
     const [name, setName] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [pendingApproval, setPendingApproval] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -32,7 +40,16 @@ function UserAuthForm({ mode, onAuthenticated, onSwitchMode }: UserAuthFormProps
 
         try {
             if (mode === "register") {
-                await api.post<UserInfo>("/v1/users/register", { email, password, name });
+                const res = await api.post<RegisterResponse>("/v1/users/register", {
+                    email,
+                    password,
+                    name
+                });
+                if (res.requiresApproval) {
+                    setPendingApproval(true);
+                    setIsSubmitting(false);
+                    return;
+                }
             } else {
                 await api.post<UserInfo>("/v1/users/login", { email, password });
             }
@@ -42,6 +59,35 @@ function UserAuthForm({ mode, onAuthenticated, onSwitchMode }: UserAuthFormProps
         } finally {
             setIsSubmitting(false);
         }
+    }
+
+    if (pendingApproval) {
+        return (
+            <main className="flex min-h-svh items-center justify-center bg-background px-4 py-8">
+                <Card className="w-full max-w-md text-center">
+                    <CardHeader>
+                        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                            XEYGATE
+                        </p>
+                        <CardTitle>Account created — pending approval</CardTitle>
+                        <CardDescription>
+                            An admin must approve your registration before you can sign in. Check
+                            back later.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full cursor-pointer"
+                            onClick={() => setPendingApproval(false)}
+                        >
+                            Back to sign in
+                        </Button>
+                    </CardContent>
+                </Card>
+            </main>
+        );
     }
 
     return (

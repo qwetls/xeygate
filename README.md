@@ -163,6 +163,10 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Virtual API Keys:** Scoped keys (`sr-live-*`) with rate limits, token quotas, and credit limits.
 - **Cloudflare Tunnel:** Expose your gateway securely with zero open ports.
 - **Embedded Observability:** Track token usage, cache efficiency, and estimated costs in real-time.
+- **Admin User Management:** Approve pending registrations and creator requests, ban/unban accounts, and revoke a user's API access (`/admin/users`).
+- **Creator Approval Workflow:** Upgrades to creator require admin approval — the account keeps the buyer role until approved.
+- **Registration Gate (optional):** Toggle admin approval for new sign-ups from the admin settings.
+- **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 
 ---
 
