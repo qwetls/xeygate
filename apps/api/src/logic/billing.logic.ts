@@ -3,9 +3,11 @@ import {
     createCreatorEarningDB,
     getProviderByIdDB,
     getAPIKeyByIdDB,
+    getModelPricingDB,
     userAuthStore,
     type TransactionType
 } from "@srouter/db";
+import { calculateCostFromTokens } from "@srouter/pricing";
 
 /**
  * Platform fee share taken from each marketplace usage (e.g. 0.3 = 30%).
@@ -23,6 +25,44 @@ export interface BillingResult {
 }
 
 /**
+ * Resolve the buyer-facing price for a request.
+ * Admin per-model override (model_pricing) wins; otherwise fall back to the
+ * static catalog estimate passed in as `fallback`.
+ */
+export async function resolveMarketplacePrice(options: {
+    providerId: string;
+    model: string;
+    fallback: number;
+    breakdown?: {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        cached_tokens?: number;
+        cache_creation_tokens?: number;
+        reasoning_tokens?: number;
+    };
+}): Promise<number> {
+    if (!options.breakdown) return options.fallback;
+    const override = await getModelPricingDB(options.providerId, options.model);
+    if (!override) return options.fallback;
+    return calculateCostFromTokens(
+        {
+            prompt_tokens: options.breakdown.prompt_tokens,
+            completion_tokens: options.breakdown.completion_tokens,
+            cached_tokens: options.breakdown.cached_tokens,
+            cache_creation_input_tokens: options.breakdown.cache_creation_tokens,
+            reasoning_tokens: options.breakdown.reasoning_tokens
+        },
+        {
+            input: override.input,
+            output: override.output,
+            cached: override.cached,
+            cache_creation: override.cacheCreation,
+            reasoning: override.reasoning
+        }
+    );
+}
+
+/**
  * Settle a completed marketplace request:
  * 1. Debit the buyer's credit balance by the request cost.
  * 2. If the provider is creator-owned, credit the creator's earnings
@@ -37,13 +77,28 @@ export async function settleMarketplaceUsage(options: {
     providerId: string;
     model: string;
     amount: number;
+    breakdown?: {
+        prompt_tokens?: number;
+        completion_tokens?: number;
+        cached_tokens?: number;
+        cache_creation_tokens?: number;
+        reasoning_tokens?: number;
+    };
 }): Promise<void> {
-    const { apiKeyId, providerId, model, amount } = options;
-    if (!(amount > 0)) return;
+    const { apiKeyId, providerId, model } = options;
 
     try {
         const apiKey = await getAPIKeyByIdDB(apiKeyId);
         if (!apiKey?.user_id) return;
+
+        // Buyer-facing price: admin override wins, else static estimate.
+        const amount = await resolveMarketplacePrice({
+            providerId,
+            model,
+            fallback: options.amount,
+            breakdown: options.breakdown
+        });
+        if (!(amount > 0)) return;
 
         const provider = await getProviderByIdDB(providerId);
         const creatorId = provider?.ownerId ?? undefined;

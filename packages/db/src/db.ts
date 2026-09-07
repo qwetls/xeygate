@@ -256,6 +256,21 @@ const TABLES: TableDef[] = [
             { name: "transaction_id", definition: "TEXT" },
             { name: "created_at", definition: "INTEGER NOT NULL" }
         ]
+    },
+    {
+        name: "model_pricing",
+        columns: [
+            { name: "id", definition: "TEXT PRIMARY KEY" },
+            { name: "provider_id", definition: "TEXT NOT NULL" },
+            { name: "model", definition: "TEXT NOT NULL" },
+            { name: "input", definition: "REAL NOT NULL" },
+            { name: "output", definition: "REAL NOT NULL" },
+            { name: "cached", definition: "REAL" },
+            { name: "cache_creation", definition: "REAL" },
+            { name: "reasoning", definition: "REAL" },
+            { name: "updated_at", definition: "INTEGER NOT NULL" },
+            { name: "created_at", definition: "INTEGER NOT NULL" }
+        ]
     }
 ];
 
@@ -269,7 +284,8 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_custom_models_provider ON custom_models(provider_id, created_at ASC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_transactions_user_created ON transactions(user_id, created_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_user_created ON creator_earnings(user_id, created_at DESC);" },
-    { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_provider ON creator_earnings(provider_id, created_at DESC);" }
+    { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_provider ON creator_earnings(provider_id, created_at DESC);" },
+    { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" }
 ];
 
 const ADMIN_TABLES = (pg: boolean) => {

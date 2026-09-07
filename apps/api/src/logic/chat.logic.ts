@@ -132,7 +132,14 @@ async function LogCompletion(
                 apiKeyId: options.apiKeyId,
                 providerId: normalizedProviderId,
                 model,
-                amount: estimatedCost
+                amount: estimatedCost,
+                breakdown: {
+                    prompt_tokens: breakdown.prompt_tokens,
+                    completion_tokens: breakdown.completion_tokens,
+                    cached_tokens: breakdown.cached_tokens,
+                    cache_creation_tokens: breakdown.cache_creation_tokens,
+                    reasoning_tokens: breakdown.reasoning_tokens
+                }
             });
         }
     }

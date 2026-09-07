@@ -33,7 +33,8 @@ const mainNavItems = [
 ] as const;
 
 const routingNavItems = [
-    { to: "/admin/combo", label: "Combo", icon: GitFork }
+    { to: "/admin/combo", label: "Combo", icon: GitFork },
+    { to: "/admin/pricing", label: "Pricing", icon: Coins }
 ] as const;
 
 const observabilityNavItems = [

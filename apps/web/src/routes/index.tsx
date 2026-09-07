@@ -57,6 +57,14 @@ function LandingPage() {
                         <Button
                             variant="ghost"
                             size="sm"
+                            render={<Link to="/catalog" />}
+                            className="text-xs cursor-pointer"
+                        >
+                            Marketplace
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
                             render={<Link to="/login" />}
                             className="text-xs cursor-pointer"
                         >

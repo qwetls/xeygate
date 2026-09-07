@@ -12,11 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ClientRouteImport } from './routes/_client'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminComboRouteImport } from './routes/admin.combo'
 import { Route as AdminKeysRouteImport } from './routes/admin.keys'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
 import { Route as AdminQuotaRouteImport } from './routes/admin.quota'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
@@ -45,6 +47,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CatalogRoute = CatalogRouteImport.update({
+  id: '/catalog',
+  path: '/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -68,6 +75,11 @@ const AdminKeysRoute = AdminKeysRouteImport.update({
 const AdminLogsRoute = AdminLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPricingRoute = AdminPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProvidersRoute = AdminProvidersRouteImport.update({
@@ -138,6 +150,7 @@ const AdminProvidersProviderIdRoute = AdminProvidersProviderIdRouteImport.update
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/catalog': typeof CatalogRoute
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
@@ -147,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -160,6 +174,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/catalog': typeof CatalogRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/onboarding': typeof OnboardingRoute
@@ -169,6 +184,7 @@ export interface FileRoutesByTo {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/dashboard/keys': typeof ClientDashboardKeysRoute
@@ -180,6 +196,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/catalog': typeof CatalogRoute
   '/admin': typeof AdminRouteWithChildren
   '/_client': typeof ClientRouteWithChildren
   '/login': typeof LoginRoute
@@ -190,6 +207,7 @@ export interface FileRoutesById {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -205,6 +223,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/catalog'
     | '/admin'
     | '/login'
     | '/register'
@@ -214,6 +233,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/pricing'
     | '/admin/providers'
     | '/admin/quota'
     | '/admin/settings'
@@ -227,6 +247,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/catalog'
     | '/login'
     | '/register'
     | '/onboarding'
@@ -236,6 +257,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/pricing'
     | '/admin/quota'
     | '/admin/settings'
     | '/dashboard/keys'
@@ -246,6 +268,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/catalog'
     | '/admin'
     | '/_client'
     | '/login'
@@ -256,6 +279,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/pricing'
     | '/admin/providers'
     | '/admin/quota'
     | '/admin/settings'
@@ -270,6 +294,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CatalogRoute: typeof CatalogRoute
   AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -298,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/catalog': {
+      id: '/catalog'
+      path: '/catalog'
+      fullPath: '/catalog'
+      preLoaderRoute: typeof CatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -333,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/logs'
       fullPath: '/admin/logs'
       preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/pricing': {
+      id: '/admin/pricing'
+      path: '/pricing'
+      fullPath: '/admin/pricing'
+      preLoaderRoute: typeof AdminPricingRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/providers': {
@@ -449,6 +488,7 @@ interface AdminRouteChildren {
   AdminComboRoute: typeof AdminComboRoute
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLogsRoute: typeof AdminLogsRoute
+  AdminPricingRoute: typeof AdminPricingRoute
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
   AdminQuotaRoute: typeof AdminQuotaRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -460,6 +500,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComboRoute: AdminComboRoute,
   AdminKeysRoute: AdminKeysRoute,
   AdminLogsRoute: AdminLogsRoute,
+  AdminPricingRoute: AdminPricingRoute,
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
   AdminQuotaRoute: AdminQuotaRoute,
   AdminSettingsRoute: AdminSettingsRoute,
@@ -497,6 +538,7 @@ const ClientRouteWithChildren = ClientRoute._addFileChildren(ClientRouteChildren
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CatalogRoute: CatalogRoute,
   AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
   LoginRoute: LoginRoute,
