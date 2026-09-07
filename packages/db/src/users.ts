@@ -133,10 +133,28 @@ export class UserAuthStore {
     public async updateCredits(userId: string, delta: number): Promise<User | null> {
         await this.ensureTables();
         await this.client.run(
-            `UPDATE users SET credits = credits + ?, updated_at = ? WHERE id = ?`,
+            `UPDATE users SET credits = MAX(0, credits + ?), updated_at = ? WHERE id = ?`,
             delta, Date.now(), userId
         );
         return this.getUserById(userId);
+    }
+
+    public async setCredits(userId: string, amount: number): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET credits = MAX(0, ?), updated_at = ? WHERE id = ?`,
+            amount, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    public async getUserCredits(userId: string): Promise<number> {
+        await this.ensureTables();
+        const row = await this.client.get<{ credits: number }>(
+            "SELECT credits FROM users WHERE id = ?",
+            userId
+        );
+        return num(row?.credits);
     }
 
     public async updateRole(userId: string, role: UserRole): Promise<User | null> {

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
-import { userAuthStore } from "@srouter/db";
+import { userAuthStore, getUserTransactionsDB, countUserTransactionsDB } from "@srouter/db";
 import {
     validateEmail,
     validateUserPassword,
@@ -120,6 +120,18 @@ UserAuthRouter.get("/users/keys", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const keys = await userAuthStore.getUserKeys(userId);
     return Ok(c, { keys });
+});
+
+// ── Transaction history ──
+UserAuthRouter.get("/users/transactions", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
+    const offset = Math.max(Number(c.req.query("offset") ?? 0), 0);
+    const [transactions, total] = await Promise.all([
+        getUserTransactionsDB(userId, limit, offset),
+        countUserTransactionsDB(userId)
+    ]);
+    return Ok(c, { transactions, total });
 });
 
 // ── Create API key ──

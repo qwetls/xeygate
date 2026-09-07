@@ -4,6 +4,7 @@ import {
     logRequestDB,
     incrementAPIKeyUsageDB
 } from "@srouter/db";
+import { settleMarketplaceUsage } from "./billing.logic.js";
 import { applyTokenSaver, estimateCostForUsage, extractUsageBreakdown } from "@srouter/translator";
 import { providerTypeForAlias } from "@srouter/constants";
 import type {
@@ -126,6 +127,14 @@ async function LogCompletion(
 
     if (options.statusCode === 200 && options.apiKeyId && breakdown.total_tokens > 0) {
         incrementAPIKeyUsageDB(options.apiKeyId, breakdown.total_tokens, estimatedCost ?? 0);
+        if (estimatedCost && estimatedCost > 0) {
+            void settleMarketplaceUsage({
+                apiKeyId: options.apiKeyId,
+                providerId: normalizedProviderId,
+                model,
+                amount: estimatedCost
+            });
+        }
     }
 
     logRequestDB({
