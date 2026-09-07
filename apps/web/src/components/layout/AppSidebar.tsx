@@ -27,19 +27,19 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainNavItems = [
-    { to: "/", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/keys", label: "API Keys", icon: KeyRound },
-    { to: "/providers", label: "Providers", icon: Boxes }
+    { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/admin/keys", label: "API Keys", icon: KeyRound },
+    { to: "/admin/providers", label: "Providers", icon: Boxes }
 ] as const;
 
 const routingNavItems = [
-    { to: "/combo", label: "Combo", icon: GitFork }
+    { to: "/admin/combo", label: "Combo", icon: GitFork }
 ] as const;
 
 const observabilityNavItems = [
-    { to: "/quota", label: "Quotas & Limits", icon: Gauge },
-    { to: "/analytics", label: "Analytics", icon: BarChart2 },
-    { to: "/logs", label: "Audit Logs", icon: ScrollText }
+    { to: "/admin/quota", label: "Quotas & Limits", icon: Gauge },
+    { to: "/admin/analytics", label: "Analytics", icon: BarChart2 },
+    { to: "/admin/logs", label: "Audit Logs", icon: ScrollText }
 ] as const;
 
 export function AppSidebar() {
@@ -51,7 +51,7 @@ export function AppSidebar() {
                     <SidebarMenuItem className="w-full">
                         <SidebarMenuButton
                             size="lg"
-                            render={<Link to="/" aria-label="XEYGATE dashboard" />}
+                            render={<Link to="/admin" aria-label="XEYGATE dashboard" />}
                             className="group h-10 w-full rounded-lg px-2 text-foreground transition-all duration-150 hover:bg-secondary/60 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0! cursor-pointer"
                         >
                             {/* Logo Mark: Double-bezel Machined Emblem with Beacon */}
@@ -227,7 +227,7 @@ export function AppSidebar() {
                         <SidebarMenuButton
                             render={
                                 <Link
-                                    to="/settings"
+                                    to="/admin/settings"
                                     activeOptions={{ exact: true }}
                                     activeProps={{
                                         className:

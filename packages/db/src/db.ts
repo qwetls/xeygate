@@ -143,6 +143,7 @@ const TABLES: TableDef[] = [
             { name: "custom_headers", definition: "TEXT" },
             { name: "token_expires_at", definition: "INTEGER" },
             { name: "last_refreshed_at", definition: "INTEGER" },
+            { name: "owner_id", definition: "TEXT" },
             { name: "enabled", definition: "INTEGER NOT NULL DEFAULT 1" },
             { name: "created_at", definition: "INTEGER NOT NULL" }
         ]
@@ -226,6 +227,35 @@ const TABLES: TableDef[] = [
             { name: "created_at", definition: "INTEGER NOT NULL" },
             { name: "PRIMARY KEY (provider_id, model_id)", definition: "" }
         ]
+    },
+    {
+        name: "transactions",
+        columns: [
+            { name: "id", definition: "TEXT PRIMARY KEY" },
+            { name: "user_id", definition: "TEXT NOT NULL" },
+            { name: "type", definition: "TEXT NOT NULL" },
+            { name: "amount", definition: "REAL NOT NULL" },
+            { name: "description", definition: "TEXT NOT NULL" },
+            { name: "provider_id", definition: "TEXT" },
+            { name: "model", definition: "TEXT" },
+            { name: "api_key_id", definition: "TEXT" },
+            { name: "created_at", definition: "INTEGER NOT NULL" }
+        ]
+    },
+    {
+        name: "creator_earnings",
+        columns: [
+            { name: "id", definition: "TEXT PRIMARY KEY" },
+            { name: "user_id", definition: "TEXT NOT NULL" },
+            { name: "provider_id", definition: "TEXT NOT NULL" },
+            { name: "gross_amount", definition: "REAL NOT NULL" },
+            { name: "platform_fee", definition: "REAL NOT NULL" },
+            { name: "net_amount", definition: "REAL NOT NULL" },
+            { name: "currency", definition: "TEXT NOT NULL DEFAULT 'USD'" },
+            { name: "status", definition: "TEXT NOT NULL DEFAULT 'pending'" },
+            { name: "transaction_id", definition: "TEXT" },
+            { name: "created_at", definition: "INTEGER NOT NULL" }
+        ]
     }
 ];
 
@@ -236,7 +266,10 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_request_logs_model ON request_logs(model);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_fallback_rules_priority ON fallback_rules(priority ASC, created_at ASC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_providers_provider_id ON providers(provider_id);" },
-    { sql: "CREATE INDEX IF NOT EXISTS idx_custom_models_provider ON custom_models(provider_id, created_at ASC);" }
+    { sql: "CREATE INDEX IF NOT EXISTS idx_custom_models_provider ON custom_models(provider_id, created_at ASC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_transactions_user_created ON transactions(user_id, created_at DESC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_user_created ON creator_earnings(user_id, created_at DESC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_provider ON creator_earnings(provider_id, created_at DESC);" }
 ];
 
 const ADMIN_TABLES = (pg: boolean) => {
@@ -327,12 +360,14 @@ function initSqliteSchemaSync(): void {
         { name: "provider_specific_data", definition: "provider_specific_data TEXT" },
         { name: "token_expires_at", definition: "token_expires_at INTEGER" },
         { name: "last_refreshed_at", definition: "last_refreshed_at INTEGER" },
-        { name: "organization_id", definition: "organization_id TEXT" }
+        { name: "organization_id", definition: "organization_id TEXT" },
+        { name: "owner_id", definition: "owner_id TEXT" }
     ]);
     ensureSync("api_keys", [
         { name: "allowed_models", definition: "allowed_models TEXT" },
         { name: "credit_limit", definition: "credit_limit REAL DEFAULT 0" },
-        { name: "usage_cost", definition: "usage_cost REAL DEFAULT 0" }
+        { name: "usage_cost", definition: "usage_cost REAL DEFAULT 0" },
+        { name: "user_id", definition: "user_id TEXT" }
     ]);
     ensureSync("request_logs", [
         { name: "ip_address", definition: "ip_address TEXT" },
@@ -364,12 +399,14 @@ async function initPostgresSchema(): Promise<void> {
         { name: "provider_specific_data", definition: "provider_specific_data TEXT" },
         { name: "token_expires_at", definition: "token_expires_at INTEGER" },
         { name: "last_refreshed_at", definition: "last_refreshed_at INTEGER" },
-        { name: "organization_id", definition: "organization_id TEXT" }
+        { name: "organization_id", definition: "organization_id TEXT" },
+        { name: "owner_id", definition: "owner_id TEXT" }
     ]);
     await ensureColumns("api_keys", [
         { name: "allowed_models", definition: "allowed_models TEXT" },
         { name: "credit_limit", definition: "credit_limit REAL DEFAULT 0" },
-        { name: "usage_cost", definition: "usage_cost REAL DEFAULT 0" }
+        { name: "usage_cost", definition: "usage_cost REAL DEFAULT 0" },
+        { name: "user_id", definition: "user_id TEXT" }
     ]);
     await ensureColumns("request_logs", [
         { name: "ip_address", definition: "ip_address TEXT" },

@@ -350,7 +350,7 @@ function NodeDetailInspector({
             <div className="pt-3 border-t border-border/60">
                 {selectedNode.type === "core" ? (
                     <Link
-                        to="/settings"
+                        to="/admin/settings"
                         className="flex w-full items-center justify-center gap-1.5 rounded-md border border-border/80 bg-secondary/50 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
                     >
                         <span>Configure Settings</span>
@@ -358,7 +358,7 @@ function NodeDetailInspector({
                     </Link>
                 ) : (
                     <Link
-                        to="/providers/$providerId"
+                        to="/admin/providers/$providerId"
                         params={{ providerId: selectedNode.data.id }}
                         className="flex w-full items-center justify-center gap-1.5 rounded-md border border-border/80 bg-secondary/50 px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary transition-colors"
                     >
@@ -474,7 +474,7 @@ function ProviderMatrixView({
                     return (
                         <Link
                             key={p.id}
-                            to="/providers/$providerId"
+                            to="/admin/providers/$providerId"
                             params={{ providerId: p.id }}
                             className={`group flex flex-col justify-between rounded-lg border bg-card p-3 transition-all cursor-pointer ${
                                 isReceiving

@@ -15,6 +15,7 @@ interface APIKeyRow {
     usage_cost: number;
     allowed_models: string | null;
     created_at: number;
+    user_id: string | null;
 }
 
 function ParseAllowedModels(value: string | null): string[] | null {
@@ -55,7 +56,8 @@ function mapAPIKeyRow(row: APIKeyRow): APIKeyZod {
         credit_limit: row.credit_limit ?? 0,
         usage_cost: row.usage_cost ?? 0,
         allowed_models: ParseAllowedModels(row.allowed_models),
-        created_at: row.created_at
+        created_at: row.created_at,
+        user_id: row.user_id ?? undefined
     };
 }
 
@@ -116,6 +118,14 @@ export async function incrementAPIKeyUsageDB(keyId: string, tokens: number, cost
     await db.prepare(
         "UPDATE api_keys SET usage_tokens = usage_tokens + ?, usage_cost = usage_cost + ? WHERE id = ?"
     ).run(tokens, cost, keyId);
+}
+
+export async function getAPIKeyByIdDB(id: string): Promise<APIKeyZod | null> {
+    const Row = (await db.prepare("SELECT * FROM api_keys WHERE id = ?").get(id)) as unknown as
+        | APIKeyRow
+        | undefined;
+    if (!Row) return null;
+    return mapAPIKeyRow(Row);
 }
 
 export async function addCreditAPIKeyDB(id: string, amount: number): Promise<APIKeyZod | null> {

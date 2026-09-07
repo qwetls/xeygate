@@ -5,6 +5,7 @@ import {
     adminAuthStore,
     getAPIKeyByKeyDB,
     getRequireApiKeyDB,
+    userAuthStore,
     type AdminAuthStore
 } from "@srouter/db";
 import { Err } from "@/utils/response.js";
@@ -99,6 +100,19 @@ export function CreateApiKeyAuth(Options: ApiKeyAuthOptions = {}) {
                             code: "quota_exceeded"
                         }
                     );
+                }
+
+                // Block marketplace requests if the user has zero or negative credits.
+                if (ApiKeyRow.user_id) {
+                    const credits = await userAuthStore.getUserCredits(ApiKeyRow.user_id);
+                    if (credits <= 0) {
+                        return Err(
+                            c,
+                            "Insufficient credit balance. Please top up to continue making requests.",
+                            402,
+                            { type: "insufficient_quota", code: "insufficient_credit" }
+                        );
+                    }
                 }
 
                 c.set("apiKeyRow", ApiKeyRow);

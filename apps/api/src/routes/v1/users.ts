@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
-import { userAuthStore } from "@srouter/db";
+import { userAuthStore, getUserTransactionsDB, countUserTransactionsDB } from "@srouter/db";
 import {
     validateEmail,
     validateUserPassword,
@@ -47,7 +47,7 @@ UserAuthRouter.post("/users/register", async (c) => {
     const token = await createUserSession(userAuthStore, user.id);
     setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
 
-    return Ok(c, { id: user.id, email: user.email, name: user.name, credits: user.credits });
+    return Ok(c, { id: user.id, email: user.email, name: user.name, role: user.role, credits: user.credits });
 });
 
 // ── Login ──
@@ -64,7 +64,7 @@ UserAuthRouter.post("/users/login", async (c) => {
     const token = await createUserSession(userAuthStore, user.id);
     setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
 
-    return Ok(c, { id: user.id, email: user.email, name: user.name, credits: user.credits });
+    return Ok(c, { id: user.id, email: user.email, name: user.name, role: user.role, credits: user.credits });
 });
 
 // ── Logout ──
@@ -80,7 +80,26 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const user = await userAuthStore.getUserById(userId);
     if (!user) return Err(c, "User not found", 404);
-    return Ok(c, { id: user.id, email: user.email, name: user.name, credits: user.credits });
+    return Ok(c, { id: user.id, email: user.email, name: user.name, role: user.role, credits: user.credits });
+});
+
+// ── Role ──
+UserAuthRouter.get("/users/role", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const user = await userAuthStore.getUserById(userId);
+    if (!user) return Err(c, "User not found", 404);
+    return Ok(c, { role: user.role });
+});
+
+UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const body = await c.req.json<{ role?: string }>().catch(() => ({}));
+    if (body.role !== "buyer" && body.role !== "creator") {
+        return Err(c, "Role must be 'buyer' or 'creator'", 400);
+    }
+    const updated = await userAuthStore.updateRole(userId, body.role);
+    if (!updated) return Err(c, "User not found", 404);
+    return Ok(c, { id: updated.id, role: updated.role });
 });
 
 // ── Top up credits (simulated for MVP) ──
@@ -101,6 +120,18 @@ UserAuthRouter.get("/users/keys", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const keys = await userAuthStore.getUserKeys(userId);
     return Ok(c, { keys });
+});
+
+// ── Transaction history ──
+UserAuthRouter.get("/users/transactions", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
+    const offset = Math.max(Number(c.req.query("offset") ?? 0), 0);
+    const [transactions, total] = await Promise.all([
+        getUserTransactionsDB(userId, limit, offset),
+        countUserTransactionsDB(userId)
+    ]);
+    return Ok(c, { transactions, total });
 });
 
 // ── Create API key ──

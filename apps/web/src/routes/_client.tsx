@@ -13,6 +13,7 @@ interface UserInfo {
     email: string;
     name: string;
     credits: number;
+    role: "buyer" | "creator";
 }
 
 function ClientLayout() {
@@ -94,7 +95,10 @@ function ClientSidebar({ user }: { user: UserInfo }) {
                 {[
                     { to: "/dashboard", label: "Dashboard", exact: true },
                     { to: "/dashboard/keys", label: "API Keys", exact: false },
-                    { to: "/dashboard/usage", label: "Usage", exact: false }
+                    { to: "/dashboard/usage", label: "Usage", exact: false },
+                    ...(user.role === "creator"
+                        ? [{ to: "/dashboard/my-apis", label: "My APIs", exact: false }]
+                        : [])
                 ].map(({ to, label, exact }) => (
                     <Link
                         key={to}

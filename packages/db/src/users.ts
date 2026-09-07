@@ -2,12 +2,15 @@ import { db } from "./db.js";
 import { getDbClient, type DbClient } from "./client.js";
 import { num, str } from "./row-utils.js";
 
+export type UserRole = "buyer" | "creator";
+
 export interface User {
     id: string;
     email: string;
     passwordHash: string;
     name: string;
     credits: number;
+    role: UserRole;
     createdAt: number;
     updatedAt: number;
 }
@@ -25,6 +28,7 @@ interface UserRow {
     password_hash: string;
     name: string;
     credits: number;
+    role: string;
     created_at: number;
     updated_at: number;
 }
@@ -55,6 +59,7 @@ export class UserAuthStore {
                 password_hash TEXT NOT NULL,
                 name TEXT NOT NULL DEFAULT '',
                 credits ${pg ? "DOUBLE PRECISION" : "REAL"} NOT NULL DEFAULT 0,
+                role TEXT NOT NULL DEFAULT 'buyer',
                 created_at ${integer} NOT NULL,
                 updated_at ${integer} NOT NULL
             );
@@ -69,6 +74,12 @@ export class UserAuthStore {
         // Ensure user_id column exists on api_keys (for linking keys to users)
         try {
             await this.client.exec(`ALTER TABLE api_keys ADD COLUMN user_id TEXT REFERENCES users(id) ON DELETE SET NULL`);
+        } catch {
+            // Column already exists
+        }
+        // Migrate role column for pre-existing users tables
+        try {
+            await this.client.exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'buyer'`);
         } catch {
             // Column already exists
         }
@@ -122,8 +133,35 @@ export class UserAuthStore {
     public async updateCredits(userId: string, delta: number): Promise<User | null> {
         await this.ensureTables();
         await this.client.run(
-            `UPDATE users SET credits = credits + ?, updated_at = ? WHERE id = ?`,
+            `UPDATE users SET credits = MAX(0, credits + ?), updated_at = ? WHERE id = ?`,
             delta, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    public async setCredits(userId: string, amount: number): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET credits = MAX(0, ?), updated_at = ? WHERE id = ?`,
+            amount, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    public async getUserCredits(userId: string): Promise<number> {
+        await this.ensureTables();
+        const row = (await this.client.get(
+            "SELECT credits FROM users WHERE id = ?",
+            userId
+        )) as { credits: number } | undefined;
+        return num(row?.credits);
+    }
+
+    public async updateRole(userId: string, role: UserRole): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET role = ?, updated_at = ? WHERE id = ?`,
+            role, Date.now(), userId
         );
         return this.getUserById(userId);
     }
@@ -251,6 +289,7 @@ function mapUserRow(row: UserRow): User {
         passwordHash: str(row.password_hash),
         name: str(row.name),
         credits: num(row.credits),
+        role: row.role === "creator" ? "creator" : "buyer",
         createdAt: num(row.created_at),
         updatedAt: num(row.updated_at)
     };

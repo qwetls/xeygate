@@ -19,7 +19,7 @@ export function ProviderCard({ provider }: { provider: ProviderDefinition }) {
 
     return (
         <Link
-            to="/providers/$providerId"
+            to="/admin/providers/$providerId"
             params={{ providerId: provider.id }}
             className="group relative flex flex-col justify-between rounded-xl border border-border/80 bg-card/60 p-4 transition-all duration-200 hover:border-foreground/30 hover:bg-card hover:shadow-xs active:scale-[0.99] font-mono cursor-pointer"
         >

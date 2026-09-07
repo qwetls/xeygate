@@ -11,7 +11,8 @@ export const APIKeySchema = z.object({
     credit_limit: z.number(),
     usage_cost: z.number(),
     allowed_models: z.array(z.string()).nullable().optional(),
-    created_at: z.number()
+    created_at: z.number(),
+    user_id: z.string().optional()
 });
 
 export type APIKeyZod = z.infer<typeof APIKeySchema>;

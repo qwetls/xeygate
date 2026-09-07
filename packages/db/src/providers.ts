@@ -1,5 +1,6 @@
 import type { ProviderCategory, ProviderConfig, ProviderProtocol } from "@srouter/types";
 import { db } from "./db.js";
+import { EncryptSecret, DecryptSecret } from "./encryption.js";
 import { num, optStr, str } from "./row-utils.js";
 
 interface ProviderRow {
@@ -17,6 +18,7 @@ interface ProviderRow {
     organization_id: string | null;
     token_expires_at: number | null;
     last_refreshed_at: number | null;
+    owner_id: string | null;
     custom_headers: string | null;
     provider_specific_data: string | null;
     enabled: number;
@@ -39,6 +41,13 @@ export async function getProviderByIdDB(id: string): Promise<ProviderConfig | nu
     return mapProviderRow(Row);
 }
 
+export async function getProvidersByOwnerDB(ownerId: string): Promise<ProviderConfig[]> {
+    const Rows = (await db
+        .prepare("SELECT * FROM providers WHERE owner_id = ? ORDER BY created_at DESC")
+        .all(ownerId)) as unknown as ProviderRow[];
+    return Rows.map(mapProviderRow);
+}
+
 export async function upsertProviderDB(
     config: ProviderConfig & { category: string; protocol: string }
 ): Promise<ProviderConfig> {
@@ -46,10 +55,10 @@ export async function upsertProviderDB(
         INSERT INTO providers (
             id, provider_id, name, alias, category, protocol, base_url, api_key,
             access_token, refresh_token, account_id, organization_id,
-            token_expires_at, last_refreshed_at, custom_headers,
+            token_expires_at, last_refreshed_at, owner_id, custom_headers,
             provider_specific_data, enabled, created_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             provider_id = excluded.provider_id,
             name = excluded.name,
@@ -64,6 +73,7 @@ export async function upsertProviderDB(
             organization_id = excluded.organization_id,
             token_expires_at = excluded.token_expires_at,
             last_refreshed_at = excluded.last_refreshed_at,
+            owner_id = excluded.owner_id,
             custom_headers = excluded.custom_headers,
             provider_specific_data = excluded.provider_specific_data,
             enabled = excluded.enabled,
@@ -76,17 +86,18 @@ export async function upsertProviderDB(
         config.category,
         config.protocol,
         config.base_url ?? null,
-        config.apiKey ?? null,
-        config.accessToken ?? null,
-        config.refreshToken ?? null,
+        EncryptSecret(config.apiKey) ?? null,
+        EncryptSecret(config.accessToken) ?? null,
+        EncryptSecret(config.refreshToken) ?? null,
         config.accountId ?? null,
         config.organizationId ?? null,
         config.tokenExpiresAt ?? null,
         config.lastRefreshedAt ?? null,
+        config.ownerId ?? null,
         config.customHeaders ? JSON.stringify(config.customHeaders) : null,
         config.providerSpecificData ? JSON.stringify(config.providerSpecificData) : null,
         config.enabled ? 1 : 0,
-        config.createdAt
+        config.createdAt ?? Date.now()
     );
 
     return config;
@@ -120,8 +131,8 @@ export async function updateProviderTokensDB(input: UpdateProviderTokensInput): 
             last_refreshed_at = ?
          WHERE id = ?`
     ).run(
-        input.accessToken,
-        input.refreshToken ?? null,
+        EncryptSecret(input.accessToken),
+        EncryptSecret(input.refreshToken) ?? null,
         input.tokenExpiresAt ?? null,
         input.lastRefreshedAt ?? null,
         input.id
@@ -145,13 +156,14 @@ function mapProviderRow(row: ProviderRow): ProviderConfig {
         category: optStr(row.category) as ProviderCategory | undefined,
         protocol: optStr(row.protocol) as ProviderProtocol | undefined,
         base_url: optStr(row.base_url),
-        apiKey: optStr(row.api_key),
-        accessToken: optStr(row.access_token),
-        refreshToken: optStr(row.refresh_token),
+        apiKey: DecryptSecret(row.api_key) ?? undefined,
+        accessToken: DecryptSecret(row.access_token) ?? undefined,
+        refreshToken: DecryptSecret(row.refresh_token) ?? undefined,
         accountId: optStr(row.account_id),
         organizationId: optStr(row.organization_id),
         tokenExpiresAt: row.token_expires_at ? num(row.token_expires_at) : undefined,
         lastRefreshedAt: row.last_refreshed_at ? num(row.last_refreshed_at) : undefined,
+        ownerId: optStr(row.owner_id),
         customHeaders: row.custom_headers ? JSON.parse(str(row.custom_headers)) : undefined,
         providerSpecificData: row.provider_specific_data
             ? JSON.parse(str(row.provider_specific_data))

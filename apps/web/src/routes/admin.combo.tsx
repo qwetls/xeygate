@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useFallbacks } from "@/hooks/useFallbacks";
 import { ComboArchitecture, ComboForm, ComboHeader, ComboList } from "@/components/combo";
 
-export const Route = createFileRoute("/_admin/combo")({
+export const Route = createFileRoute("/admin/combo")({
     staticData: { title: "Model Combo" },
     component: ComboPage
 });
