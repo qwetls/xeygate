@@ -94,7 +94,9 @@ function ModelPicker({
             if (source === "catalog") {
                 // Public storefront catalog: no auth needed, only models ticked
                 // by admins or creators. fullId carries the runtime alias prefix.
-                const res = await fetch(`${baseUrl}/v1/catalog`, {
+                // baseUrl already ends with /v1 (getGatewayBaseUrl contract), so
+                // append the route path directly — no extra /v1 segment.
+                const res = await fetch(`${baseUrl}/catalog`, {
                     headers: { Accept: "application/json" }
                 });
                 if (!res.ok) {
@@ -112,7 +114,7 @@ function ModelPicker({
                     }
                 }
             } else {
-                const res = await fetch(`${baseUrl}/v1/models`, {
+                const res = await fetch(`${baseUrl}/models`, {
                     headers: {
                         Authorization: `Bearer ${apiKey}`,
                         Accept: "application/json"
@@ -259,7 +261,7 @@ export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVa
         setSending(true);
 
         try {
-            const res = await fetch(`${gatewayBase}/v1/chat/completions`, {
+            const res = await fetch(`${gatewayBase}/chat/completions`, {
                 method: "POST",
                 headers: {
                     Authorization: `Bearer ${apiKey}`,
@@ -475,7 +477,7 @@ export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVa
                             </p>
                             <p className="text-[10px] text-[var(--ink-3)] max-w-xs">
                                 Non-streaming request to{" "}
-                                <code className="text-[var(--ink)]">POST {gatewayBase}/v1/chat/completions</code>{" "}
+                                <code className="text-[var(--ink)]">POST {gatewayBase}/chat/completions</code>{" "}
                                 with your key as Bearer token.
                             </p>
                         </div>
