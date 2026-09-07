@@ -1,6 +1,6 @@
 services:
     xeygate:
-        image: ghcr.io/xeycompany/xeygate:latest
+        image: ghcr.io/qwetls/xeygate:latest
         build:
             context: .
             dockerfile: Dockerfile

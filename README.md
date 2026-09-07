@@ -34,7 +34,7 @@ docker run -d \
   -p 3000:3000 \
   -p 1455:1455 \
   -v $HOME/.xeygate:/root/.xeygate \
-  ghcr.io/xeycompany/xeygate:latest
+  ghcr.io/qwetls/xeygate:latest
 ```
 
 ### Option B: Local Node.js
@@ -195,7 +195,7 @@ All gateway endpoints are served under `/v1`:
 ```yaml
 services:
   xeygate:
-    image: ghcr.io/xeycompany/xeygate:latest
+    image: ghcr.io/qwetls/xeygate:latest
     container_name: xeygate
     restart: unless-stopped
     ports:

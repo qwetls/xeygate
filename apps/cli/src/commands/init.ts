@@ -16,8 +16,8 @@ export interface InitCommandOptions {
 }
 
 const DEFAULT_PORT = "3000";
-const REPO_URL = "https://github.com/seaavey/SRouter.git";
-const DOCKER_IMAGE = "ghcr.io/seaavey/srouter:latest";
+const REPO_URL = "https://github.com/qwetls/xeygate.git";
+const DOCKER_IMAGE = "ghcr.io/qwetls/xeygate:latest";
 
 function runProcess(
     command: string,
