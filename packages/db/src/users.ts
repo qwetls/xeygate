@@ -150,10 +150,10 @@ export class UserAuthStore {
 
     public async getUserCredits(userId: string): Promise<number> {
         await this.ensureTables();
-        const row = await this.client.get<{ credits: number }>(
+        const row = (await this.client.get(
             "SELECT credits FROM users WHERE id = ?",
             userId
-        );
+        )) as { credits: number } | undefined;
         return num(row?.credits);
     }
 
