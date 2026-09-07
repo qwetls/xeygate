@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Copy, Check, Trash2, Plus, KeyRound, Eye, EyeOff } from "lucide-react";
 
 export const Route = createFileRoute("/_client/dashboard/keys")({
+    staticData: { title: "API Keys" },
     component: ClientKeysPage
 });
 

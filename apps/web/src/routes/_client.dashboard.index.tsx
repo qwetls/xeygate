@@ -1,11 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "@/lib/api";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity, Coins, KeyRound, Copy, Check, BookOpen } from "lucide-react";
+import { Activity, Coins, KeyRound, Copy, Check, BookOpen, Store, ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/_client/dashboard/")({
+    staticData: { title: "Dashboard" },
     component: ClientDashboard
 });
 
@@ -14,12 +16,21 @@ interface UserInfo {
     email: string;
     name: string;
     credits: number;
+    role: "buyer" | "creator";
 }
 
 function ClientDashboard() {
+    const queryClient = useQueryClient();
     const { data: user } = useQuery({
         queryKey: ["user-auth-status"],
         queryFn: () => api.get<UserInfo>("/v1/users/me")
+    });
+
+    const upgradeMutation = useMutation({
+        mutationFn: () => api.put("/v1/users/role", { role: "creator" }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
+        }
     });
 
     const { data: usage } = useQuery({
@@ -44,6 +55,37 @@ function ClientDashboard() {
                     Manage your API keys and monitor your usage on the XEYGATE gateway.
                 </p>
             </header>
+
+            {user?.role === "buyer" && (
+                <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border/80 bg-secondary/20 p-5">
+                    <div className="flex items-start gap-3">
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-secondary/50">
+                            <Store className="size-5 text-muted-foreground" strokeWidth={1.75} />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-bold text-foreground">Become a Creator</h2>
+                            <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed max-w-xl">
+                                Connect your own LLM provider accounts and sell API access on the marketplace. Earn revenue on every request served through your keys.
+                            </p>
+                        </div>
+                    </div>
+                    <Button
+                        size="sm"
+                        className="h-8 text-xs cursor-pointer gap-1.5 shrink-0 self-start sm:self-auto"
+                        disabled={upgradeMutation.isPending}
+                        onClick={() => upgradeMutation.mutate()}
+                    >
+                        {upgradeMutation.isPending ? "Upgrading..." : "Upgrade now"}
+                        <ArrowRight className="size-3.5" />
+                    </Button>
+                </section>
+            )}
+
+            {upgradeMutation.isSuccess && (
+                <p className="text-xs text-emerald-600">
+                    You&apos;re now a Creator! Use the &quot;My APIs&quot; section in the sidebar to add your first provider.
+                </p>
+            )}
 
             <section className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 <article className="rounded-xl border border-border/80 bg-card/60 p-4">

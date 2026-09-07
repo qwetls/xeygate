@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import {
     BarChart2,
-    CreditCard,
     KeyRound,
     LayoutDashboard,
     LogOut,
+    Store,
     Zap
 } from "lucide-react";
 import {
@@ -21,13 +21,23 @@ import {
 } from "@/components/ui/sidebar";
 import { api } from "@/lib/api";
 
-const navItems = [
+interface ClientSidebarProps {
+    role: "buyer" | "creator";
+    email: string;
+    credits: number;
+}
+
+const baseNavItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dashboard/keys", label: "API Keys", icon: KeyRound },
     { to: "/dashboard/usage", label: "Usage", icon: BarChart2 }
 ] as const;
 
-export function ClientSidebar() {
+const creatorNavItems = [
+    { to: "/dashboard/my-apis", label: "My APIs", icon: Store }
+] as const;
+
+export function ClientSidebar({ role, email, credits }: ClientSidebarProps) {
     async function handleLogout() {
         await api.post("/v1/users/logout");
         window.location.href = "/dashboard";
@@ -65,7 +75,7 @@ export function ClientSidebar() {
                     <SidebarGroup className="p-0">
                         <SidebarGroupContent>
                             <SidebarMenu className="gap-1">
-                                {navItems.map(({ to, label, icon: Icon }) => (
+                                {[...baseNavItems, ...(role === "creator" ? creatorNavItems : [])].map(({ to, label, icon: Icon }) => (
                                     <SidebarMenuItem key={to}>
                                         <SidebarMenuButton
                                             render={
@@ -95,7 +105,13 @@ export function ClientSidebar() {
                 </nav>
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-border/80 p-2.5">
+            <SidebarFooter className="border-t border-border/80 p-2.5 space-y-2">
+                <div className="hidden group-data-[collapsible=icon]:hidden px-2 py-1.5 rounded-md bg-secondary/30 border border-border/50 text-[10px] text-muted-foreground">
+                    <div className="font-semibold text-foreground/80 truncate">{email}</div>
+                    <div className="mt-0.5">
+                        {role === "creator" ? "Creator" : "Buyer"} · ${credits.toFixed(4)}
+                    </div>
+                </div>
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton

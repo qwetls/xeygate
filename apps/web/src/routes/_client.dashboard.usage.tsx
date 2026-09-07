@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Coins, Cpu } from "lucide-react";
 
 export const Route = createFileRoute("/_client/dashboard/usage")({
+    staticData: { title: "Usage" },
     component: ClientUsagePage
 });
 
