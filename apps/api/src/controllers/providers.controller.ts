@@ -174,4 +174,15 @@ export class ProvidersController {
         await loadSavedProvidersFromDB();
         return Ok(c, { message: "Connection deleted" });
     }
+
+    public static async VerifyMyProvider(c: Context): Promise<Response> {
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = VerifyProviderSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid verification payload", 400);
+        }
+
+        const Result = await ProvidersLogic.VerifyConnection(Parsed.data);
+        return Ok(c, Result);
+    }
 }

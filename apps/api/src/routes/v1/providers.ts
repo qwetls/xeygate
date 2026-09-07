@@ -12,6 +12,11 @@ export const ProvidersRouter = new Hono();
 // Registered before the ":providerId" wildcard so "mine" is not captured as an ID.
 ProvidersRouter.get("/providers/mine", RequireCreator, ProvidersController.ListMyProviders);
 ProvidersRouter.post("/providers/mine", RequireCreator, ProvidersController.AddMyProvider);
+ProvidersRouter.post(
+    "/providers/mine/verify",
+    RequireCreator,
+    ProvidersController.VerifyMyProvider
+);
 ProvidersRouter.delete("/providers/mine/:id", RequireCreator, ProvidersController.DeleteMyProvider);
 
 // Creator earnings dashboard.

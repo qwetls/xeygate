@@ -5,6 +5,7 @@ import {
     LayoutDashboard,
     LogOut,
     Store,
+    Terminal,
     Zap
 } from "lucide-react";
 import {
@@ -30,6 +31,7 @@ interface ClientSidebarProps {
 const baseNavItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dashboard/keys", label: "API Keys", icon: KeyRound },
+    { to: "/dashboard/playground", label: "Playground", icon: Terminal },
     { to: "/dashboard/usage", label: "Usage", icon: BarChart2 }
 ] as const;
 

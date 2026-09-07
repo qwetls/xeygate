@@ -366,6 +366,7 @@ export class ProvidersLogic {
         success: boolean;
         message: string;
         modelsCount?: number;
+        models?: string[];
     }> {
         const Protocol = Payload.protocol || "openai";
         const RawBaseUrl = Payload.base_url?.trim() || "";
@@ -415,16 +416,22 @@ export class ProvidersLogic {
 
                 if (Res.ok) {
                     const Data = (await Res.json().catch(() => ({}))) as {
-                        data?: unknown[];
+                        data?: Array<{ id?: string }>;
                     };
-                    const Count = Array.isArray(Data?.data) ? Data.data.length : undefined;
+                    const Models = Array.isArray(Data?.data)
+                        ? Data.data
+                              .map((M) => M.id)
+                              .filter((Id): Id is string => typeof Id === "string")
+                        : undefined;
+                    const Count = Models?.length;
                     return {
                         success: true,
                         message:
                             Count !== undefined
                                 ? `Koneksi Anthropic valid! (${Count} model ditemukan)`
                                 : "Koneksi Anthropic berhasil diverifikasi.",
-                        modelsCount: Count
+                        modelsCount: Count,
+                        models: Models
                     };
                 }
 
@@ -476,16 +483,22 @@ export class ProvidersLogic {
 
             if (Res.ok) {
                 const Data = (await Res.json().catch(() => ({}))) as {
-                    data?: unknown[];
+                    data?: Array<{ id?: string }>;
                 };
-                const Count = Array.isArray(Data?.data) ? Data.data.length : undefined;
+                const Models = Array.isArray(Data?.data)
+                    ? Data.data
+                          .map((M) => M.id)
+                          .filter((Id): Id is string => typeof Id === "string")
+                    : undefined;
+                const Count = Models?.length;
                 return {
                     success: true,
                     message:
                         Count !== undefined
                             ? `Koneksi OpenAI valid! (${Count} model ditemukan)`
                             : "Koneksi OpenAI berhasil diverifikasi.",
-                    modelsCount: Count
+                    modelsCount: Count,
+                    models: Models
                 };
             }
 

@@ -27,6 +27,7 @@ import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashb
 import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
 import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
 import { Route as ClientDashboardMyApisRouteImport } from './routes/_client.dashboard.my-apis'
+import { Route as ClientDashboardPlaygroundRouteImport } from './routes/_client.dashboard.playground'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
@@ -137,6 +138,11 @@ const ClientDashboardMyApisRoute = ClientDashboardMyApisRouteImport.update({
   path: '/my-apis',
   getParentRoute: () => ClientDashboardRoute,
 } as any)
+const ClientDashboardPlaygroundRoute = ClientDashboardPlaygroundRouteImport.update({
+  id: '/playground',
+  path: '/playground',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
 const AdminProvidersIndexRoute = AdminProvidersIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -169,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
+  '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers/': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
 }
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
+  '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
 }
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
   '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
   '/_client/dashboard/my-apis': typeof ClientDashboardMyApisRoute
+  '/_client/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers/': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
 }
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/dashboard/keys'
     | '/dashboard/usage'
     | '/dashboard/my-apis'
+    | '/dashboard/playground'
     | '/admin/providers/'
     | '/admin/providers/$providerId'
   fileRoutesByTo: FileRoutesByTo
@@ -263,6 +273,7 @@ export interface FileRouteTypes {
     | '/dashboard/keys'
     | '/dashboard/usage'
     | '/dashboard/my-apis'
+    | '/dashboard/playground'
     | '/admin/providers'
     | '/admin/providers/$providerId'
   id:
@@ -288,6 +299,7 @@ export interface FileRouteTypes {
     | '/_client/dashboard/keys'
     | '/_client/dashboard/usage'
     | '/_client/dashboard/my-apis'
+    | '/_client/dashboard/playground'
     | '/admin/providers/'
     | '/admin/providers/$providerId'
   fileRoutesById: FileRoutesById
@@ -430,6 +442,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardMyApisRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
+    '/_client/dashboard/playground': {
+      id: '/_client/dashboard/playground'
+      path: '/playground'
+      fullPath: '/dashboard/playground'
+      preLoaderRoute: typeof ClientDashboardPlaygroundRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -513,6 +532,7 @@ interface ClientDashboardRouteChildren {
   ClientDashboardKeysRoute: typeof ClientDashboardKeysRoute
   ClientDashboardUsageRoute: typeof ClientDashboardUsageRoute
   ClientDashboardMyApisRoute: typeof ClientDashboardMyApisRoute
+  ClientDashboardPlaygroundRoute: typeof ClientDashboardPlaygroundRoute
 }
 
 const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
@@ -520,6 +540,7 @@ const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
   ClientDashboardKeysRoute: ClientDashboardKeysRoute,
   ClientDashboardUsageRoute: ClientDashboardUsageRoute,
   ClientDashboardMyApisRoute: ClientDashboardMyApisRoute,
+  ClientDashboardPlaygroundRoute: ClientDashboardPlaygroundRoute,
 }
 
 const ClientDashboardRouteWithChildren = ClientDashboardRoute._addFileChildren(
