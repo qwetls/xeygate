@@ -97,7 +97,7 @@ export async function upsertProviderDB(
         config.customHeaders ? JSON.stringify(config.customHeaders) : null,
         config.providerSpecificData ? JSON.stringify(config.providerSpecificData) : null,
         config.enabled ? 1 : 0,
-        config.createdAt
+        config.createdAt ?? Date.now()
     );
 
     return config;

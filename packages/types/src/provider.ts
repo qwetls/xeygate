@@ -60,7 +60,7 @@ export interface ProviderConfig {
     providerSpecificData?: Record<string, string>;
     ownerId?: string | null;
     enabled: boolean;
-    createdAt: number;
+    createdAt?: number;
 }
 
 export interface AIProvider {
