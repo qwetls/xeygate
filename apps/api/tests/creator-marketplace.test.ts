@@ -32,7 +32,7 @@ beforeEach(async () => {
         passwordHash: hashUserPassword("testpassword1234"),
         name: "Creator Test"
     }) as User;
-    await store.updateRole(creatorUser.id, "creator");
+    await store.setCreatorApproval(creatorUser.id, "approved");
     creatorUser = (await store.getUserById(creatorUser.id))!;
 
     const bId = `test_buyer_${crypto.randomUUID().slice(0, 8)}`;
@@ -75,7 +75,7 @@ test("GET /v1/users/role returns the correct role", async () => {
     assert.equal(body.role, "buyer");
 });
 
-test("PUT /v1/users/role upgrades buyer to creator", async () => {
+test("PUT /v1/users/role requests creator upgrade (pending until admin approves)", async () => {
     const app = createTestApp();
     const res = await app.request("/v1/users/role", {
         method: "PUT",
@@ -83,9 +83,33 @@ test("PUT /v1/users/role upgrades buyer to creator", async () => {
         body: JSON.stringify({ role: "creator" })
     });
     assert.equal(res.status, 200);
-    const body = await res.json() as { id: string; role: string };
+    const body = await res.json() as { id: string; role: string; creatorStatus: string; requiresApproval: boolean };
     assert.equal(body.id, buyerUser.id);
-    assert.equal(body.role, "creator");
+    assert.equal(body.role, "buyer", "role stays buyer while creator request is pending");
+    assert.equal(body.creatorStatus, "pending");
+    assert.equal(body.requiresApproval, true);
+});
+
+test("creator upgrade is approved via admin setCreatorApproval", async () => {
+    const app = createTestApp();
+    // buyer requests creator access
+    const reqRes = await app.request("/v1/users/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: buyerCookie },
+        body: JSON.stringify({ role: "creator" })
+    });
+    assert.equal(reqRes.status, 200);
+
+    // admin approves
+    const approved = await store.setCreatorApproval(buyerUser.id, "approved");
+    assert.equal(approved?.role, "creator");
+    assert.equal(approved?.creatorStatus, "approved");
+
+    // approved creator can now reach /providers/mine
+    const res = await app.request("/v1/providers/mine", {
+        headers: { Cookie: buyerCookie }
+    });
+    assert.equal(res.status, 200);
 });
 
 test("PUT /v1/users/role rejects invalid role", async () => {
@@ -216,8 +240,8 @@ test("DELETE /v1/providers/mine/:id returns 404 for other user's provider", asyn
     });
     createdProviderIds.push(providerId);
 
-    // another user (buyer, after upgrade) tries to delete
-    await store.updateRole(buyerUser.id, "creator");
+    // another user (buyer, after approved upgrade) tries to delete
+    await store.setCreatorApproval(buyerUser.id, "approved");
     const token2 = await createUserSession(store, buyerUser.id);
     const cookie2 = `${USER_SESSION_COOKIE}=${token2}`;
 
