@@ -27,7 +27,10 @@ function MyApisPage() {
 
     const list = useQuery({
         queryKey: ["my-providers"],
-        queryFn: () => api.get<MyProvider[]>("/v1/providers/mine"),
+        queryFn: () =>
+            api
+                .get<{ object: string; data: MyProvider[] }>("/v1/providers/mine")
+                .then((res) => res.data),
         staleTime: 30_000
     });
 
@@ -84,6 +87,14 @@ function MyApisPage() {
 
             {list.isPending ? (
                 <p className="text-xs text-muted-foreground">Loading...</p>
+            ) : list.error ? (
+                <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-10 text-center">
+                    <Boxes className="size-8 mx-auto text-muted-foreground/50 mb-3" strokeWidth={1.5} />
+                    <h2 className="text-sm font-semibold text-foreground">Unable to load your APIs</h2>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        {list.error instanceof Error ? list.error.message : "Failed to load providers."} This area is for creators — upgrade your account to sell APIs on the marketplace.
+                    </p>
+                </div>
             ) : providers.length === 0 ? (
                 <div className="rounded-xl border border-border/70 bg-secondary/20 p-10 text-center">
                     <Boxes className="size-8 mx-auto text-muted-foreground/50 mb-3" strokeWidth={1.5} />
