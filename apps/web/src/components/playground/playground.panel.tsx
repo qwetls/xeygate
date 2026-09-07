@@ -31,37 +31,58 @@ interface ErrorBody {
     error?: { message?: string } | string;
 }
 
-function usePlaygroundKey() {
+/**
+ * "client": storefront playground — model list comes from the public catalog
+ * (only models ticked by admins/creators). "admin": full provider model list
+ * via admin API keys, used from the admin dashboard.
+ */
+type PlaygroundVariant = "client" | "admin";
+
+function usePlaygroundKey(variant: PlaygroundVariant) {
     const keysQuery = useQuery({
-        queryKey: ["user-keys"],
-        queryFn: () => api.get<{ keys: UserApiKey[] }>("/v1/users/keys"),
+        queryKey: ["playground-keys", variant],
+        queryFn: async () => {
+            if (variant === "admin") {
+                const res = await api.get<{ object: string; data: UserApiKey[] }>("/v1/keys");
+                return res.data ?? [];
+            }
+            return (await api.get<{ keys: UserApiKey[] }>("/v1/users/keys")).keys ?? [];
+        },
         staleTime: 30_000
     });
-    const keys = keysQuery.data?.keys ?? [];
+    const keys = keysQuery.data ?? [];
     const firstEnabled = keys.find((k) => k.enabled);
     return { keys, firstEnabled, ...keysQuery };
+}
+
+interface PickableModel {
+    id: string;
+    owned_by: string;
 }
 
 function ModelPicker({
     baseUrl,
     apiKey,
+    source,
     value,
     onChange,
     onError
 }: {
     baseUrl: string;
     apiKey: string;
+    source: "catalog" | "models";
     value: string;
     onChange: (m: string) => void;
     onError: (msg: string) => void;
 }) {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
-    const [list, setList] = useState<ModelObject[]>([]);
+    const [list, setList] = useState<PickableModel[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loaded, setLoaded] = useState(false);
 
     async function load() {
-        if (list.length > 0) {
+        if (loaded) {
             setOpen((o) => !o);
             setSearch("");
             return;
@@ -69,28 +90,53 @@ function ModelPicker({
         setLoading(true);
         setOpen(true);
         try {
-            const res = await fetch(`${baseUrl}/v1/models`, {
-                headers: {
-                    Authorization: `Bearer ${apiKey}`,
-                    Accept: "application/json"
+            let models: PickableModel[] = [];
+            if (source === "catalog") {
+                // Public storefront catalog: no auth needed, only models ticked
+                // by admins or creators. fullId carries the runtime alias prefix.
+                const res = await fetch(`${baseUrl}/v1/catalog`, {
+                    headers: { Accept: "application/json" }
+                });
+                if (!res.ok) {
+                    throw new Error(`Failed to load catalog (HTTP ${res.status})`);
                 }
-            });
-            if (!res.ok) {
-                let message = `Failed to load models (HTTP ${res.status})`;
-                try {
-                    const body = (await res.json()) as ErrorBody;
-                    message =
-                        typeof body.error === "string"
-                            ? body.error
-                            : (body.error?.message ?? message);
-                } catch {
-                    // ignore body parse errors
+                const data = (await res.json()) as {
+                    providers?: Array<{
+                        name: string;
+                        models?: Array<{ id: string; fullId?: string }>;
+                    }>;
+                };
+                for (const p of data.providers ?? []) {
+                    for (const m of p.models ?? []) {
+                        models.push({ id: m.fullId ?? m.id, owned_by: p.name });
+                    }
                 }
-                throw new Error(message);
+            } else {
+                const res = await fetch(`${baseUrl}/v1/models`, {
+                    headers: {
+                        Authorization: `Bearer ${apiKey}`,
+                        Accept: "application/json"
+                    }
+                });
+                if (!res.ok) {
+                    let message = `Failed to load models (HTTP ${res.status})`;
+                    try {
+                        const body = (await res.json()) as ErrorBody;
+                        message =
+                            typeof body.error === "string"
+                                ? body.error
+                                : (body.error?.message ?? message);
+                    } catch {
+                        // ignore body parse errors
+                    }
+                    throw new Error(message);
+                }
+                const data = (await res.json()) as { object: string; data: ModelObject[] };
+                models = (data.data ?? []).map((m) => ({ id: m.id, owned_by: m.owned_by ?? "" }));
             }
-            const data = (await res.json()) as { object: string; data: ModelObject[] };
-            setList(data.data ?? []);
-            if (!value && data.data[0]) onChange(data.data[0].id);
+            setList(models);
+            setLoaded(true);
+            if (!value && models[0]) onChange(models[0].id);
         } catch (err) {
             onError(err instanceof Error ? err.message : "Failed to load models.");
         } finally {
@@ -100,7 +146,10 @@ function ModelPicker({
 
     const filtered = useMemo(() => {
         const q = search.trim().toLowerCase();
-        return q ? list.filter((m) => m.id.toLowerCase().includes(q)) : list;
+        if (!q) return list;
+        return list.filter(
+            (m) => m.id.toLowerCase().includes(q) || m.owned_by.toLowerCase().includes(q)
+        );
     }, [list, search]);
 
     return (
@@ -139,7 +188,9 @@ function ModelPicker({
                             {filtered.length === 0 ? (
                                 <p className="py-3 text-center text-[11px] text-[var(--ink-3)]">
                                     {list.length === 0
-                                        ? "No models returned by this key."
+                                        ? source === "catalog"
+                                            ? "No models listed in the marketplace yet."
+                                            : "No models returned by this key."
                                         : "No models matched your filter."}
                                 </p>
                             ) : (
@@ -173,8 +224,8 @@ function ModelPicker({
     );
 }
 
-export function PlaygroundPanel() {
-    const { keys, firstEnabled, isPending: keysPending } = usePlaygroundKey();
+export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVariant }) {
+    const { keys, firstEnabled, isPending: keysPending } = usePlaygroundKey(variant);
     const [selectedKeyId, setSelectedKeyId] = useState<string>("");
     const [keyOpen, setKeyOpen] = useState(false);
     const selectedKey = keys.find((k) => k.id === selectedKeyId) ?? firstEnabled ?? keys[0];
@@ -188,6 +239,7 @@ export function PlaygroundPanel() {
 
     const gatewayBase = getGatewayBaseUrl();
     const apiKey = selectedKey?.key ?? "";
+    const modelSource = variant === "admin" ? "models" : "catalog";
 
     function handleKeyChange(id: string) {
         setSelectedKeyId(id);
@@ -281,7 +333,7 @@ export function PlaygroundPanel() {
                         <p className="text-xs text-[var(--ink-3)]">Loading keys…</p>
                     ) : keys.length === 0 ? (
                         <a
-                            href="/dashboard/keys"
+                            href={variant === "admin" ? "/admin/keys" : "/dashboard/keys"}
                             className="inline-flex items-center gap-1.5 rounded-[8px] border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-xs font-semibold text-orange-500 hover:bg-orange-500/20 transition-colors"
                         >
                             <KeyRound className="size-3.5" />
@@ -357,6 +409,7 @@ export function PlaygroundPanel() {
                     <ModelPicker
                         baseUrl={gatewayBase}
                         apiKey={apiKey}
+                        source={modelSource}
                         value={model}
                         onChange={(m) => setModel(m)}
                         onError={(msg) => setError(msg)}

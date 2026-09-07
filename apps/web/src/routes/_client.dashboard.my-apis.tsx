@@ -2,9 +2,10 @@ import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Boxes, Plus, RefreshCw, Store, Trash2 } from "lucide-react";
+import { Boxes, Pencil, Plus, RefreshCw, Store, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MyApisAddForm } from "@/components/providers/my-apis.form";
+import { MyApisEditForm } from "@/components/providers/my-apis.edit-form";
 
 export const Route = createFileRoute("/_client/dashboard/my-apis")({
     staticData: { title: "My APIs" },
@@ -20,6 +21,7 @@ interface MyProvider {
     protocol?: string;
     base_url?: string;
     enabled: boolean;
+    models?: string[];
     modelsCount?: number;
     createdAt?: number;
 }
@@ -27,6 +29,7 @@ interface MyProvider {
 function MyApisPage() {
     const queryClient = useQueryClient();
     const [showForm, setShowForm] = useState(false);
+    const [editing, setEditing] = useState<MyProvider | null>(null);
 
     const list = useQuery({
         queryKey: ["my-providers"],
@@ -42,6 +45,15 @@ function MyApisPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["my-providers"] });
             setShowForm(false);
+        }
+    });
+
+    const updateMut = useMutation({
+        mutationFn: ({ id, body }: { id: string; body: Record<string, unknown> }) =>
+            api.patch(`/v1/providers/mine/${id}`, body),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["my-providers"] });
+            setEditing(null);
         }
     });
 
@@ -89,6 +101,21 @@ function MyApisPage() {
                     error={addMut.error instanceof Error ? addMut.error.message : null}
                     onSaved={() => setShowForm(false)}
                     onCancel={() => setShowForm(false)}
+                />
+            )}
+
+            {editing && (
+                <MyApisEditForm
+                    provider={{
+                        id: editing.id,
+                        name: editing.name,
+                        enabled: editing.enabled,
+                        models: editing.models ?? []
+                    }}
+                    isSaving={updateMut.isPending}
+                    error={updateMut.error instanceof Error ? updateMut.error.message : null}
+                    onSaved={() => setEditing(null)}
+                    onCancel={() => setEditing(null)}
                 />
             )}
 
@@ -175,6 +202,19 @@ function MyApisPage() {
                                     }`}
                                     title={p.enabled ? "Enabled" : "Disabled"}
                                 />
+                                <Button
+                                    variant="ghost"
+                                    size="icon-sm"
+                                    className="size-8 text-muted-foreground hover:text-foreground cursor-pointer"
+                                    disabled={showForm || Boolean(editing)}
+                                    onClick={() => {
+                                        setShowForm(false);
+                                        setEditing(p);
+                                    }}
+                                    title={`Edit "${p.name || p.providerId}"`}
+                                >
+                                    <Pencil className="size-3.5" />
+                                </Button>
                                 <Button
                                     variant="ghost"
                                     size="icon-sm"

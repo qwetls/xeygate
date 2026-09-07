@@ -37,6 +37,35 @@ export const CreateProviderSchema = z.object({
 
 export type CreateProviderZod = z.infer<typeof CreateProviderSchema>;
 
+export const UpdateMyProviderSchema = z.object({
+    name: z
+        .string({ required_error: "Field 'name' is required" })
+        .min(1, "Field 'name' is required")
+        .optional(),
+    alias: z
+        .string()
+        .regex(/^[a-z0-9_-]{1,32}$/, "Alias must be 1-32 chars: lowercase letters, numbers, - or _")
+        .optional()
+        .nullable(),
+    base_url: z.string().url().optional().nullable(),
+    api_key: z.string().optional(),
+    enabled: z.boolean().optional(),
+    models: z
+        .array(
+            z
+                .string()
+                .max(200, "Model ID too long")
+                .regex(
+                    /^[A-Za-z0-9._\-/: ]+$/,
+                    "Model IDs may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
+                )
+        )
+        .max(300, "Too many models")
+        .optional()
+});
+
+export type UpdateMyProviderZod = z.infer<typeof UpdateMyProviderSchema>;
+
 export const VerifyProviderSchema = z.object({
     protocol: ProviderProtocolSchema.optional().default("openai"),
     base_url: z.string().url().optional(),

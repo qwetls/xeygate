@@ -12,11 +12,13 @@ import type {
     ProviderConfig,
     ProviderDefinition,
     ProviderProtocol,
+    UpdateMyProviderZod,
     VerifyProviderZod
 } from "@srouter/types";
 import {
     addCustomModelDB,
     deleteCustomModelDB,
+    deleteCustomModelsByProviderDB,
     getAllProvidersDB,
     getCustomModelsByProviderDB,
     getProvidersByOwnerDB,
@@ -158,6 +160,8 @@ function RuntimeAliasFor(ProviderId: string): string {
     if (Registered?.alias) return Registered.alias;
     return providerAlias(providerBaseId(ProviderId));
 }
+
+export { RuntimeAliasFor };
 
 export class ProvidersLogic {
     public static async ListProviders(): Promise<ProviderDefinition[]> {
@@ -317,16 +321,70 @@ export class ProvidersLogic {
 
     public static async ListMyProviders(
         OwnerId: string
-    ): Promise<Array<ProviderConfig & { modelsCount: number }>> {
+    ): Promise<Array<ProviderConfig & { models: string[]; modelsCount: number }>> {
         const Providers = await getProvidersByOwnerDB(OwnerId);
         return Promise.all(
             Providers.map(async (P) => {
                 const Models = await getCustomModelsByProviderDB(
                     (P.providerId || P.id).toLowerCase()
                 );
-                return { ...P, modelsCount: Models.length };
+                return {
+                    ...P,
+                    models: Models.map((Row) => Row.modelId),
+                    modelsCount: Models.length
+                };
             })
         );
+    }
+
+    public static async UpdateMyProvider(
+        Existing: ProviderConfig,
+        Payload: UpdateMyProviderZod
+    ): Promise<ProviderConfig> {
+        const Name = Payload.name?.trim();
+        if (Name !== undefined && !Name) throw new Error("Provider name is required");
+
+        let BaseUrl = Payload.base_url;
+        if (Payload.base_url === null) {
+            BaseUrl = undefined;
+        } else if (Payload.base_url !== undefined) {
+            BaseUrl = Payload.base_url.trim() || undefined;
+            if (BaseUrl) {
+                try {
+                    const Url = new URL(BaseUrl);
+                    if (!["http:", "https:"].includes(Url.protocol))
+                        throw new Error("unsupported protocol");
+                } catch {
+                    throw new Error("Base URL must be a valid HTTP or HTTPS URL");
+                }
+            }
+        }
+        const ApiKey = Payload.api_key?.trim();
+
+        const Updated: ProviderConfig = {
+            ...Existing,
+            name: Name ?? Existing.name,
+            alias: Payload.alias === undefined ? Existing.alias : Payload.alias,
+            base_url: Payload.base_url === undefined ? Existing.base_url : BaseUrl,
+            apiKey: ApiKey ? ApiKey : Existing.apiKey,
+            enabled: Payload.enabled ?? Existing.enabled
+        };
+
+        await upsertProviderDB(Updated as ProviderConfig & { category: string; protocol: string });
+
+        if (Payload.models !== undefined) {
+            // Replace the whole storefront subset: rows keyed by providerId so
+            // each listing keeps its own catalog slice.
+            const ProviderKey = (Updated.providerId || Updated.id).toLowerCase();
+            await deleteCustomModelsByProviderDB(ProviderKey);
+            for (const ModelId of Payload.models) {
+                await addCustomModelDB(ProviderKey, ModelId);
+            }
+        }
+
+        await loadSavedProvidersFromDB();
+        registry.clearModelsCache();
+        return Updated;
     }
 
     public static async AddCustomModel(ProviderId: string, ModelId: string): Promise<ModelObject> {

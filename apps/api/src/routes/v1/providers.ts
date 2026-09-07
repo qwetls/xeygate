@@ -18,6 +18,7 @@ ProvidersRouter.post(
     ProvidersController.VerifyMyProvider
 );
 ProvidersRouter.delete("/providers/mine/:id", RequireCreator, ProvidersController.DeleteMyProvider);
+ProvidersRouter.patch("/providers/mine/:id", RequireCreator, ProvidersController.UpdateMyProvider);
 
 // Creator earnings dashboard.
 ProvidersRouter.get("/providers/mine/earnings", RequireCreator, async (c) => {

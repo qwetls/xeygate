@@ -16,6 +16,7 @@ type CatalogPayload = {
 type CatalogProvider = {
     providerId: string;
     name: string;
+    providerName?: string;
     protocol: string | null;
     category: string | null;
     ownerId: string | null;
@@ -94,7 +95,12 @@ export function CatalogPage() {
                             <div className="flex items-start justify-between gap-2">
                                 <div>
                                     <p className="text-sm font-semibold leading-none">{p.name}</p>
-                                    <p className="mt-1 text-[11px] text-muted-foreground">{p.providerId} · {p.protocol ?? "custom"} · {p.category ?? "api_key"}</p>
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                        {p.providerName && p.providerName !== p.name
+                                            ? `${p.providerName} · `
+                                            : ""}
+                                        {p.providerId} · {p.protocol ?? "custom"} · {p.category ?? "api_key"}
+                                    </p>
                                 </div>
                                 {p.official ? (
                                     <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">

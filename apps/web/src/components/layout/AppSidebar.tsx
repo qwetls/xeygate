@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+    BarChart2,
     Boxes,
     Coins,
     Cpu,
@@ -9,8 +10,8 @@ import {
     LayoutDashboard,
     ScrollText,
     Settings,
-    Zap,
-    BarChart2
+    Terminal,
+    Zap
 } from "lucide-react";
 import {
     Sidebar,
@@ -29,7 +30,8 @@ import {
 const mainNavItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { to: "/admin/keys", label: "API Keys", icon: KeyRound },
-    { to: "/admin/providers", label: "Providers", icon: Boxes }
+    { to: "/admin/providers", label: "Providers", icon: Boxes },
+    { to: "/admin/playground", label: "Playground", icon: Terminal }
 ] as const;
 
 const routingNavItems = [

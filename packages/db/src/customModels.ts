@@ -46,6 +46,13 @@ export async function deleteCustomModelDB(providerId: string, modelId: string): 
     return num(Result.changes) > 0;
 }
 
+export async function deleteCustomModelsByProviderDB(providerId: string): Promise<number> {
+    const Result = await db
+        .prepare("DELETE FROM custom_models WHERE provider_id = ?")
+        .run(providerId);
+    return num(Result.changes);
+}
+
 function mapCustomModelRow(row: CustomModelDBShape): CustomModelRow {
     return {
         providerId: str(row.provider_id),

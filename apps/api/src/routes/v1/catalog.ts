@@ -3,10 +3,12 @@ import {
     getAllProvidersDB,
     getAllCustomModelsDB,
     getCustomModelsByProviderDB,
-    listModelPricingDB
+    listModelPricingDB,
+    userAuthStore
 } from "@srouter/db";
 import { isSeedProvider } from "@srouter/constants";
 import { getPricingForModel } from "@srouter/pricing";
+import { RuntimeAliasFor } from "@/logic/providers.logic.js";
 import { Err, Ok } from "@/utils/response.js";
 
 export const CatalogRouter = new Hono();
@@ -14,12 +16,14 @@ export const CatalogRouter = new Hono();
 interface CatalogItem {
     providerId: string;
     name: string;
+    providerName: string;
     protocol: string | null;
     category: string | null;
     ownerId: string | null;
     official: boolean;
     models: Array<{
         id: string;
+        fullId: string;
         pricing: { input: number; output: number; cached?: number; cache_creation?: number; reasoning?: number };
         override: boolean;
     }>;
@@ -28,6 +32,21 @@ interface CatalogItem {
 function BareModelId(modelWithPrefix: string): string {
     const slash = modelWithPrefix.indexOf("/");
     return slash >= 0 ? modelWithPrefix.slice(slash + 1) : modelWithPrefix;
+}
+
+// Storefront display name: creators run a provider under their account name,
+// so the marketplace (and the playground model list) shows the account name;
+// official providers show their own name.
+const creatorNameCache = new Map<string, string | null>();
+
+async function StorefrontName(ownerId: string | null | undefined, fallback: string): Promise<string> {
+    if (!ownerId) return fallback;
+    const cached = creatorNameCache.get(ownerId);
+    if (cached !== undefined) return cached || fallback;
+    const user = await userAuthStore.getUserById(ownerId);
+    const name = user?.name?.trim() || null;
+    creatorNameCache.set(ownerId, name);
+    return name || fallback;
 }
 
 // GET /v1/catalog — public (no auth). Lists all enabled providers with their
@@ -42,6 +61,7 @@ CatalogRouter.get("/catalog", async (c) => {
             const customModels = await getCustomModelsByProviderDB(
                 (p.providerId || p.id).toLowerCase()
             );
+            const alias = RuntimeAliasFor((p.providerId || p.id).toLowerCase());
             const models = customModels.map((row) => {
                 const modelId = row.modelId;
                 const override = pricingOverrides.find(
@@ -50,6 +70,7 @@ CatalogRouter.get("/catalog", async (c) => {
                 if (override) {
                     return {
                         id: modelId,
+                        fullId: `${alias}/${modelId}`,
                         pricing: {
                             input: override.input,
                             output: override.output,
@@ -63,6 +84,7 @@ CatalogRouter.get("/catalog", async (c) => {
                 const staticPrice = getPricingForModel(p.providerId, modelId);
                 return {
                     id: modelId,
+                    fullId: `${alias}/${modelId}`,
                     pricing: {
                         input: staticPrice.input,
                         output: staticPrice.output,
@@ -75,7 +97,8 @@ CatalogRouter.get("/catalog", async (c) => {
             });
             return {
                 providerId: p.providerId,
-                name: p.name,
+                name: await StorefrontName(p.ownerId, p.name),
+                providerName: p.name,
                 protocol: (p.protocol as unknown as string) ?? null,
                 category: (p.category as unknown as string) ?? null,
                 ownerId: p.ownerId ?? null,
@@ -114,6 +137,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
     const offerings: Array<{
         providerId: string;
         name: string;
+        providerName: string;
         official: boolean;
         pricing: { input: number; output: number; cached?: number; cache_creation?: number; reasoning?: number };
         override: boolean;
@@ -126,6 +150,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
         if (!provider || !provider.enabled || isSeedProvider(provider)) continue;
         if (seen.has(provider.providerId)) continue;
         seen.add(provider.providerId);
+        const displayName = await StorefrontName(provider.ownerId, provider.name);
 
         const override = pricingOverrides.find(
             (o) => o.providerId === provider.providerId && o.model === row.modelId
@@ -133,7 +158,8 @@ CatalogRouter.get("/catalog/models", async (c) => {
         if (override) {
             offerings.push({
                 providerId: provider.providerId,
-                name: provider.name,
+                name: displayName,
+                providerName: provider.name,
                 official: !provider.ownerId,
                 pricing: {
                     input: override.input,
@@ -148,7 +174,8 @@ CatalogRouter.get("/catalog/models", async (c) => {
             const sp = getPricingForModel(provider.providerId, row.modelId);
             offerings.push({
                 providerId: provider.providerId,
-                name: provider.name,
+                name: displayName,
+                providerName: provider.name,
                 official: !provider.ownerId,
                 pricing: {
                     input: sp.input,

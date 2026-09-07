@@ -3,7 +3,7 @@ import type { CreateProviderPayload } from "@/logic/providers.logic.js";
 import type { ProviderConfig } from "@srouter/types";
 import { ProvidersLogic } from "@/logic/providers.logic.js";
 import { deleteProviderDB, getProviderByIdDB } from "@srouter/db";
-import { AddCustomModelSchema, CreateProviderSchema, ToggleRoundRobinSchema, VerifyProviderSchema } from "@srouter/types";
+import { AddCustomModelSchema, CreateProviderSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -173,6 +173,30 @@ export class ProvidersController {
         registry.unregisterProvider(Id);
         await loadSavedProvidersFromDB();
         return Ok(c, { message: "Connection deleted" });
+    }
+
+    public static async UpdateMyProvider(c: Context): Promise<Response> {
+        const userId = c.get("userId") as string;
+        const Id = c.req.param("id");
+        if (!Id) return Err(c, "Connection ID is required", 400);
+
+        const Existing = await getProviderByIdDB(Id);
+        if (!Existing || Existing.ownerId !== userId) {
+            return Err(c, `Connection '${Id}' not found`, 404);
+        }
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = UpdateMyProviderSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid provider update payload", 400);
+        }
+
+        try {
+            const Updated = await ProvidersLogic.UpdateMyProvider(Existing, Parsed.data);
+            return Ok(c, SanitizedProvider(Updated));
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Invalid provider update payload", 400);
+        }
     }
 
     public static async VerifyMyProvider(c: Context): Promise<Response> {

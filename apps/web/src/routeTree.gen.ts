@@ -18,6 +18,7 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminComboRouteImport } from './routes/admin.combo'
 import { Route as AdminKeysRouteImport } from './routes/admin.keys'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminPlaygroundRouteImport } from './routes/admin.playground'
 import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
 import { Route as AdminQuotaRouteImport } from './routes/admin.quota'
@@ -76,6 +77,11 @@ const AdminKeysRoute = AdminKeysRouteImport.update({
 const AdminLogsRoute = AdminLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlaygroundRoute = AdminPlaygroundRouteImport.update({
+  id: '/playground',
+  path: '/playground',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPricingRoute = AdminPricingRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -215,6 +223,7 @@ export interface FileRoutesById {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
     | '/admin/quota'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/playground'
     | '/admin/pricing'
     | '/admin/quota'
     | '/admin/settings'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
     | '/admin/quota'
@@ -377,6 +389,13 @@ declare module '@tanstack/react-router' {
       path: '/logs'
       fullPath: '/admin/logs'
       preLoaderRoute: typeof AdminLogsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/playground': {
+      id: '/admin/playground'
+      path: '/playground'
+      fullPath: '/admin/playground'
+      preLoaderRoute: typeof AdminPlaygroundRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/pricing': {
@@ -507,6 +526,7 @@ interface AdminRouteChildren {
   AdminComboRoute: typeof AdminComboRoute
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLogsRoute: typeof AdminLogsRoute
+  AdminPlaygroundRoute: typeof AdminPlaygroundRoute
   AdminPricingRoute: typeof AdminPricingRoute
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
   AdminQuotaRoute: typeof AdminQuotaRoute
@@ -519,6 +539,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComboRoute: AdminComboRoute,
   AdminKeysRoute: AdminKeysRoute,
   AdminLogsRoute: AdminLogsRoute,
+  AdminPlaygroundRoute: AdminPlaygroundRoute,
   AdminPricingRoute: AdminPricingRoute,
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
   AdminQuotaRoute: AdminQuotaRoute,

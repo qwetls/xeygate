@@ -15,6 +15,7 @@ export const Route = createFileRoute("/admin/pricing")({
 type CatalogProvider = {
     providerId: string;
     name: string;
+    providerName?: string;
     official?: boolean;
     models: Array<{ id: string; pricing: Record<string, number>; override: boolean }>;
 };
@@ -173,6 +174,9 @@ function AdminPricingPage() {
                                         <div className="space-y-0.5 min-w-0">
                                             <p className="text-sm font-semibold leading-none break-all">{model}</p>
                                             <p className="text-xs text-muted-foreground">
+                                                {provider.providerName && provider.providerName !== provider.name
+                                                    ? `${provider.providerName} · `
+                                                    : ""}
                                                 {provider.name}
                                                 {provider.official ? (
                                                     <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
