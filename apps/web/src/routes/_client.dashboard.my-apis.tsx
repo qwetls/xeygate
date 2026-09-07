@@ -20,6 +20,7 @@ interface MyProvider {
     protocol?: string;
     base_url?: string;
     enabled: boolean;
+    modelsCount?: number;
     createdAt?: number;
 }
 
@@ -144,6 +145,19 @@ function MyApisPage() {
                                         {p.alias && (
                                             <span className="shrink-0 rounded-full border border-border/70 bg-secondary/40 px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
                                                 {p.alias}/*
+                                            </span>
+                                        )}
+                                        {p.modelsCount !== undefined && (
+                                            <span
+                                                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${
+                                                    p.modelsCount > 0
+                                                        ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                                        : "border border-border/70 bg-secondary/40 text-muted-foreground"
+                                                }`}
+                                                title="Models exposed for sale in the marketplace"
+                                            >
+                                                {p.modelsCount} model
+                                                {p.modelsCount === 1 ? "" : "s"}
                                             </span>
                                         )}
                                     </div>

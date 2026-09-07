@@ -299,13 +299,34 @@ export class ProvidersLogic {
         };
 
         await upsertProviderDB(Config);
+
+        // Persist the creator-selected models this provider exposes for sale.
+        // Rows are keyed by the connection's providerId so each listing keeps
+        // its own storefront subset (catalog groups by providerId).
+        if (Payload.models?.length) {
+            const ProviderKey = Id.toLowerCase();
+            for (const ModelId of Payload.models) {
+                await addCustomModelDB(ProviderKey, ModelId);
+            }
+        }
+
         await loadSavedProvidersFromDB();
 
         return ProviderDefinitionFromConfig(Config);
     }
 
-    public static async ListMyProviders(OwnerId: string): Promise<ProviderConfig[]> {
-        return getProvidersByOwnerDB(OwnerId);
+    public static async ListMyProviders(
+        OwnerId: string
+    ): Promise<Array<ProviderConfig & { modelsCount: number }>> {
+        const Providers = await getProvidersByOwnerDB(OwnerId);
+        return Promise.all(
+            Providers.map(async (P) => {
+                const Models = await getCustomModelsByProviderDB(
+                    (P.providerId || P.id).toLowerCase()
+                );
+                return { ...P, modelsCount: Models.length };
+            })
+        );
     }
 
     public static async AddCustomModel(ProviderId: string, ModelId: string): Promise<ModelObject> {

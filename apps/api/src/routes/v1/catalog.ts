@@ -17,6 +17,7 @@ interface CatalogItem {
     protocol: string | null;
     category: string | null;
     ownerId: string | null;
+    official: boolean;
     models: Array<{
         id: string;
         pricing: { input: number; output: number; cached?: number; cache_creation?: number; reasoning?: number };
@@ -78,6 +79,7 @@ CatalogRouter.get("/catalog", async (c) => {
                 protocol: (p.protocol as unknown as string) ?? null,
                 category: (p.category as unknown as string) ?? null,
                 ownerId: p.ownerId ?? null,
+                official: !p.ownerId,
                 models,
             };
         })
@@ -112,6 +114,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
     const offerings: Array<{
         providerId: string;
         name: string;
+        official: boolean;
         pricing: { input: number; output: number; cached?: number; cache_creation?: number; reasoning?: number };
         override: boolean;
     }> = [];
@@ -131,6 +134,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
             offerings.push({
                 providerId: provider.providerId,
                 name: provider.name,
+                official: !provider.ownerId,
                 pricing: {
                     input: override.input,
                     output: override.output,
@@ -145,6 +149,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
             offerings.push({
                 providerId: provider.providerId,
                 name: provider.name,
+                official: !provider.ownerId,
                 pricing: {
                     input: sp.input,
                     output: sp.output,

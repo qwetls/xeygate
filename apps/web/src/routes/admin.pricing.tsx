@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { BadgeCheck } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/admin/pricing")({
 type CatalogProvider = {
     providerId: string;
     name: string;
+    official?: boolean;
     models: Array<{ id: string; pricing: Record<string, number>; override: boolean }>;
 };
 type CatalogPayload = { data?: { providers: CatalogProvider[] } & CatalogProvider[] } & { providers?: CatalogProvider[] };
@@ -170,7 +172,16 @@ function AdminPricingPage() {
                                     <div className="flex flex-wrap items-start justify-between gap-2">
                                         <div className="space-y-0.5 min-w-0">
                                             <p className="text-sm font-semibold leading-none break-all">{model}</p>
-                                            <p className="text-xs text-muted-foreground">{provider.name} · {provider.providerId}</p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {provider.name}
+                                                {provider.official ? (
+                                                    <span className="ml-1.5 inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-1 py-0.5 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                                        <BadgeCheck className="size-2.5" />
+                                                        Official
+                                                    </span>
+                                                ) : null}{" "}
+                                                · {provider.providerId}
+                                            </p>
                                             <p className="text-[11px] text-muted-foreground">
                                                 {override ? <>Override: <span className="font-mono">${override.input} in / ${override.output} out</span></> : <span className="text-muted-foreground/70">Using static catalog price</span>}
                                             </p>

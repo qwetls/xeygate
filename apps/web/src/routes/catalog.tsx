@@ -19,6 +19,7 @@ type CatalogProvider = {
     protocol: string | null;
     category: string | null;
     ownerId: string | null;
+    official: boolean;
     models: Array<{ id: string; pricing: { input: number; output: number; cached?: number; reasoning?: number }; override: boolean }>;
 };
 
@@ -95,7 +96,14 @@ export function CatalogPage() {
                                     <p className="text-sm font-semibold leading-none">{p.name}</p>
                                     <p className="mt-1 text-[11px] text-muted-foreground">{p.providerId} · {p.protocol ?? "custom"} · {p.category ?? "api_key"}</p>
                                 </div>
-                                {p.ownerId ? <span className="rounded bg-secondary px-2 py-1 text-[10px] font-semibold text-muted-foreground">Creator</span> : null}
+                                {p.official ? (
+                                    <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                        <BadgeCheck className="size-3" />
+                                        Official
+                                    </span>
+                                ) : p.ownerId ? (
+                                    <span className="rounded bg-secondary px-2 py-1 text-[10px] font-semibold text-muted-foreground">Creator</span>
+                                ) : null}
                             </div>
                             {p.models.length === 0 ? <p className="text-xs text-muted-foreground">No models listed yet.</p> : (
                                 <ul className="space-y-1.5">

@@ -20,7 +20,19 @@ export const CreateProviderSchema = z.object({
     access_token: z.string().optional(),
     refresh_token: z.string().optional(),
     provider_specific_data: z.record(z.string()).optional(),
-    custom_headers: z.record(z.string()).optional()
+    custom_headers: z.record(z.string()).optional(),
+    models: z
+        .array(
+            z
+                .string()
+                .max(200, "Model ID too long")
+                .regex(
+                    /^[A-Za-z0-9._\-/: ]+$/,
+                    "Model IDs may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
+                )
+        )
+        .max(300, "Too many models")
+        .optional()
 });
 
 export type CreateProviderZod = z.infer<typeof CreateProviderSchema>;

@@ -51,6 +51,7 @@ interface ImportState {
     models: string[];
     count?: number;
     open: boolean;
+    selected: string[];
 }
 
 export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddFormProps) {
@@ -61,7 +62,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
     const [driverKey, setDriverKey] = useState("");
     const [showDriverKey, setShowDriverKey] = useState(false);
     const [driverVerify, setDriverVerify] = useState<VerifyStatus>("idle");
-    const [driverImport, setDriverImport] = useState<ImportState>({ models: [], open: false });
+    const [driverImport, setDriverImport] = useState<ImportState>({ models: [], open: false, selected: [] });
     const [driverError, setDriverError] = useState("");
     const [driverOpen, setDriverOpen] = useState(false);
     const [quickSearch, setQuickSearch] = useState("");
@@ -74,7 +75,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
     const [cApiKey, setCApiKey] = useState("");
     const [cShowKey, setCShowKey] = useState(false);
     const [cVerify, setCVerify] = useState<VerifyStatus>("idle");
-    const [cImport, setCImport] = useState<ImportState>({ models: [], open: false });
+    const [cImport, setCImport] = useState<ImportState>({ models: [], open: false, selected: [] });
     const [cError, setCError] = useState("");
 
     const driver = driverId ? KNOWN_PROVIDER_MAP[driverId] : undefined;
@@ -93,16 +94,16 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
         setMode(next);
         // Keep credentials out of the other mode; reset transient state.
         setDriverVerify("idle");
-        setDriverImport({ models: [], open: false });
+        setDriverImport({ models: [], open: false, selected: [] });
         setDriverError("");
         setCVerify("idle");
-        setCImport({ models: [], open: false });
+        setCImport({ models: [], open: false, selected: [] });
         setCError("");
     }
 
     function applyVerified(res: VerifyResponse, setImport: (s: ImportState) => void) {
         if (res.success && res.models?.length) {
-            setImport({ models: res.models, count: res.modelsCount, open: true });
+            setImport({ models: res.models, count: res.modelsCount, open: true, selected: [] });
         }
     }
 
@@ -128,7 +129,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                 toast.success(res.message || "Connection verified.");
             } else {
                 setDriverVerify("error");
-                setDriverImport({ models: [], open: false });
+                setDriverImport({ models: [], open: false, selected: [] });
                 toast.error(res.message || "Connection test failed.");
             }
         } catch (err) {
@@ -156,7 +157,8 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
             category: driver.category,
             protocol: driver.protocol,
             base_url: driver.base_url,
-            api_key: key
+            api_key: key,
+            ...(driverImport.selected.length ? { models: driverImport.selected } : {})
         };
         save(payload, setDriverError);
     }
@@ -187,7 +189,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                 toast.success(res.message || "Connection verified.");
             } else {
                 setCVerify("error");
-                setCImport({ models: [], open: false });
+                setCImport({ models: [], open: false, selected: [] });
                 toast.error(res.message || "Connection test failed.");
             }
         } catch (err) {
@@ -228,7 +230,8 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
             category: "custom_provider",
             protocol: cProtocol,
             base_url: baseUrl,
-            api_key: apiKey
+            api_key: apiKey,
+            ...(cImport.selected.length ? { models: cImport.selected } : {})
         };
         save(payload, setCError);
     }
@@ -372,7 +375,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                                                             setDriverId(d.id);
                                                             setDriverOpen(false);
                                                             setDriverVerify("idle");
-                                                            setDriverImport({ models: [], open: false });
+                                                            setDriverImport({ models: [], open: false, selected: [] });
                                                             setDriverError("");
                                                         }}
                                                         className="flex w-full items-center justify-between gap-2 rounded-[6px] px-2.5 py-1.5 text-left text-xs text-[var(--ink)] hover:bg-[var(--field)] transition-colors cursor-pointer"
@@ -463,7 +466,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                                 }}
                                 disabled={driverVerify === "testing" || !driverKey.trim()}
                                 className={ghostBtnCls}
-                                title="Preview models exposed upstream (read-only)"
+                                title="Choose which upstream models to expose for sale"
                             >
                                 Import Models
                             </button>
@@ -515,7 +518,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                                             setCProtocol(p.value);
                                             setCError("");
                                             setCVerify("idle");
-                                            setCImport({ models: [], open: false });
+                                            setCImport({ models: [], open: false, selected: [] });
                                         }}
                                         className={`rounded-[6px] border px-3 py-1.5 font-semibold transition-colors cursor-pointer text-xs ${
                                             cProtocol === p.value
@@ -610,7 +613,7 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                                 }}
                                 disabled={cVerify === "testing"}
                                 className={ghostBtnCls}
-                                title="Preview models exposed upstream (read-only)"
+                                title="Choose which upstream models to expose for sale"
                             >
                                 Import Models
                             </button>
@@ -623,9 +626,18 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
                     <ImportPreview
                         models={importState.models}
                         count={importState.count}
-                        onClose={() =>
-                            setImportState((s) => ({ ...s, open: false }))
+                        selected={importState.selected}
+                        onToggle={(m) =>
+                            setImportState((s) => ({
+                                ...s,
+                                selected: s.selected.includes(m)
+                                    ? s.selected.filter((x) => x !== m)
+                                    : [...s.selected, m]
+                            }))
                         }
+                        onSelectAll={() => setImportState((s) => ({ ...s, selected: s.models }))}
+                        onClearAll={() => setImportState((s) => ({ ...s, selected: [] }))}
+                        onClose={() => setImportState((s) => ({ ...s, open: false }))}
                     />
                 )}
 
@@ -652,10 +664,18 @@ export function MyApisAddForm({ isSaving, error, onSaved, onCancel }: MyApisAddF
 function ImportPreview({
     models,
     count,
+    selected,
+    onToggle,
+    onSelectAll,
+    onClearAll,
     onClose
 }: {
     models: string[];
     count?: number;
+    selected: string[];
+    onToggle: (m: string) => void;
+    onSelectAll: () => void;
+    onClearAll: () => void;
     onClose: () => void;
 }) {
     const [search, setSearch] = useState("");
@@ -705,6 +725,28 @@ function ImportPreview({
                             className="w-full rounded-[6px] border border-[var(--line)] bg-[var(--surface)] py-1.5 pl-7 pr-2 text-[11px] text-[var(--ink)] placeholder:text-[var(--ink-3)] focus:outline-none focus:ring-1 focus:ring-[var(--ink)]"
                         />
                     </div>
+                    <div className="mt-1.5 flex items-center justify-between">
+                        <span className="text-[10px] font-semibold text-[var(--ink)]">
+                            {selected.length} selected
+                        </span>
+                        <div className="flex items-center gap-2.5">
+                            <button
+                                type="button"
+                                onClick={onSelectAll}
+                                className="text-[10px] font-semibold text-orange-500 hover:text-orange-400 cursor-pointer"
+                            >
+                                Select all
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClearAll}
+                                disabled={selected.length === 0}
+                                className="text-[10px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-40 cursor-pointer"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
                     <div className="mt-1.5 max-h-40 overflow-y-auto rounded-[6px] border border-[var(--line)]">
                         {filtered.length === 0 ? (
                             <p className="py-3 text-center text-[11px] text-[var(--ink-3)]">
@@ -717,16 +759,23 @@ function ImportPreview({
                                         key={m}
                                         className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-[var(--ink)]"
                                     >
+                                        <input
+                                            type="checkbox"
+                                            checked={selected.includes(m)}
+                                            onChange={() => onToggle(m)}
+                                            className="size-3 shrink-0 accent-orange-500 cursor-pointer"
+                                        />
                                         <Boxes className="size-3 shrink-0 text-[var(--ink-3)]" />
-                                        <code className="truncate">{m}</code>
+                                        <code className="truncate flex-1">{m}</code>
                                     </li>
                                 ))}
                             </ul>
                         )}
                     </div>
                     <p className="mt-1.5 text-[10px] text-[var(--ink-3)]">
-                        These are the models exposed upstream. Listing is read-only — configure
-                        what you sell from your storefront once the provider is added.
+                        Tick the models you want to sell — they'll be listed in the marketplace as
+                        soon as this provider is added. Leave none selected to add it without
+                        importing models.
                     </p>
                 </div>
             )}
