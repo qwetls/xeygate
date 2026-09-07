@@ -41,6 +41,7 @@ beforeEach(async () => {
     providerId = `bill_prov_${crypto.randomUUID().slice(0, 8)}`;
     createdProviderIds.push(providerId);
     await upsertProviderDB({
+        id: providerId,
         providerId,
         name: "Billing Test Provider",
         category: "openai",
@@ -154,6 +155,7 @@ test("settleMarketplaceUsage handles admin-owned provider (no creator)", async (
     const adminProvId = `admin_prov_${crypto.randomUUID().slice(0, 8)}`;
     createdProviderIds.push(adminProvId);
     await upsertProviderDB({
+        id: adminProvId,
         providerId: adminProvId,
         name: "Admin Provider",
         category: "openai",
@@ -194,7 +196,6 @@ test("getEarningsSummaryDB aggregates correctly", async () => {
     // Two settlements
     await settleMarketplaceUsage({ apiKeyId: key.id, providerId, model: "m1", amount: 10 });
     await settleMarketplaceUsage({ apiKeyId: key.id, providerId, model: "m2", amount: 20 });
-
     const summary = await getEarningsSummaryDB(creator.id);
     assert.equal(summary.requestCount, 2);
     assert.equal(summary.totalGross, 30);
