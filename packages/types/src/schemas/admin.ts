@@ -1,33 +1,19 @@
 import { z } from "zod";
 
-export const AdminSetupSchema = z.object({
-    password: z.string({ required_error: "Password is required" }).min(1, "Password is required"),
-    confirmation: z
-        .string({ required_error: "Password confirmation is required" })
-        .min(1, "Password confirmation is required")
+/**
+ * POST /v1/admin/bootstrap
+ *
+ * First-come-wins account claim when no admin exists yet. The email and
+ * password are validated in the route handler itself; the schema mirrors that
+ * shape so the dashboard form can be driven client-side.
+ */
+export const AdminBootstrapSchema = z.object({
+    email: z.string({ required_error: "Email is required" }).email("Invalid email"),
+    password: z.string({ required_error: "Password is required" }).min(8, "Password must be at least 8 characters"),
+    name: z.string().optional()
 });
 
-export type AdminSetupZod = z.infer<typeof AdminSetupSchema>;
-
-export const AdminLoginSchema = z.object({
-    password: z.string({ required_error: "Password is required" }).min(1, "Password is required")
-});
-
-export type AdminLoginZod = z.infer<typeof AdminLoginSchema>;
-
-export const AdminChangePasswordSchema = z.object({
-    current_password: z
-        .string({ required_error: "Current password is required" })
-        .min(1, "Current password is required"),
-    new_password: z
-        .string({ required_error: "New password is required" })
-        .min(1, "New password is required"),
-    confirmation: z
-        .string({ required_error: "Password confirmation is required" })
-        .min(1, "Password confirmation is required")
-});
-
-export type AdminChangePasswordZod = z.infer<typeof AdminChangePasswordSchema>;
+export type AdminBootstrapZod = z.infer<typeof AdminBootstrapSchema>;
 
 export const TunnelConfigSchema = z.object({
     token: z.string().optional(),

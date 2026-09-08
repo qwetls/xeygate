@@ -3,7 +3,7 @@ import { afterEach, test } from "node:test";
 import { db } from "@srouter/db";
 import { Hono } from "hono";
 import { LogsRouter } from "@/routes/v1/logs.js";
-import { ADMIN_SESSION_COOKIE, createAdminSession } from "@/services/adminAuth.js";
+import { createTestAdminSession } from "./helpers/adminSession.js";
 import type { RequestLogEntry } from "@srouter/types";
 
 const seededIds: string[] = [];
@@ -88,9 +88,9 @@ function createTestApp() {
 }
 
 async function authedRequest(app: Hono, path: string) {
-    const token = await createAdminSession();
+    const token = await createTestAdminSession();
     return app.request(path, {
-        headers: { Cookie: `${ADMIN_SESSION_COOKIE}=${token}` }
+        headers: { Cookie: `xeygate_user_session=${token}` }
     });
 }
 

@@ -4,6 +4,7 @@ import {
     KeyRound,
     LayoutDashboard,
     LogOut,
+    ShieldCheck,
     Store,
     Terminal,
     Wallet,
@@ -27,6 +28,7 @@ interface ClientSidebarProps {
     role: "buyer" | "creator";
     email: string;
     credits: number;
+    isAdmin: boolean;
 }
 
 const baseNavItems = [
@@ -41,7 +43,12 @@ const creatorNavItems = [
     { to: "/dashboard/payouts", label: "Payouts", icon: Wallet }
 ] as const;
 
-export function ClientSidebar({ role, email, credits }: ClientSidebarProps) {
+// Only rendered when the signed-in account carries is_admin.
+const adminNavItems = [
+    { to: "/admin", label: "Admin", icon: ShieldCheck }
+] as const;
+
+export function ClientSidebar({ role, email, credits, isAdmin }: ClientSidebarProps) {
     async function handleLogout() {
         await api.post("/v1/users/logout");
         window.location.href = "/dashboard";
@@ -79,7 +86,11 @@ export function ClientSidebar({ role, email, credits }: ClientSidebarProps) {
                     <SidebarGroup className="p-0">
                         <SidebarGroupContent>
                             <SidebarMenu className="gap-1">
-                                {[...baseNavItems, ...(role === "creator" ? creatorNavItems : [])].map(({ to, label, icon: Icon }) => (
+                                {[
+                                    ...baseNavItems,
+                                    ...(role === "creator" ? creatorNavItems : []),
+                                    ...(isAdmin ? adminNavItems : [])
+                                ].map(({ to, label, icon: Icon }) => (
                                     <SidebarMenuItem key={to}>
                                         <SidebarMenuButton
                                             render={

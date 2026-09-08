@@ -1,13 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Hono } from "hono";
-import { adminAuthStore } from "@srouter/db";
 import { TunnelRouter } from "../src/routes/v1/tunnel.js";
-import {
-    ADMIN_SESSION_COOKIE,
-    createAdminSession,
-    revokeAdminSession
-} from "../src/services/adminAuth.js";
+import { createTestAdminSession } from "./helpers/adminSession.js";
 
 function createTestApp() {
     const app = new Hono();
@@ -48,15 +43,11 @@ test("tunnel endpoints reject API-key-only requests with 401", async () => {
 
 test("tunnel status is readable with a valid admin session", async () => {
     const app = createTestApp();
-    const Token = await createAdminSession(adminAuthStore);
-    try {
-        const res = await app.request("/v1/tunnel/status", {
-            headers: { Cookie: `${ADMIN_SESSION_COOKIE}=${Token}` }
-        });
-        assert.equal(res.status, 200);
-        const body = (await res.json()) as { ok: boolean; running: boolean };
-        assert.equal(typeof body.running, "boolean");
-    } finally {
-        await await revokeAdminSession(adminAuthStore, Token);
-    }
+    const Token = await createTestAdminSession();
+    const res = await app.request("/v1/tunnel/status", {
+        headers: { Cookie: `xeygate_user_session=${Token}` }
+    });
+    assert.equal(res.status, 200);
+    const body = (await res.json()) as { ok: boolean; running: boolean };
+    assert.equal(typeof body.running, "boolean");
 });

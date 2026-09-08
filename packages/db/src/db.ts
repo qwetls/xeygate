@@ -302,24 +302,6 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" }
 ];
 
-const ADMIN_TABLES = (pg: boolean) => {
-    const integer = pg ? "BIGINT" : "INTEGER";
-    return `
-    CREATE TABLE IF NOT EXISTS admin_account (
-        id ${integer} PRIMARY KEY CHECK (id = 1),
-        password_hash TEXT NOT NULL,
-        created_at ${integer} NOT NULL,
-        updated_at ${integer} NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_sessions (
-        token_hash TEXT PRIMARY KEY,
-        created_at ${integer} NOT NULL,
-        expires_at ${integer} NOT NULL
-    );
-`;
-};
-
 /**
  * Adds columns to a table if they do not already exist.
  * Declarative replacement for repeated try/catch ALTER TABLE blocks.
@@ -361,7 +343,6 @@ function initSqliteSchemaSync(): void {
     for (const index of INDEXES) {
         raw.exec(index.sql);
     }
-    raw.exec(ADMIN_TABLES(false));
 
     const ensureSync = (table: string, columns: ColumnDef[]): void => {
         const existing = new Set(
@@ -421,7 +402,6 @@ async function initPostgresSchema(): Promise<void> {
     for (const index of INDEXES) {
         await client.exec(index.sql);
     }
-    await client.exec(ADMIN_TABLES(true));
     await ensureColumns("providers", [
         { name: "alias", definition: "alias TEXT" },
         { name: "refresh_token", definition: "refresh_token TEXT" },

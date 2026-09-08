@@ -19,10 +19,11 @@ function LoginPage() {
     const [error, setError] = useState<string | null>(null);
 
     const loginMutation = useMutation({
-        mutationFn: () => api.post<{ id: string }>("/v1/users/login", { email, password }),
-        onSuccess: () => {
+        mutationFn: () => api.post<{ id: string; isAdmin?: boolean }>("/v1/users/login", { email, password }),
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
-            navigate({ to: "/dashboard" });
+            // Admin accounts land straight in the control plane.
+            navigate({ to: data?.isAdmin ? "/admin" : "/dashboard" });
         },
         onError: (err: Error) => {
             setError(err instanceof ApiError ? err.message : "Login failed");

@@ -4,7 +4,7 @@ import { createAPIKeyDB, deleteAPIKeyDB, getAPIKeyByKeyDB } from "@srouter/db";
 import type { APIKeyZod } from "@srouter/types";
 import { Hono } from "hono";
 import { KeysRouter } from "@/routes/v1/keys.js";
-import { createAdminSession, ADMIN_SESSION_COOKIE } from "@/services/adminAuth.js";
+import { createTestAdminSession } from "./helpers/adminSession.js";
 
 const createdIds: string[] = [];
 
@@ -21,13 +21,13 @@ function createTestApp() {
 }
 
 test("POST /v1/keys creates key with creditLimit", async () => {
-    const token = await createAdminSession();
+    const token = await createTestAdminSession();
     const app = createTestApp();
     const res = await app.request("/v1/keys", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Cookie: `${ADMIN_SESSION_COOKIE}=${token}`
+            Cookie: `xeygate_user_session=${token}`
         },
         body: JSON.stringify({
             name: "Credit API Key",
@@ -43,7 +43,7 @@ test("POST /v1/keys creates key with creditLimit", async () => {
 });
 
 test("POST /v1/keys/:id/credit adds credit to existing key", async () => {
-    const token = await createAdminSession();
+    const token = await createTestAdminSession();
     const key = await createAPIKeyDB({
         name: "Topup Route Key",
         credit_limit: 10
@@ -55,7 +55,7 @@ test("POST /v1/keys/:id/credit adds credit to existing key", async () => {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Cookie: `${ADMIN_SESSION_COOKIE}=${token}`
+            Cookie: `xeygate_user_session=${token}`
         },
         body: JSON.stringify({ amount: 15 })
     });
@@ -69,7 +69,7 @@ test("POST /v1/keys/:id/credit adds credit to existing key", async () => {
 });
 
 test("POST /v1/keys/:id/credit rejects non-positive amount", async () => {
-    const token = await createAdminSession();
+    const token = await createTestAdminSession();
     const key = await createAPIKeyDB({ name: "Validation Key" });
     createdIds.push(key.id);
 
@@ -78,7 +78,7 @@ test("POST /v1/keys/:id/credit rejects non-positive amount", async () => {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Cookie: `${ADMIN_SESSION_COOKIE}=${token}`
+            Cookie: `xeygate_user_session=${token}`
         },
         body: JSON.stringify({ amount: -5 })
     });

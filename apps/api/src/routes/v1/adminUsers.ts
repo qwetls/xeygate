@@ -5,6 +5,9 @@ import { RequireAdmin } from "@/middleware/AdminAuth.js";
 export const AdminUsersRouter = new Hono();
 
 AdminUsersRouter.get("/admin/users", RequireAdmin, AdminUsersController.ListUsers);
+AdminUsersRouter.get("/admin/admins", RequireAdmin, AdminUsersController.ListAdmins);
+AdminUsersRouter.post("/admin/users/:id/promote", RequireAdmin, AdminUsersController.PromoteAdmin);
+AdminUsersRouter.post("/admin/users/:id/demote", RequireAdmin, AdminUsersController.DemoteAdmin);
 AdminUsersRouter.get("/admin/platform-analytics", RequireAdmin, AdminUsersController.PlatformAnalytics);
 AdminUsersRouter.post("/admin/users/:id/approve", RequireAdmin, AdminUsersController.ApproveRegistration);
 AdminUsersRouter.post("/admin/users/:id/ban", RequireAdmin, AdminUsersController.BanUser);

@@ -26,10 +26,10 @@ import { CreateBodyLimitMiddleware } from "@/middleware/BodyLimit.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry, startProviderRegistry } from "@/services/registry.js";
-import { bootstrapAdminAccountFromEnv } from "@/services/adminAuth.js";
+import { bootstrapAdminFromEnv } from "@/services/adminAuth.js";
 import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
 import { GetPublicUrlBase } from "@/utils/callbackUrl.js";
-import { adminAuthStore, initDatabase, isPostgres } from "@srouter/db";
+import { initDatabase, isPostgres } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
 import { API_VERSION } from "@srouter/constants";
@@ -200,7 +200,7 @@ async function boot(): Promise<void> {
 
     // Bootstrap admin account & tunnel autostart: query DB, so must run
     // after schema init (especially for Postgres).
-    void bootstrapAdminAccountFromEnv(adminAuthStore);
+    void bootstrapAdminFromEnv();
     void autostartTunnelIfEnabled();
 
     // Seed default provider rows + load saved providers (must run after DB schema init).

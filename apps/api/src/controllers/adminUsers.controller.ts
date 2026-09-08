@@ -19,6 +19,7 @@ function toUserPayload(user: {
     status: string;
     creatorStatus: string;
     creatorShare: number;
+    isAdmin: boolean;
     createdAt: number;
     updatedAt: number;
 }) {
@@ -31,6 +32,7 @@ function toUserPayload(user: {
         status: user.status,
         creatorStatus: user.creatorStatus,
         creatorShare: user.creatorShare,
+        isAdmin: user.isAdmin,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
     };
@@ -115,6 +117,52 @@ export class AdminUsersController {
         }
 
         const updated = await userAuthStore.setCreatorApproval(id, "rejected");
+        if (!updated) return Err(c, "User not found", 404);
+        return Ok(c, { user: toUserPayload(updated) });
+    }
+
+    // ── Admin accounts (is_admin flag) ──
+
+    public static async ListAdmins(c: Context): Promise<Response> {
+        const admins = await userAuthStore.listAdmins();
+        return Ok(c, { admins: admins.map(toUserPayload) });
+    }
+
+    public static async PromoteAdmin(c: Context): Promise<Response> {
+        const id = c.req.param("id");
+        const target = await userAuthStore.getUserById(id);
+        if (!target) return Err(c, "User not found", 404);
+        if (target.isAdmin) {
+            return Err(c, "User is already an admin", 409, { code: "already_admin" });
+        }
+        if (target.status !== "active") {
+            return Err(c, "Only active accounts can be made admin", 409, {
+                code: "account_not_active"
+            });
+        }
+
+        const updated = await userAuthStore.setAdmin(id, true);
+        if (!updated) return Err(c, "User not found", 404);
+        return Ok(c, { user: toUserPayload(updated) });
+    }
+
+    public static async DemoteAdmin(c: Context): Promise<Response> {
+        const id = c.req.param("id");
+        const target = await userAuthStore.getUserById(id);
+        if (!target) return Err(c, "User not found", 404);
+        if (!target.isAdmin) {
+            return Err(c, "User is not an admin", 409, { code: "not_an_admin" });
+        }
+        // Never leave the platform without someone who can sign in to administer it.
+        if ((await userAuthStore.countAdmins()) <= 1) {
+            return Err(c, "Cannot demote the last remaining admin", 409, {
+                code: "last_admin"
+            });
+        }
+
+        // Sign the demoted account out everywhere before dropping the flag.
+        await userAuthStore.deleteSessionsForUser(id);
+        const updated = await userAuthStore.setAdmin(id, false);
         if (!updated) return Err(c, "User not found", 404);
         return Ok(c, { user: toUserPayload(updated) });
     }

@@ -49,6 +49,16 @@ pnpm start
 
 Open **`http://localhost:3000`** to access the dashboard. Configure your provider accounts under **Providers**, generate a virtual key in **API Keys**, and test endpoints immediately in **Playground**.
 
+### Admin Access
+
+There is no separate admin login. An **admin is an ordinary user account** flagged `is_admin` — it signs in through the same `/login` page as everyone else and lands on `/admin`; non-admin accounts cannot reach any admin surface (routes return 401/403 and the Admin nav item stays hidden).
+
+- **First run:** while no admin exists, `/admin` shows a claim form (`POST /v1/admin/bootstrap`, first-come-wins). The claimer is signed in immediately.
+- **Recovery / headless:** set `SROUTER_ADMIN_PASSWORD` (optionally `SROUTER_ADMIN_EMAIL`, default `admin@xeygate.local`) — every boot ensures that account exists and its password is reset, so a lost admin password is recoverable from the environment.
+- **Managing admins:** existing admins promote or demote accounts from `/admin/users`. The last remaining admin cannot be demoted (409), and demoting revokes that account's sessions.
+- **Password change:** `POST /v1/users/change-password` rotates the password and invalidates all previous sessions.
+- **Brute-force guard:** `/v1/users/login` locks an address for 15 minutes after 5 failed attempts (429).
+
 ---
 
 ## 🔌 Connect Coding Tools
@@ -164,6 +174,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Cloudflare Tunnel:** Expose your gateway securely with zero open ports.
 - **Embedded Observability:** Track token usage, cache efficiency, and estimated costs in real-time.
 - **Admin User Management:** Approve pending registrations and creator requests, ban/unban accounts, and revoke a user's API access (`/admin/users`).
+- **Account-Based Admins:** Admins are regular user accounts flagged `is_admin` — one login path, promote/demote from `/admin/users`, first-run claim at `/admin`, and env-password recovery (`SROUTER_ADMIN_PASSWORD`).
 - **Creator Approval Workflow:** Upgrades to creator require admin approval — the account keeps the buyer role until approved.
 - **Registration Gate (optional):** Toggle admin approval for new sign-ups from the admin settings.
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
@@ -194,6 +205,11 @@ All gateway endpoints are served under `/v1`:
 | `GET` / `POST` | `/v1/keys` | Manage virtual API keys |
 | `GET` | `/v1/logs` | Query request audit logs and token telemetry |
 | `GET` / `POST` | `/v1/tunnel/*` | Manage Cloudflare Tunnel daemon state |
+| `GET` | `/v1/admin/status` | Setup probe — `{ setupRequired }` while no admin exists |
+| `POST` | `/v1/admin/bootstrap` | First-run admin claim (rejected with 409 once an admin exists) |
+| `POST` | `/v1/admin/users/:id/promote` | Grant the admin flag to an account |
+| `POST` | `/v1/admin/users/:id/demote` | Revoke the admin flag (409 on last admin) |
+| `POST` | `/v1/users/change-password` | Rotate password, revoking all prior sessions |
 
 ---
 

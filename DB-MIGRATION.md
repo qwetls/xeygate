@@ -3,6 +3,26 @@
 This file tracks schema changes that are not automatically handled by the
 declarative `initDatabase()` migration (see `packages/db/src/db.ts`).
 
+## 2026-09-08 — Admins become user accounts (`users.is_admin`)
+
+**Change:** Admin authentication no longer uses a separate singleton table.
+The `admin_account` / `admin_sessions` tables are removed from the generated
+schema; admins are now ordinary `users` rows carrying a boolean `is_admin`
+flag, and admin sessions are ordinary `user_sessions`.
+
+- Handled automatically by `initDatabase()` column sync — `users.is_admin`
+  is added with default `false`, so existing accounts keep normal access.
+- **Legacy upgrade path:** if an old `admin_account` row still exists, its
+  password hash is migrated at boot into a real user account
+  (`admin@xeygate.local`, overridable via `SROUTER_ADMIN_EMAIL`) with the
+  same scrypt format — the existing admin password keeps working. If the
+  old table is already gone, the first-run claim via
+  `POST /v1/admin/bootstrap` (or `SROUTER_ADMIN_PASSWORD` at boot) creates
+  the initial admin.
+- The dropped `admin_account` / `admin_sessions` tables are harmless
+  leftovers on upgraded databases and can be removed manually
+  (`DROP TABLE IF EXISTS admin_sessions; DROP TABLE IF EXISTS admin_account;`).
+
 ## 2026-09 — Add client ip_address column to request_logs
 
 **Change:** Added `ip_address` TEXT column to `request_logs` table for auditing and client request tracking.

@@ -1,22 +1,22 @@
 import { getCookie } from "hono/cookie";
 import type { Context, MiddlewareHandler } from "hono";
 import { Err } from "@/utils/response.js";
-import { ADMIN_SESSION_COOKIE } from "@/services/adminAuth.js";
+import { USER_SESSION_COOKIE } from "@/services/userAuth.js";
 import { GetAllowedOrigin } from "@/middleware/Cors.js";
 
 const UNSAFE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
- * CSRF defense for cookie-based admin mutations. SameSite=Lax already blocks
+ * CSRF defense for cookie-based portal mutations. SameSite=Lax already blocks
  * cross-site POSTs from modern browsers; this adds an explicit Origin/Referer
- * check for same-site cross-subdomain requests. Requests without an admin
+ * check for same-site cross-subdomain requests. Requests without a user
  * session cookie (plain API-key traffic) and non-browser clients (no Origin)
  * pass through untouched.
  */
 export function CreateCsrfOriginGuard(Allowlist: Set<string>): MiddlewareHandler {
     return async (c: Context, next) => {
         if (!UNSAFE_METHODS.has(c.req.method)) return next();
-        if (!getCookie(c, ADMIN_SESSION_COOKIE)) return next();
+        if (!getCookie(c, USER_SESSION_COOKIE)) return next();
 
         const Origin = c.req.header("origin") || c.req.header("referer");
         if (!Origin) return next();
@@ -28,7 +28,7 @@ export function CreateCsrfOriginGuard(Allowlist: Set<string>): MiddlewareHandler
             OriginUrl = null;
         }
         if (!OriginUrl) {
-            return Err(c, "Cross-origin admin mutation is not allowed", 403, {
+            return Err(c, "Cross-origin mutation is not allowed", 403, {
                 code: "csrf_origin_rejected"
             });
         }

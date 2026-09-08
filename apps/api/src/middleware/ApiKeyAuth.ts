@@ -2,21 +2,23 @@ import type { Context, Next } from "hono";
 import { getCookie } from "hono/cookie";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import {
-    adminAuthStore,
     getAPIKeyByKeyDB,
     getRequireApiKeyDB,
     userAuthStore,
-    type AdminAuthStore
+    type UserAuthStore
 } from "@srouter/db";
 import { Err } from "@/utils/response.js";
-import {
-    ADMIN_SESSION_COOKIE,
-    isLoopbackAddress,
-    verifyAdminSession
-} from "@/services/adminAuth.js";
+import { USER_SESSION_COOKIE } from "@/services/userAuth.js";
+import { verifyAdminSession } from "@/services/adminAuth.js";
+
+export function isLoopbackAddress(address: string | undefined): boolean {
+    if (!address) return false;
+    const normalized = address.toLowerCase().replace(/^::ffff:/, "");
+    return normalized === "127.0.0.1" || normalized === "::1";
+}
 
 export interface ApiKeyAuthOptions {
-    store?: AdminAuthStore;
+    store?: Pick<UserAuthStore, "getSession" | "getUserById">;
     now?: () => number;
     getClientAddress?: (c: Context) => string | undefined;
 }
@@ -42,12 +44,14 @@ export function GetDirectClientAddress(c: Context): string | undefined {
 }
 
 export function CreateApiKeyAuth(Options: ApiKeyAuthOptions = {}) {
-    const Store = Options.store ?? adminAuthStore;
+    const Store = Options.store ?? userAuthStore;
     const Now = Options.now ?? (() => Date.now());
     const GetClientAddress = Options.getClientAddress ?? GetDirectClientAddress;
 
     return async function ApiKeyAuthMiddleware(c: Context, next: Next) {
-        if (await verifyAdminSession(Store, getCookie(c, ADMIN_SESSION_COOKIE), Now())) {
+        const Admin = await verifyAdminSession(Store, getCookie(c, USER_SESSION_COOKIE), Now());
+        if (Admin) {
+            c.set("userId", Admin.id);
             c.set("authType", "admin_session");
             return await next();
         }

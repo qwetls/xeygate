@@ -18,6 +18,7 @@ interface UserInfo {
     role: "buyer" | "creator";
     status: "active" | "pending" | "banned";
     creatorStatus: "none" | "pending" | "approved" | "rejected";
+    isAdmin: boolean;
 }
 
 function ClientLayout() {
@@ -49,7 +50,12 @@ function ClientLayout() {
     return (
         <TooltipProvider>
             <SidebarProvider>
-                <ClientSidebar role={user.role} email={user.email} credits={user.credits} />
+                <ClientSidebar
+                    role={user.role}
+                    email={user.email}
+                    credits={user.credits}
+                    isAdmin={user.isAdmin}
+                />
                 <SidebarInset className="h-svh overflow-hidden">
                     <Topbar />
                     <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6 bg-grid-pattern">

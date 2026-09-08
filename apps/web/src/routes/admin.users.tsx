@@ -47,6 +47,7 @@ interface AdminUser {
     status: UserStatus;
     creatorStatus: CreatorStatus;
     creatorShare?: number;
+    isAdmin: boolean;
     createdAt: number;
     updatedAt: number;
 }
@@ -289,6 +290,9 @@ function AdminUsersPage() {
                                                     {user.role === "creator" && (
                                                         <Store className="ml-1.5 inline size-3 text-muted-foreground" strokeWidth={1.75} />
                                                     )}
+                                                    {user.isAdmin && (
+                                                        <ShieldCheck className="ml-1.5 inline size-3 text-emerald-500" strokeWidth={1.75} aria-label="Admin" />
+                                                    )}
                                                 </div>
                                                 <div className="text-[11px] text-muted-foreground truncate">
                                                     {user.email}
@@ -430,6 +434,34 @@ function AdminUsersPage() {
                                                     >
                                                         <Ban className="size-3" />
                                                         Ban
+                                                    </Button>
+                                                )}
+                                                {!user.isAdmin && !isBanned && user.status === "active" && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={busy}
+                                                        onClick={() => void runAction(user.id, "promote")}
+                                                        className="h-7 gap-1 px-2 text-[11px] cursor-pointer border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                                                        title="Grant admin access"
+                                                    >
+                                                        <ShieldCheck className="size-3" />
+                                                        Promote
+                                                    </Button>
+                                                )}
+                                                {user.isAdmin && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={busy}
+                                                        onClick={() => void runAction(user.id, "demote")}
+                                                        className="h-7 gap-1 px-2 text-[11px] cursor-pointer text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                                                        title="Revoke admin access"
+                                                    >
+                                                        <ShieldAlert className="size-3" />
+                                                        Demote
                                                     </Button>
                                                 )}
                                                 {isBanned && (

@@ -3,7 +3,7 @@ import { afterEach, test } from "node:test";
 import { createFallbackRuleDB, deleteFallbackRuleDB, getFallbackRuleByIdDB } from "@srouter/db";
 import { Hono } from "hono";
 import { SettingsRouter } from "../src/routes/v1/settings.js";
-import { ADMIN_SESSION_COOKIE, createAdminSession } from "../src/services/adminAuth.js";
+import { createTestAdminSession } from "./helpers/adminSession.js";
 
 const createdRuleIds: string[] = [];
 
@@ -14,9 +14,9 @@ afterEach(async () => {
 });
 
 async function getAuthHeaders(extraHeaders: Record<string, string> = {}) {
-    const sessionToken = await createAdminSession();
+    const sessionToken = await createTestAdminSession();
     return {
-        Cookie: `${ADMIN_SESSION_COOKIE}=${sessionToken}`,
+        Cookie: `xeygate_user_session=${sessionToken}`,
         ...extraHeaders
     };
 }

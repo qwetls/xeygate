@@ -1,130 +1,84 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { adminAuthStore, type AdminAuthStore } from "@srouter/db";
+import { userAuthStore, type User, type UserAuthStore } from "@srouter/db";
+import { hashUserPassword, verifyUserSession } from "@/services/userAuth.js";
 
-export const ADMIN_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-export const ADMIN_SESSION_COOKIE = "xeygate_admin_session";
+export const DEFAULT_ADMIN_EMAIL = "admin@xeygate.local";
 
-const PASSWORD_HASH_ALGORITHM = "scrypt";
-const PASSWORD_HASH_LENGTH = 64;
-const PASSWORD_SALT_LENGTH = 16;
-const PASSWORD_SCRYPT_N = 16_384;
-const PASSWORD_SCRYPT_R = 8;
-const PASSWORD_SCRYPT_P = 1;
-const PASSWORD_SCRYPT_MAXMEM = 32 * 1024 * 1024;
+export type AdminStore = Pick<UserAuthStore, "getSession" | "getUserById">;
 
-export function validateAdminPassword(value: unknown): string | null {
-    if (typeof value !== "string" || value.length === 0) {
-        return "Password is required";
-    }
-    if (value.length > 128) {
-        return "Password must be at most 128 characters";
-    }
-    return null;
-}
-
-export function hashAdminPassword(password: string): string {
-    const salt = randomBytes(PASSWORD_SALT_LENGTH);
-    const derivedKey = scryptSync(password, salt, PASSWORD_HASH_LENGTH, {
-        N: PASSWORD_SCRYPT_N,
-        r: PASSWORD_SCRYPT_R,
-        p: PASSWORD_SCRYPT_P,
-        maxmem: PASSWORD_SCRYPT_MAXMEM
-    });
-
-    return [
-        PASSWORD_HASH_ALGORITHM,
-        PASSWORD_SCRYPT_N,
-        PASSWORD_SCRYPT_R,
-        PASSWORD_SCRYPT_P,
-        salt.toString("base64url"),
-        derivedKey.toString("base64url")
-    ].join("$");
-}
-
-export function verifyAdminPassword(password: string, storedHash: string): boolean {
-    try {
-        const parts = storedHash.split("$");
-        if (parts.length !== 6 || parts[0] !== PASSWORD_HASH_ALGORITHM) return false;
-
-        const [, nValue, rValue, pValue, saltValue, hashValue] = parts;
-        const n = Number(nValue);
-        const r = Number(rValue);
-        const p = Number(pValue);
-        if (![n, r, p].every((value) => Number.isSafeInteger(value) && value > 0)) {
-            return false;
-        }
-
-        const salt = Buffer.from(saltValue, "base64url");
-        const expected = Buffer.from(hashValue, "base64url");
-        if (salt.length === 0 || expected.length === 0) return false;
-
-        const actual = scryptSync(password, salt, expected.length, {
-            N: n,
-            r,
-            p,
-            maxmem: PASSWORD_SCRYPT_MAXMEM
-        });
-        return actual.length === expected.length && timingSafeEqual(actual, expected);
-    } catch {
-        return false;
-    }
-}
-
-export function hashSessionToken(token: string): string {
-    return createHash("sha256").update(token, "utf8").digest("hex");
-}
-
-export async function createAdminSession(
-    store: Pick<AdminAuthStore, "createSession"> = adminAuthStore,
-    now = Date.now()
-): Promise<string> {
-    const token = randomBytes(32).toString("base64url");
-    await store.createSession(hashSessionToken(token), now, now + ADMIN_SESSION_TTL_MS);
-    return token;
-}
-
+/**
+ * Resolve a session cookie to an admin identity.
+ *
+ * Admins are ordinary user accounts flagged with `is_admin`, so this shares the
+ * user-session store and simply adds the privilege + ban checks. Returns null
+ * when the session is missing/expired, the account no longer exists, is not an
+ * admin, or has been banned.
+ */
 export async function verifyAdminSession(
-    store: Pick<AdminAuthStore, "getSession"> = adminAuthStore,
+    store: AdminStore = userAuthStore,
     token: string | undefined,
     now = Date.now()
-): Promise<boolean> {
-    if (!token) return false;
-    return (await store.getSession(hashSessionToken(token), now)) !== null;
-}
+): Promise<User | null> {
+    const userId = await verifyUserSession(store, token, now);
+    if (!userId) return null;
 
-export async function revokeAdminSession(
-    store: Pick<AdminAuthStore, "deleteSession"> = adminAuthStore,
-    token: string | undefined
-): Promise<boolean> {
-    if (!token) return false;
-    return await store.deleteSession(hashSessionToken(token));
-}
-
-export function isLoopbackAddress(address: string | undefined): boolean {
-    if (!address) return false;
-    const normalized = address.toLowerCase().replace(/^::ffff:/, "");
-    return normalized === "127.0.0.1" || normalized === "::1";
+    const user = await store.getUserById(userId);
+    if (!user || !user.isAdmin) return null;
+    if (user.status === "banned") return null;
+    return user;
 }
 
 /**
- * Bootstrap the admin account from the environment when requested.
- * - `SROUTER_ADMIN_PASSWORD` set → creates the account if missing, or resets
- *   the password on every boot (documented recovery path for a forgotten password).
- * - Not set → no account is auto-created. First-run setup happens through the
- *   dashboard ("create your admin password"), which is first-come-wins until
- *   an account exists.
+ * Make sure an admin account exists at boot.
+ *
+ * Order of precedence:
+ * 1. `SROUTER_ADMIN_PASSWORD` set → ensures the `SROUTER_ADMIN_EMAIL` account
+ *    exists as admin and resets its password on every boot (documented recovery
+ *    path for a forgotten password).
+ * 2. Otherwise, if the pre-refactor `admin_account` singleton is still on disk,
+ *    migrate it into a real user account and keep its password working.
+ * 3. Otherwise do nothing — the dashboard's first-run form (POST
+ *    /v1/admin/bootstrap) lets the first visitor claim admin access.
  */
-export async function bootstrapAdminAccountFromEnv(
-    store: AdminAuthStore,
-    now: number = Date.now()
-): Promise<void> {
+export async function bootstrapAdminFromEnv(store: UserAuthStore = userAuthStore): Promise<void> {
     const envPassword = process.env.SROUTER_ADMIN_PASSWORD;
-    if (envPassword === undefined || envPassword.length === 0) return;
+    const email = (process.env.SROUTER_ADMIN_EMAIL ?? DEFAULT_ADMIN_EMAIL).toLowerCase().trim();
 
-    const hash = hashAdminPassword(envPassword);
-    if (!(await store.hasAdminAccount())) {
-        await store.createAdminAccount(hash, now);
-    } else {
-        await store.updatePasswordHash(hash, now);
+    if (envPassword !== undefined && envPassword.length > 0) {
+        const hash = hashUserPassword(envPassword);
+        const existing = await store.getUserByEmail(email);
+        if (existing) {
+            await store.updatePasswordHash(existing.id, hash);
+            if (!existing.isAdmin) await store.setAdmin(existing.id, true);
+            return;
+        }
+        await store.createUser({
+            email,
+            passwordHash: hash,
+            name: "Administrator",
+            status: "active",
+            isAdmin: true
+        });
+        return;
     }
+
+    if (await store.hasAdmin()) return;
+
+    const legacyHash = await store.getLegacyAdminPasswordHash();
+    if (!legacyHash) return;
+
+    const clash = await store.getUserByEmail(email);
+    if (clash) {
+        await store.setAdmin(clash.id, true);
+        return;
+    }
+    await store.createUser({
+        email,
+        passwordHash: legacyHash,
+        name: "Administrator",
+        status: "active",
+        isAdmin: true
+    });
+    console.log(
+        `ℹ️ Migrated the legacy admin account to ${email} — sign in from the dashboard with the existing password.`
+    );
 }

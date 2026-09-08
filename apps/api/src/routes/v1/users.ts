@@ -18,6 +18,7 @@ import {
     USER_SESSION_TTL_MS
 } from "@/services/userAuth.js";
 import { RequireUserAuth } from "@/middleware/UserAuth.js";
+import { GetDirectClientAddress } from "@/middleware/ApiKeyAuth.js";
 import { Err, Ok } from "@/utils/response.js";
 
 export const UserAuthRouter = new Hono();
@@ -29,6 +30,33 @@ const COOKIE_OPTS = {
     sameSite: "lax" as const,
     maxAge: Math.floor(USER_SESSION_TTL_MS / 1000)
 };
+
+/** Sliding window of failed logins keyed by client address. */
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_BLOCK_MS = 15 * 60 * 1000;
+const FailedLogins = new Map<string, { count: number; blockedUntil: number }>();
+
+function RegisterFailure(key: string, now: number): void {
+    const entry = FailedLogins.get(key) ?? { count: 0, blockedUntil: 0 };
+    entry.count += 1;
+    if (entry.count >= LOGIN_MAX_FAILURES) {
+        entry.blockedUntil = now + LOGIN_BLOCK_MS;
+        entry.count = 0;
+    }
+    FailedLogins.set(key, entry);
+}
+
+function IsBlocked(key: string, now: number): number {
+    const entry = FailedLogins.get(key);
+    if (!entry) return 0;
+    if (entry.blockedUntil > now) return Math.ceil((entry.blockedUntil - now) / 1000);
+    if (entry.blockedUntil !== 0 && entry.blockedUntil <= now) FailedLogins.delete(key);
+    return 0;
+}
+
+function ClearFailures(key: string): void {
+    FailedLogins.delete(key);
+}
 
 // ── Register ──
 UserAuthRouter.post("/users/register", async (c) => {
@@ -77,6 +105,7 @@ UserAuthRouter.post("/users/register", async (c) => {
         role: user.role,
         status: user.status,
         creatorStatus: user.creatorStatus,
+        isAdmin: user.isAdmin,
         credits: user.credits
     });
 });
@@ -87,8 +116,19 @@ UserAuthRouter.post("/users/login", async (c) => {
 
     if (!body.email || !body.password) return Err(c, "Email and password are required", 400);
 
+    const ClientAddress = GetDirectClientAddress(c) ?? "unknown";
+    const now = Date.now();
+
+    const blockedFor = IsBlocked(ClientAddress, now);
+    if (blockedFor > 0) {
+        return Err(c, `Too many failed attempts. Try again in ${blockedFor}s.`, 429, {
+            code: "rate_limited"
+        });
+    }
+
     const user = await userAuthStore.getUserByEmail(body.email);
     if (!user || !verifyUserPassword(body.password, user.passwordHash)) {
+        RegisterFailure(ClientAddress, now);
         return Err(c, "Invalid email or password", 401, { code: "invalid_credentials" });
     }
 
@@ -103,6 +143,7 @@ UserAuthRouter.post("/users/login", async (c) => {
         });
     }
 
+    ClearFailures(ClientAddress);
     const token = await createUserSession(userAuthStore, user.id);
     setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
 
@@ -113,6 +154,7 @@ UserAuthRouter.post("/users/login", async (c) => {
         role: user.role,
         status: user.status,
         creatorStatus: user.creatorStatus,
+        isAdmin: user.isAdmin,
         credits: user.credits
     });
 });
@@ -123,6 +165,43 @@ UserAuthRouter.post("/users/logout", async (c) => {
     await revokeUserSession(userAuthStore, token);
     deleteCookie(c, USER_SESSION_COOKIE, { path: "/" });
     return Ok(c, { message: "Logged out" });
+});
+
+// ── Change password ──
+// Every account (admins included) authenticates through the user login, so the
+// password lives here too. Rotating it signs out all sessions, including the
+// current one, and re-issues a fresh cookie for the caller.
+UserAuthRouter.post("/users/change-password", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const body = await c.req
+        .json<{ current_password?: string; new_password?: string; confirmation?: string }>()
+        .catch(() => ({}));
+
+    if (body.new_password !== undefined && body.new_password !== body.confirmation) {
+        return Err(c, "Password confirmation does not match", 400, {
+            code: "password_mismatch"
+        });
+    }
+    const pwErr = validateUserPassword(body.new_password);
+    if (pwErr) return Err(c, pwErr, 400);
+
+    const user = await userAuthStore.getUserById(userId);
+    if (!user) return Err(c, "User not found", 404);
+    if (!body.current_password || !verifyUserPassword(body.current_password, user.passwordHash)) {
+        return Err(c, "Current password is incorrect", 401, { code: "invalid_credentials" });
+    }
+
+    const updated = await userAuthStore.updatePasswordHash(
+        userId,
+        hashUserPassword(body.new_password!)
+    );
+    if (!updated) return Err(c, "Failed to update password", 500);
+
+    await userAuthStore.deleteSessionsForUser(userId);
+    const token = await createUserSession(userAuthStore, userId);
+    setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
+
+    return Ok(c, { message: "Password updated" });
 });
 
 // ── Current user ──
@@ -137,6 +216,7 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
         role: user.role,
         status: user.status,
         creatorStatus: user.creatorStatus,
+        isAdmin: user.isAdmin,
         credits: user.credits
     });
 });

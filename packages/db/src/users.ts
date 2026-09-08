@@ -16,6 +16,7 @@ export interface User {
     status: UserStatus;
     creatorStatus: CreatorStatus;
     creatorShare: number;
+    isAdmin: boolean;
     createdAt: number;
     updatedAt: number;
 }
@@ -37,6 +38,7 @@ interface UserRow {
     status: string;
     creator_status: string;
     creator_share: number;
+    is_admin: number | boolean;
     created_at: number;
     updated_at: number;
 }
@@ -71,6 +73,7 @@ export class UserAuthStore {
                 status TEXT NOT NULL DEFAULT 'active',
                 creator_status TEXT NOT NULL DEFAULT 'none',
                 creator_share REAL NOT NULL DEFAULT 0.80,
+                is_admin ${integer} NOT NULL DEFAULT 0,
                 created_at ${integer} NOT NULL,
                 updated_at ${integer} NOT NULL
             );
@@ -122,6 +125,14 @@ export class UserAuthStore {
         } catch {
             // Column already exists
         }
+        // Migrate is_admin column (admin flag on user accounts).
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN is_admin ${integer} NOT NULL DEFAULT 0`
+            );
+        } catch {
+            // Column already exists
+        }
         this.initialized = true;
     }
 
@@ -150,6 +161,7 @@ export class UserAuthStore {
         passwordHash: string;
         name?: string;
         status?: UserStatus;
+        isAdmin?: boolean;
     }): Promise<User | null> {
         await this.ensureTables();
         const id = `user_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
@@ -159,9 +171,9 @@ export class UserAuthStore {
 
         try {
             await this.client.run(
-                `INSERT INTO users (id, email, password_hash, name, credits, role, status, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?)`,
-                id, email, data.passwordHash, data.name ?? "", status, now, now
+                `INSERT INTO users (id, email, password_hash, name, credits, role, status, is_admin, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?, ?)`,
+                id, email, data.passwordHash, data.name ?? "", status, data.isAdmin ? 1 : 0, now, now
             );
         } catch {
             // Duplicate email
@@ -260,6 +272,77 @@ export class UserAuthStore {
             clamped, Date.now(), userId
         );
         return this.getUserById(userId);
+    }
+
+    // ── Admin accounts (is_admin flag on users) ──
+
+    public async hasAdmin(): Promise<boolean> {
+        await this.ensureTables();
+        const Row = await this.client.get(
+            "SELECT 1 AS present FROM users WHERE is_admin = 1 LIMIT 1"
+        );
+        return Boolean(Row);
+    }
+
+    public async countAdmins(): Promise<number> {
+        await this.ensureTables();
+        const Row = (await this.client.get(
+            "SELECT COUNT(*) AS count FROM users WHERE is_admin = 1"
+        )) as unknown as { count: number } | undefined;
+        return num(Row?.count);
+    }
+
+    public async setAdmin(userId: string, isAdmin: boolean): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET is_admin = ?, updated_at = ? WHERE id = ?`,
+            isAdmin ? 1 : 0, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    public async listAdmins(): Promise<User[]> {
+        await this.ensureTables();
+        const Rows = (await this.client.all(
+            "SELECT * FROM users WHERE is_admin = 1 ORDER BY created_at ASC"
+        )) as unknown as UserRow[];
+        return Rows.map(mapUserRow);
+    }
+
+    /**
+     * Reads the password hash from the pre-refactor `admin_account` singleton
+     * table, when it is still present. Used once at boot to migrate the old
+     * admin into a real user account. Returns null on fresh installs (the table
+     * is no longer created).
+     */
+    public async getLegacyAdminPasswordHash(): Promise<string | null> {
+        await this.ensureTables();
+        try {
+            const Row = (await this.client.get(
+                "SELECT password_hash FROM admin_account WHERE id = 1"
+            )) as unknown as { password_hash: string } | undefined;
+            const hash = str(Row?.password_hash);
+            return hash.length > 0 ? hash : null;
+        } catch {
+            return null;
+        }
+    }
+
+    public async updatePasswordHash(userId: string, passwordHash: string): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?`,
+            passwordHash, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    public async deleteSessionsForUser(userId: string): Promise<number> {
+        await this.ensureTables();
+        const Result = await this.client.run(
+            "DELETE FROM user_sessions WHERE user_id = ?", userId
+        );
+        return num(Result.changes);
     }
 
     public async revokeApiKeys(userId: string): Promise<number> {
@@ -442,6 +525,7 @@ function mapUserRow(row: UserRow): User {
                 ? row.creator_status
                 : "none",
         creatorShare: num(row.creator_share, 0.8),
+        isAdmin: row.is_admin === 1 || (row.is_admin as unknown) === true,
         createdAt: num(row.created_at),
         updatedAt: num(row.updated_at)
     };

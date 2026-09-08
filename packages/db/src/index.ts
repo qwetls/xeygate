@@ -1,6 +1,5 @@
 export * from "./encryption.js";
 export * from "./apiKeys.js";
-export * from "./adminAuth.js";
 export * from "./users.js";
 export * from "./db.js";
 export * from "./logs.js";

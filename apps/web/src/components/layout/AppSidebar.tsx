@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
     Banknote,
     BarChart2,
@@ -9,8 +9,10 @@ import {
     GitFork,
     KeyRound,
     LayoutDashboard,
+    LogOut,
     ScrollText,
     Settings,
+    Store,
     Terminal,
     Users,
     Zap
@@ -28,6 +30,7 @@ import {
     SidebarMenuItem,
     SidebarRail
 } from "@/components/ui/sidebar";
+import { api } from "@/lib/api";
 
 const mainNavItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -49,7 +52,21 @@ const observabilityNavItems = [
     { to: "/admin/logs", label: "Audit Logs", icon: ScrollText }
 ] as const;
 
-export function AppSidebar() {
+interface AppSidebarProps {
+    email?: string;
+}
+
+export function AppSidebar({ email }: AppSidebarProps) {
+    const navigate = useNavigate();
+
+    async function handleLogout() {
+        try {
+            await api.post("/v1/users/logout");
+        } finally {
+            navigate({ to: "/login" });
+        }
+    }
+
     return (
         <Sidebar collapsible="icon" className="border-r border-border/80 bg-sidebar/95 font-mono">
             {/* Header: Machined Branding */}
@@ -227,9 +244,33 @@ export function AppSidebar() {
                 </nav>
             </SidebarContent>
 
-            {/* Footer with Settings & Node Telemetry */}
+            {/* Footer with Client Portal link, Settings, Sign out & Node Telemetry */}
             <SidebarFooter className="border-t border-border/80 p-2.5 space-y-2">
                 <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            render={
+                                <Link
+                                    to="/dashboard"
+                                    activeOptions={{ exact: false }}
+                                    activeProps={{
+                                        className:
+                                            "bg-secondary text-foreground font-semibold border border-border/80 shadow-2xs",
+                                        "aria-current": "page"
+                                    }}
+                                    inactiveProps={{
+                                        className:
+                                            "text-muted-foreground hover:bg-secondary/40 hover:text-foreground border border-transparent"
+                                    }}
+                                />
+                            }
+                            tooltip="Client Portal"
+                            className="h-8.5 rounded-md px-2.5 transition-all text-xs cursor-pointer group-data-[collapsible=icon]:justify-center"
+                        >
+                            <Store strokeWidth={1.75} className="size-3.5 shrink-0" />
+                            <span className="text-xs">Client Portal</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             render={
@@ -254,15 +295,32 @@ export function AppSidebar() {
                             <span className="text-xs">Settings & Ops</span>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={handleLogout}
+                            tooltip="Sign out"
+                            className="h-8.5 rounded-md px-2.5 transition-all text-xs cursor-pointer group-data-[collapsible=icon]:justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive border border-transparent"
+                        >
+                            <LogOut strokeWidth={1.75} className="size-3.5 shrink-0" />
+                            <span className="text-xs">Sign Out</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                 </SidebarMenu>
 
-                {/* Micro Node Info */}
-                <div className="hidden group-data-[collapsible=icon]:hidden px-2 py-1.5 rounded-md bg-secondary/30 border border-border/50 text-[10px] text-muted-foreground flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                        <Cpu className="size-3 text-muted-foreground/80" />
-                        <span>Node SQLite</span>
+                {/* Account & Micro Node Info */}
+                <div className="hidden group-data-[collapsible=icon]:hidden px-2 py-1.5 rounded-md bg-secondary/30 border border-border/50 text-[10px] text-muted-foreground">
+                    {email && (
+                        <div className="mb-0.5 truncate font-semibold text-foreground/80" title={email}>
+                            {email}
+                        </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                            <Cpu className="size-3 text-muted-foreground/80" />
+                            <span>Node SQLite</span>
+                        </div>
+                        <span className="font-semibold text-foreground/80">WAL</span>
                     </div>
-                    <span className="font-semibold text-foreground/80">WAL</span>
                 </div>
             </SidebarFooter>
 

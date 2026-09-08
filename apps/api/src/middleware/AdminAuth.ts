@@ -1,28 +1,29 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { getCookie } from "hono/cookie";
-import { adminAuthStore, type AdminAuthStore } from "@srouter/db";
 import { Err } from "@/utils/response.js";
-import { ADMIN_SESSION_COOKIE, verifyAdminSession } from "@/services/adminAuth.js";
+import { USER_SESSION_COOKIE } from "@/services/userAuth.js";
+import { verifyAdminSession, type AdminStore } from "@/services/adminAuth.js";
 
 export interface AdminAuthMiddlewareOptions {
-    store?: AdminAuthStore;
+    store?: AdminStore;
     now?: () => number;
 }
 
 export function CreateAdminAuthMiddleware(
     Options: AdminAuthMiddlewareOptions = {}
 ): MiddlewareHandler {
-    const Store = Options.store ?? adminAuthStore;
+    const Store = Options.store;
     const Now = Options.now ?? (() => Date.now());
 
     return async (c: Context, next: Next) => {
-        const SessionToken = getCookie(c, ADMIN_SESSION_COOKIE);
-        if (!(await verifyAdminSession(Store, SessionToken, Now()))) {
+        const admin = await verifyAdminSession(Store, getCookie(c, USER_SESSION_COOKIE), Now());
+        if (!admin) {
             return Err(c, "Admin authentication is required", 401, {
                 code: "authentication_required"
             });
         }
 
+        c.set("userId", admin.id);
         c.set("authType", "admin_session");
         return next();
     };
