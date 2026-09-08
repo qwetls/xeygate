@@ -7,24 +7,25 @@ import { ProvidersLogic } from "@/logic/providers.logic.js";
 import { providerAlias, providerBaseId } from "@srouter/constants";
 
 // Admin model management: bulk add/delete + id normalization.
-// Uses the built-in "openai" seed provider so no DB provider row is needed.
-const PROVIDER = "openai";
-const RUNTIME_ALIAS = providerAlias(providerBaseId(PROVIDER)); // "openai"
+// Uses the built-in "anthropic" seed provider (alias "claude") so no DB row
+// is needed — DEFAULT_PROVIDER_MAP["anthropic"] exists at init.
+const PROVIDER = "anthropic";
+const RUNTIME_ALIAS = providerAlias(providerBaseId(PROVIDER)); // "claude"
 const UNIQUE = `test-mng-${Date.now()}-${process.pid}`;
 
 // ── AddCustomModels (bulk) ───────────────────────────────────────────
 
 test("AddCustomModels normalizes alias-prefixed ids, dedupes and returns custom models", async () => {
     const result = await ProvidersLogic.AddCustomModels(PROVIDER, [
-        `gpt-5.5-tiny-${UNIQUE}`,
-        `openai/gpt-5.5-tiny-${UNIQUE}`,
-        `  openai/gpt-5.5-mini-${UNIQUE}  `
+        `sonnet-4.5-tiny-${UNIQUE}`,
+        `claude/sonnet-4.5-tiny-${UNIQUE}`,
+        `  claude/sonnet-4.5-mini-${UNIQUE}  `
     ]);
 
     assert.equal(result.added, 2);
     assert.deepEqual(
         result.models.map((m) => m.id).sort(),
-        [`${RUNTIME_ALIAS}/gpt-5.5-mini-${UNIQUE}`, `${RUNTIME_ALIAS}/gpt-5.5-tiny-${UNIQUE}`].sort()
+        [`${RUNTIME_ALIAS}/sonnet-4.5-mini-${UNIQUE}`, `${RUNTIME_ALIAS}/sonnet-4.5-tiny-${UNIQUE}`].sort()
     );
     for (const m of result.models) {
         assert.equal(m.custom, true);
@@ -33,8 +34,8 @@ test("AddCustomModels normalizes alias-prefixed ids, dedupes and returns custom 
 
     // Stored rows stay bare (no prefix).
     const rows = (await getCustomModelsByProviderDB(PROVIDER)).map((r) => r.modelId);
-    assert.ok(rows.includes(`gpt-5.5-tiny-${UNIQUE}`));
-    assert.ok(rows.includes(`gpt-5.5-mini-${UNIQUE}`));
+    assert.ok(rows.includes(`sonnet-4.5-tiny-${UNIQUE}`));
+    assert.ok(rows.includes(`sonnet-4.5-mini-${UNIQUE}`));
 });
 
 test("AddCustomModels rejects unknown providers and invalid ids", async () => {
@@ -60,11 +61,11 @@ test("AddCustomModels keeps ids with legit slashes that do not match the provide
 // ── DeleteCustomModels (bulk) ────────────────────────────────────────
 
 test("DeleteCustomModels is idempotent and counts only existing rows", async () => {
-    await ProvidersLogic.AddCustomModels(PROVIDER, [`del-a-${UNIQUE}`, `openai/del-b-${UNIQUE}`]);
+    await ProvidersLogic.AddCustomModels(PROVIDER, [`del-a-${UNIQUE}`, `claude/del-b-${UNIQUE}`]);
 
     const first = await ProvidersLogic.DeleteCustomModels(PROVIDER, [
         `del-a-${UNIQUE}`,
-        `openai/del-b-${UNIQUE}`,
+        `claude/del-b-${UNIQUE}`,
         `never-existed-${UNIQUE}`
     ]);
     assert.equal(first.deleted, 2);
@@ -76,14 +77,14 @@ test("DeleteCustomModels is idempotent and counts only existing rows", async () 
 // ── Single add/delete with prefix normalization ──────────────────────
 
 test("AddCustomModel and DeleteCustomModel tolerate alias-prefixed ids", async () => {
-    const added = await ProvidersLogic.AddCustomModel(PROVIDER, `openai/single-${UNIQUE}`);
+    const added = await ProvidersLogic.AddCustomModel(PROVIDER, `claude/single-${UNIQUE}`);
     assert.equal(added.custom, true);
     assert.equal(added.id, `${RUNTIME_ALIAS}/single-${UNIQUE}`);
 
     const rows = (await getCustomModelsByProviderDB(PROVIDER)).map((r) => r.modelId);
     assert.ok(rows.includes(`single-${UNIQUE}`));
 
-    await ProvidersLogic.DeleteCustomModel(PROVIDER, `openai/single-${UNIQUE}`);
+    await ProvidersLogic.DeleteCustomModel(PROVIDER, `claude/single-${UNIQUE}`);
     const after = (await getCustomModelsByProviderDB(PROVIDER)).map((r) => r.modelId);
     assert.ok(!after.includes(`single-${UNIQUE}`));
 });
@@ -91,8 +92,8 @@ test("AddCustomModel and DeleteCustomModel tolerate alias-prefixed ids", async (
 // Cleanup so reruns (and other suites) do not see leftovers.
 test("cleanup: remove all models created by this suite", async () => {
     await ProvidersLogic.DeleteCustomModels(PROVIDER, [
-        `gpt-5.5-tiny-${UNIQUE}`,
-        `gpt-5.5-mini-${UNIQUE}`,
+        `sonnet-4.5-tiny-${UNIQUE}`,
+        `sonnet-4.5-mini-${UNIQUE}`,
         `openrouter/mixtral-${UNIQUE}`,
         `ok-${UNIQUE}`,
         `single-${UNIQUE}`
