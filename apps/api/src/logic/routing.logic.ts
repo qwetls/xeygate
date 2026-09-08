@@ -1,11 +1,15 @@
 import {
-    getAllCustomModelsDB,
     getAllProvidersDB,
     getMarketplaceQualityDB,
     type ProviderQualityStats
 } from "@srouter/db";
 import { isSeedProvider, providerAlias, providerBaseId } from "@srouter/constants";
 import { registry } from "@/services/registry.js";
+import {
+    IsOfficialProviderRow,
+    SelectMarketplaceRows,
+    type MarketplaceScope
+} from "@/logic/official.logic.js";
 
 // Quality window and scoring knobs. Weights favor success rate over latency;
 // providers without enough recent samples score neutral so new listings still
@@ -90,49 +94,60 @@ export function BuildMarketplaceChain(
 
 /**
  * Resolve a bare marketplace model ("gpt-4o") to an ordered chain of full
- * candidate ids ("creatorAlias/gpt-4o"). Returns null when the model is not
- * bare, has no marketplace listings, or nothing is currently registered —
- * the caller then falls back to existing candidate resolution (including its
- * 404 path). Results are cached briefly to keep the hot path cheap.
+ * candidate ids ("creatorAlias/gpt-4o") within one marketplace namespace.
+ * Scope selects the key space: "user" routes only creator-owned connections,
+ * "official" only platform-owned ones, "all" (default, backward-compatible
+ * /v1) both. Returns null when the model is not bare, has no marketplace
+ * listings, or nothing is currently registered — the caller then falls back
+ * to existing candidate resolution (including its 404 path). Results are
+ * cached briefly to keep the hot path cheap.
  */
-export async function ResolveMarketplaceRoute(model: string): Promise<string[] | null> {
+export async function ResolveMarketplaceRoute(
+    model: string,
+    scope: MarketplaceScope = "all"
+): Promise<string[] | null> {
     if (model.includes("/")) return null;
 
-    const CacheKey = model.toLowerCase();
+    const Bare = model.toLowerCase();
+    const CacheKey = `${scope}:${Bare}`;
     const cached = routeCache.get(CacheKey);
     if (cached && Date.now() < cached.expires) return cached.chain;
 
-    const Bare = CacheKey;
-    const [providers, customModels, quality] = await Promise.all([
+    const [providers, quality] = await Promise.all([
         getAllProvidersDB(),
-        getAllCustomModelsDB(),
         getMarketplaceQualityDB(Bare, QUALITY_WINDOW_MS)
     ]);
 
     const enabled = providers.filter((p) => p.enabled && !isSeedProvider(p));
     const scored: ScoredMarketplaceCandidate[] = [];
 
-    for (const row of customModels) {
-        if (row.modelId.toLowerCase() !== Bare) continue;
-        const provider = enabled.find(
-            (p) => p.id.toLowerCase() === row.providerId || p.providerId.toLowerCase() === row.providerId
-        );
-        if (!provider) continue;
+    for (const provider of enabled) {
         if (!registry.getProvider(provider.id)) continue;
+        const isOfficial = await IsOfficialProviderRow(provider);
+        if (scope === "official" && !isOfficial) continue;
+        if (scope === "user" && isOfficial) continue;
 
-        const stats =
-            quality.get(provider.id.toLowerCase()) ??
-            quality.get(provider.providerId.toLowerCase()) ??
-            (provider.alias ? quality.get(provider.alias.toLowerCase()) : undefined);
-        const health = registry.getCircuitBreaker().getHealth(provider.id);
+        // Official listings live under the shared base id and are inherited
+        // by every official connection of that driver; creator listings stay
+        // connection-scoped, so the two key spaces never cross.
+        const rows = await SelectMarketplaceRows(provider, isOfficial);
+        for (const row of rows) {
+            if (row.modelId.toLowerCase() !== Bare) continue;
 
-        scored.push({
-            fullId: `${provider.alias || providerAlias(providerBaseId(provider.id))}/${row.modelId}`,
-            score: ComputeQualityScore(stats),
-            successRate: stats?.successRate ?? 0,
-            samples: stats?.samples ?? 0,
-            healthy: health.state === "healthy"
-        });
+            const stats =
+                quality.get(provider.id.toLowerCase()) ??
+                quality.get(provider.providerId.toLowerCase()) ??
+                (provider.alias ? quality.get(provider.alias.toLowerCase()) : undefined);
+            const health = registry.getCircuitBreaker().getHealth(provider.id);
+
+            scored.push({
+                fullId: `${provider.alias || providerAlias(providerBaseId(provider.id))}/${row.modelId}`,
+                score: ComputeQualityScore(stats),
+                successRate: stats?.successRate ?? 0,
+                samples: stats?.samples ?? 0,
+                healthy: health.state === "healthy"
+            });
+        }
     }
 
     const chain = scored.length > 0 ? BuildMarketplaceChain(scored) : null;

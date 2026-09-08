@@ -7,6 +7,7 @@ import {
 } from "@srouter/translator";
 import { AnthropicMessageRequestSchema, type AnthropicMessageRequest } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
+import type { MarketplaceScope } from "@/logic/official.logic.js";
 import {
     AnthropicErr,
     FormatAnthropicErrorPayload,
@@ -59,6 +60,7 @@ export class MessagesController {
             c.req.header("x-real-ip") ||
             c.req.header("cf-connecting-ip") ||
             "127.0.0.1";
+        const marketplaceScope = (c.get("marketplaceScope") as MarketplaceScope | undefined) ?? "all";
 
         if (body.stream) {
             c.header("Content-Type", "text/event-stream");
@@ -73,7 +75,9 @@ export class MessagesController {
                         startTime,
                         0,
                         ApiKeyId,
-                        rawIp
+                        rawIp,
+                        undefined,
+                        marketplaceScope
                     );
                     const AnthropicStream = OpenAIToAnthropicStream(chunkGenerator, body.model, {
                         allowThinking: isThinkingEnabled
@@ -110,7 +114,9 @@ export class MessagesController {
                 startTime,
                 0,
                 ApiKeyId,
-                rawIp
+                rawIp,
+                undefined,
+                marketplaceScope
             );
             const AnthropicRes = OpenAIToAnthropicResponse(OpenAIRes, body.model, {
                 allowThinking: isThinkingEnabled

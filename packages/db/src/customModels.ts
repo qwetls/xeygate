@@ -27,6 +27,29 @@ export async function getCustomModelsByProviderDB(providerId: string): Promise<C
     return Rows.map(mapCustomModelRow);
 }
 
+/**
+ * Models listed for one provider row. Official (platform-owned) listings are
+ * keyed by the provider base id and shared by every connection of that
+ * provider — admin registers the catalog once, then connects keys in any
+ * order. Connection-scoped rows stay private to their own connection and win
+ * over base-id rows on modelId conflicts. `baseId` must only be passed for
+ * official providers; creators never inherit listings from other owners.
+ */
+export async function getCustomModelsForProviderDB(
+    providerId: string,
+    baseId?: string
+): Promise<CustomModelRow[]> {
+    const Key = providerId.toLowerCase();
+    const Base = baseId?.toLowerCase();
+    if (!Base || Base === Key) return getCustomModelsByProviderDB(Key);
+    const [own, inherited] = await Promise.all([
+        getCustomModelsByProviderDB(Key),
+        getCustomModelsByProviderDB(Base)
+    ]);
+    const seen = new Set(own.map((row) => row.modelId.toLowerCase()));
+    return [...own, ...inherited.filter((row) => !seen.has(row.modelId.toLowerCase()))];
+}
+
 export async function addCustomModelDB(providerId: string, modelId: string): Promise<CustomModelRow> {
     const CreatedAt = Date.now();
     const UpsertSql = isPostgres()

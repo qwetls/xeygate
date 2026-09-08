@@ -51,7 +51,10 @@ export class ProvidersController {
         }
 
         try {
-            const Created = await ProvidersLogic.AddProvider(Parsed.data as CreateProviderPayload);
+            const Created = await ProvidersLogic.AddProvider(
+                Parsed.data as CreateProviderPayload,
+                c.get("userId") as string | undefined
+            );
             return Ok(c, Created);
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Invalid provider payload", 400);

@@ -9,6 +9,7 @@ import {
     type TransactionType
 } from "@srouter/db";
 import { calculateCostFromTokens } from "@srouter/pricing";
+import { IsOfficialProviderRow } from "./official.logic.js";
 
 /**
  * Default creator revenue share (80% creator / 20% platform fee). Admin can
@@ -111,7 +112,11 @@ export async function settleMarketplaceUsage(options: {
         });
         if (!(amount > 0)) return;
 
-        const creatorId = provider?.ownerId ?? undefined;
+        // Official supply (legacy null-owner or admin account) keeps the full
+        // amount — there is no creator to credit.  Creator-owned connections
+        // receive their revenue share as before.
+        const isOfficial = provider ? await IsOfficialProviderRow(provider) : true;
+        const creatorId = (!isOfficial && provider?.ownerId) ? provider.ownerId : undefined;
         const creatorShare = creatorId
             ? (await userAuthStore.getUserById(creatorId))?.creatorShare ?? DEFAULT_CREATOR_SHARE
             : 0;

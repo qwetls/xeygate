@@ -1,13 +1,9 @@
 import { Hono } from "hono";
-import {
-    getAllProvidersDB,
-    getAllCustomModelsDB,
-    getCustomModelsByProviderDB,
-    listModelPricingDB,
-    userAuthStore
-} from "@srouter/db";
-import { isSeedProvider } from "@srouter/constants";
+import { getAllProvidersDB, listModelPricingDB, userAuthStore } from "@srouter/db";
+import type { ProviderConfig } from "@srouter/types";
+import { isSeedProvider, providerBaseId } from "@srouter/constants";
 import { getPricingForModel } from "@srouter/pricing";
+import { IsOfficialProviderRow, SelectMarketplaceRows } from "@/logic/official.logic.js";
 import { RuntimeAliasFor } from "@/logic/providers.logic.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -35,8 +31,8 @@ function BareModelId(modelWithPrefix: string): string {
 }
 
 // Storefront display name: creators run a provider under their account name,
-// so the marketplace (and the playground model list) shows the account name;
-// official providers show their own name.
+// so the marketplace shows the account name; official providers show their
+// own name (the admin's account name would be misleading).
 const creatorNameCache = new Map<string, string | null>();
 
 async function StorefrontName(ownerId: string | null | undefined, fallback: string): Promise<string> {
@@ -49,21 +45,53 @@ async function StorefrontName(ownerId: string | null | undefined, fallback: stri
     return name || fallback;
 }
 
+/**
+ * Every enabled non-seed connection, deduplicated for official supply:
+ * multiple connections of one driver share the same base-id catalog, so the
+ * storefront merges them into a single card per driver.  Creator connections
+ * each keep their own card (they own their rows individually).
+ */
+async function MarketplaceCards(): Promise<
+    { row: ProviderConfig; official: boolean }[]
+> {
+    const all = (await getAllProvidersDB()).filter(
+        (p) => p.enabled && !isSeedProvider(p)
+    );
+    const flags = await Promise.all(
+        all.map(async (p) => ({ p, official: await IsOfficialProviderRow(p) }))
+    );
+
+    const officialByBase = new Map<string, { row: ProviderConfig; official: boolean }>();
+    const cards: { row: ProviderConfig; official: boolean }[] = [];
+
+    for (const { p, official } of flags) {
+        if (!official) {
+            cards.push({ row: p, official: false });
+            continue;
+        }
+        const base = providerBaseId(
+            (p.providerId || p.id).toLowerCase()
+        );
+        if (!officialByBase.has(base)) {
+            officialByBase.set(base, { row: p, official: true });
+        }
+    }
+    cards.unshift(...officialByBase.values());
+    return cards;
+}
+
 // GET /v1/catalog — public (no auth). Lists all enabled providers with their
 // available models and merged pricing (admin override wins, else static).
 CatalogRouter.get("/catalog", async (c) => {
-    const all = await getAllProvidersDB();
-    const enabled = all.filter((p) => p.enabled && !isSeedProvider(p));
     const pricingOverrides = await listModelPricingDB();
 
+    const cards = await MarketplaceCards();
     const items: CatalogItem[] = await Promise.all(
-        enabled.map(async (p) => {
-            const customModels = await getCustomModelsByProviderDB(
-                (p.providerId || p.id).toLowerCase()
-            );
+        cards.map(async ({ row: p, official }) => {
+            const customModels = await SelectMarketplaceRows(p, official);
             const alias = RuntimeAliasFor((p.providerId || p.id).toLowerCase());
-            const models = customModels.map((row) => {
-                const modelId = row.modelId;
+            const models = customModels.map((mr) => {
+                const modelId = mr.modelId;
                 const override = pricingOverrides.find(
                     (o) => o.providerId === p.providerId && o.model === modelId
                 );
@@ -97,12 +125,14 @@ CatalogRouter.get("/catalog", async (c) => {
             });
             return {
                 providerId: p.providerId,
-                name: await StorefrontName(p.ownerId, p.name),
+                name: official
+                    ? p.name
+                    : await StorefrontName(p.ownerId, p.name),
                 providerName: p.name,
                 protocol: (p.protocol as unknown as string) ?? null,
                 category: (p.category as unknown as string) ?? null,
                 ownerId: p.ownerId ?? null,
-                official: !p.ownerId,
+                official,
                 models,
             };
         })
@@ -120,20 +150,9 @@ CatalogRouter.get("/catalog/models", async (c) => {
     const target = BareModelId(raw).toLowerCase();
     const targetFull = raw.toLowerCase();
 
-    const [all, pricingOverrides, allModels] = await Promise.all([
-        getAllProvidersDB(),
-        listModelPricingDB(),
-        getAllCustomModelsDB()
-    ]);
-    // custom_models rows store the lowercase provider base id; build a lookup
-    // that resolves via both p.id and p.providerId (lowercased).
-    const providerLookup = new Map<string, typeof all[number]>();
-    for (const p of all) {
-        providerLookup.set(p.id.toLowerCase(), p);
-        providerLookup.set(p.providerId.toLowerCase(), p);
-    }
+    const pricingOverrides = await listModelPricingDB();
+    const seen = new Set<string>();
 
-    const seen = new Set<string>(); // dedupe by providerId
     const offerings: Array<{
         providerId: string;
         name: string;
@@ -143,24 +162,27 @@ CatalogRouter.get("/catalog/models", async (c) => {
         override: boolean;
     }> = [];
 
-    for (const row of allModels) {
-        const bare = BareModelId(row.modelId).toLowerCase();
-        if (bare !== target && row.modelId.toLowerCase() !== targetFull) continue;
-        const provider = providerLookup.get(row.providerId.toLowerCase());
-        if (!provider || !provider.enabled || isSeedProvider(provider)) continue;
-        if (seen.has(provider.providerId)) continue;
-        seen.add(provider.providerId);
-        const displayName = await StorefrontName(provider.ownerId, provider.name);
-
+    for (const { row: p, official } of await MarketplaceCards()) {
+        if (seen.has(p.providerId)) continue;
+        const rows = await SelectMarketplaceRows(p, official);
+        const firstModel = rows.find((mr) => {
+            const bare = BareModelId(mr.modelId).toLowerCase();
+            return bare === target || mr.modelId.toLowerCase() === targetFull;
+        });
+        if (!firstModel) continue;
+        seen.add(p.providerId);
+        const displayName = official
+            ? p.name
+            : await StorefrontName(p.ownerId, p.name);
         const override = pricingOverrides.find(
-            (o) => o.providerId === provider.providerId && o.model === row.modelId
+            (o) => o.providerId === p.providerId && o.model === firstModel.modelId
         );
         if (override) {
             offerings.push({
-                providerId: provider.providerId,
+                providerId: p.providerId,
                 name: displayName,
-                providerName: provider.name,
-                official: !provider.ownerId,
+                providerName: p.name,
+                official,
                 pricing: {
                     input: override.input,
                     output: override.output,
@@ -171,12 +193,12 @@ CatalogRouter.get("/catalog/models", async (c) => {
                 override: true,
             });
         } else {
-            const sp = getPricingForModel(provider.providerId, row.modelId);
+            const sp = getPricingForModel(p.providerId, firstModel.modelId);
             offerings.push({
-                providerId: provider.providerId,
+                providerId: p.providerId,
                 name: displayName,
-                providerName: provider.name,
-                official: !provider.ownerId,
+                providerName: p.name,
+                official,
                 pricing: {
                     input: sp.input,
                     output: sp.output,

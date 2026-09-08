@@ -1,10 +1,15 @@
 import type { Context } from "hono";
 import type { ModelListResponse } from "@srouter/types";
 import { ModelsLogic } from "@/logic/models.logic.js";
+import type { MarketplaceScope } from "@/logic/official.logic.js";
 import { Err, Ok } from "@/utils/response.js";
 import { GetApiKeyRow, IsModelAllowed } from "@/middleware/ModelAccess.js";
 
 const MODEL_CACHE_CONTROL = "public, max-age=60, stale-while-revalidate=300";
+
+function MarketplaceScopeOf(c: Context): MarketplaceScope {
+    return (c.get("marketplaceScope") as MarketplaceScope | undefined) ?? "all";
+}
 
 export class ModelsController {
     public static async ListModels(c: Context): Promise<Response> {
@@ -18,7 +23,7 @@ export class ModelsController {
             void ModelsLogic.RefreshModels(true).catch(() => undefined);
         }
 
-        const Models = await ModelsLogic.GetAllModels(undefined, ExplicitRefresh);
+        const Models = await ModelsLogic.GetAllModels(undefined, ExplicitRefresh, MarketplaceScopeOf(c));
         const AllowedModels = GetApiKeyRow(c)?.allowed_models;
         const VisibleModels =
             AllowedModels && AllowedModels.length > 0
@@ -48,7 +53,7 @@ export class ModelsController {
         const RefreshParam = c.req.query("refresh") || c.req.query("force");
         const ForceRefresh = RefreshParam === "true" || RefreshParam === "1";
 
-        const Model = await ModelsLogic.GetModelById(ModelId, ForceRefresh);
+        const Model = await ModelsLogic.GetModelById(ModelId, ForceRefresh, MarketplaceScopeOf(c));
         if (Model) {
             c.header("Cache-Control", MODEL_CACHE_CONTROL);
             return Ok(c, Model);

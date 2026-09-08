@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { ChatCompletionRequest, APIKeyZod } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
+import type { MarketplaceScope } from "@/logic/official.logic.js";
 import { Err, FormatErrorPayload, Ok, ToContentfulStatusCode } from "@/utils/response.js";
 
 function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequest {
@@ -25,6 +26,7 @@ export class ChatController {
             c.req.header("x-real-ip") ||
             c.req.header("cf-connecting-ip") ||
             "127.0.0.1";
+        const marketplaceScope = (c.get("marketplaceScope") as MarketplaceScope | undefined) ?? "all";
 
         if (Body.stream) {
             c.header("Content-Type", "text/event-stream");
@@ -39,7 +41,8 @@ export class ChatController {
                         0,
                         ApiKeyId,
                         rawIp,
-                        userAgent
+                        userAgent,
+                        marketplaceScope
                     );
                     for await (const Chunk of Generator) {
                         await stream.writeSSE({
@@ -74,7 +77,8 @@ export class ChatController {
                 0,
                 ApiKeyId,
                 rawIp,
-                userAgent
+                userAgent,
+                marketplaceScope
             );
             return Ok(c, ResponseData);
         } catch (error) {

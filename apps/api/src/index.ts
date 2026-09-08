@@ -23,6 +23,7 @@ import imagesRouter from "@/routes/v1/images.js";
 import { CreateCorsMiddleware, ParseAllowedOrigins } from "@/middleware/Cors.js";
 import { CreateCsrfOriginGuard } from "@/middleware/CsrfOrigin.js";
 import { CreateBodyLimitMiddleware } from "@/middleware/BodyLimit.js";
+import { MarketplaceScopeMiddleware } from "@/middleware/MarketplaceScope.js";
 import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry, startProviderRegistry } from "@/services/registry.js";
@@ -63,6 +64,26 @@ app.use("/v1/*", CreateBodyLimitMiddleware());
 
 // Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
 // (Moved into boot() — queries DB, must run after PG schema init.)
+
+// ── Marketplace namespaces ──────────────────────────────────────────────
+// /user/v1 and /official/v1 mount the same routers as /v1 but pin the
+// marketplace namespace for bare-model routing and listings: "user" resolves
+// only creator-owned connections, "official" only platform-owned (admin
+// account) ones. /v1 keeps serving both for backward compatibility.
+function MarketplaceNamespace(scope: "user" | "official"): Hono {
+    const ns = new Hono();
+    ns.use("*", CreateCsrfOriginGuard(CorsAllowlist));
+    ns.use("*", CreateBodyLimitMiddleware());
+    ns.use("*", MarketplaceScopeMiddleware(scope));
+    ns.route("/v1", ModelsRouter);
+    ns.route("/v1", ChatRouter);
+    ns.route("/v1", MessagesRouter);
+    ns.route("/v1", CatalogRouter);
+    ns.route("/v1", KeysRouter);
+    ns.route("/v1", LogsRouter);
+    ns.route("/v1", QuotaRouter);
+    return ns;
+}
 
 const apiInfo = () => ({
     name: "XEYGATE API",
@@ -147,6 +168,10 @@ app.route("/v1", TunnelRouter);
 app.route("/v1/v1", MessagesRouter);
 app.route("/v1/v1", ChatRouter);
 app.route("/v1/v1", ModelsRouter);
+
+// Marketplace namespace mounts (creator-only vs platform-official key space).
+app.route("/user", MarketplaceNamespace("user"));
+app.route("/official", MarketplaceNamespace("official"));
 
 // Serve Web Dashboard in production if built dist exists
 const webDistPath = resolveWebDistPath();

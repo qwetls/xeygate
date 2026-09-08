@@ -21,6 +21,7 @@ import {
     deleteCustomModelsByProviderDB,
     getAllProvidersDB,
     getCustomModelsByProviderDB,
+    getCustomModelsForProviderDB,
     getProvidersByOwnerDB,
     getRoundRobinDB,
     setRoundRobinDB,

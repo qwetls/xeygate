@@ -180,6 +180,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
 - **Quality-Weighted Marketplace Routing:** Bare model requests (`"gpt-4o"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
+- **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
 - **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
 
 ---
@@ -195,6 +196,9 @@ All gateway endpoints are served under `/v1`:
 | `POST` | `/v1/messages` | Anthropic messages endpoint |
 | `GET` | `/v1/models` | List all discovered & connected models |
 | `GET` | `/v1/models/:model` | Retrieve specific model schema & capabilities |
+| `POST` | `/user/v1/chat/completions` | Chat completion routed across creator listings only |
+| `POST` | `/official/v1/chat/completions` | Chat completion routed across platform-official listings only |
+| `GET` | `/user/v1/models`, `/official/v1/models` | Namespace-scoped model lists |
 
 ### Management & Metrics
 | Method | Endpoint | Description |

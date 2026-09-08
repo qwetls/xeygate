@@ -6,6 +6,7 @@ import {
 } from "@srouter/db";
 import { settleMarketplaceUsage } from "./billing.logic.js";
 import { ResolveMarketplaceRoute } from "./routing.logic.js";
+import type { MarketplaceScope } from "./official.logic.js";
 import { applyTokenSaver, estimateCostForUsage, extractUsageBreakdown } from "@srouter/translator";
 import { providerTypeForAlias } from "@srouter/constants";
 import type {
@@ -174,18 +175,23 @@ export class ChatLogic {
         depth = 0,
         apiKeyId?: string,
         ipAddress?: string,
-        userAgent?: string
+        userAgent?: string,
+        marketplaceScope: MarketplaceScope = "all"
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
         let candidates = await ResolveCandidates(originalModel);
 
-        // Bare marketplace models ("gpt-4o") route across every creator
-        // listing that model; the marketplace chain replaces local fallback
-        // candidates because failover there is mandatory.
+        // Bare marketplace models ("gpt-4o") route across the listings of the
+        // request's namespace (creator-only on /user/v1, platform-official on
+        // /official/v1, both on /v1); the marketplace chain replaces local
+        // fallback candidates because failover there is mandatory.
         if (!originalModel.includes("/")) {
-            const marketplaceChain = await ResolveMarketplaceRoute(originalModel);
+            const marketplaceChain = await ResolveMarketplaceRoute(
+                originalModel,
+                marketplaceScope
+            );
             if (marketplaceChain && marketplaceChain.length > 0) {
                 candidates = marketplaceChain.map((m) => ({ model: m }));
             }
@@ -256,7 +262,8 @@ export class ChatLogic {
                         depth + 1,
                         apiKeyId,
                         ipAddress,
-                        userAgent
+                        userAgent,
+                        marketplaceScope
                     );
                 }
 
@@ -307,18 +314,23 @@ export class ChatLogic {
         depth = 0,
         apiKeyId?: string,
         ipAddress?: string,
-        userAgent?: string
+        userAgent?: string,
+        marketplaceScope: MarketplaceScope = "all"
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
         let candidates = await ResolveCandidates(originalModel);
 
-        // Bare marketplace models ("gpt-4o") route across every creator
-        // listing that model; the marketplace chain replaces local fallback
-        // candidates because failover there is mandatory.
+        // Bare marketplace models ("gpt-4o") route across the listings of the
+        // request's namespace (creator-only on /user/v1, platform-official on
+        // /official/v1, both on /v1); the marketplace chain replaces local
+        // fallback candidates because failover there is mandatory.
         if (!originalModel.includes("/")) {
-            const marketplaceChain = await ResolveMarketplaceRoute(originalModel);
+            const marketplaceChain = await ResolveMarketplaceRoute(
+                originalModel,
+                marketplaceScope
+            );
             if (marketplaceChain && marketplaceChain.length > 0) {
                 candidates = marketplaceChain.map((m) => ({ model: m }));
             }
@@ -450,7 +462,8 @@ export class ChatLogic {
                         depth + 1,
                         apiKeyId,
                         ipAddress,
-                        userAgent
+                        userAgent,
+                        marketplaceScope
                     );
                     return;
                 }
