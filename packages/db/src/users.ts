@@ -15,6 +15,7 @@ export interface User {
     role: UserRole;
     status: UserStatus;
     creatorStatus: CreatorStatus;
+    creatorShare: number;
     createdAt: number;
     updatedAt: number;
 }
@@ -35,6 +36,7 @@ interface UserRow {
     role: string;
     status: string;
     creator_status: string;
+    creator_share: number;
     created_at: number;
     updated_at: number;
 }
@@ -68,6 +70,7 @@ export class UserAuthStore {
                 role TEXT NOT NULL DEFAULT 'buyer',
                 status TEXT NOT NULL DEFAULT 'active',
                 creator_status TEXT NOT NULL DEFAULT 'none',
+                creator_share REAL NOT NULL DEFAULT 0.80,
                 created_at ${integer} NOT NULL,
                 updated_at ${integer} NOT NULL
             );
@@ -107,6 +110,14 @@ export class UserAuthStore {
             );
             await this.client.exec(
                 `UPDATE users SET creator_status = 'approved' WHERE role = 'creator'`
+            );
+        } catch {
+            // Column already exists
+        }
+        // Migrate creator_share column (creator revenue share, default 80%).
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN creator_share REAL NOT NULL DEFAULT 0.80`
             );
         } catch {
             // Column already exists
@@ -236,6 +247,18 @@ export class UserAuthStore {
                 creatorStatus, Date.now(), userId
             );
         }
+        return this.getUserById(userId);
+    }
+
+    // ── Creator revenue share ──
+
+    public async setCreatorShare(userId: string, share: number): Promise<User | null> {
+        await this.ensureTables();
+        const clamped = Math.min(1, Math.max(0.01, share));
+        await this.client.run(
+            `UPDATE users SET creator_share = ?, updated_at = ? WHERE id = ?`,
+            clamped, Date.now(), userId
+        );
         return this.getUserById(userId);
     }
 
@@ -418,6 +441,7 @@ function mapUserRow(row: UserRow): User {
             row.creator_status === "rejected"
                 ? row.creator_status
                 : "none",
+        creatorShare: num(row.creator_share, 0.8),
         createdAt: num(row.created_at),
         updatedAt: num(row.updated_at)
     };

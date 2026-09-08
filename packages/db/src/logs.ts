@@ -388,3 +388,67 @@ export async function getAnalyticsDB(window: AnalyticsWindow): Promise<Analytics
         rps: Rps
     };
 }
+
+// --- Marketplace routing quality ---
+
+export interface ProviderQualityStats {
+    samples: number;
+    successes: number;
+    successRate: number;
+    avgLatencyMs: number;
+}
+
+interface QualityLogRow {
+    provider_id: string;
+    model: string;
+    status_code: number;
+    latency_ms: number;
+}
+
+/**
+ * Aggregate recent request quality per provider for a bare marketplace model.
+ * request_logs stores the model as it was sent — either the bare name or the
+ * "alias/bare" form produced by a marketplace rewrite — so the match is done
+ * by suffix in JS rather than in SQL. Keys are lowercased provider ids, which
+ * line up with the providers.id / provider_id / alias lookups the router does.
+ */
+export async function getMarketplaceQualityDB(
+    bareModel: string,
+    windowMs = 86_400_000
+): Promise<Map<string, ProviderQualityStats>> {
+    const Target = bareModel.toLowerCase();
+    const Since = Date.now() - windowMs;
+    const Rows = (await db
+        .prepare(`
+            SELECT provider_id, model, status_code, latency_ms
+            FROM request_logs
+            WHERE created_at >= ?
+            ORDER BY created_at DESC
+            LIMIT 10000
+        `)
+        .all(Since)) as unknown as QualityLogRow[];
+
+    const Acc = new Map<string, { samples: number; successes: number; latency: number }>();
+    for (const row of Rows) {
+        const model = str(row.model).toLowerCase();
+        if (model !== Target && !model.endsWith(`/${Target}`)) continue;
+        const Key = str(row.provider_id).toLowerCase();
+        const entry = Acc.get(Key) ?? { samples: 0, successes: 0, latency: 0 };
+        entry.samples += 1;
+        const status = num(row.status_code);
+        if (status >= 200 && status < 300) entry.successes += 1;
+        entry.latency += num(row.latency_ms);
+        Acc.set(Key, entry);
+    }
+
+    const Result = new Map<string, ProviderQualityStats>();
+    for (const [key, entry] of Acc) {
+        Result.set(key, {
+            samples: entry.samples,
+            successes: entry.successes,
+            successRate: entry.samples > 0 ? entry.successes / entry.samples : 0,
+            avgLatencyMs: entry.samples > 0 ? entry.latency / entry.samples : 0
+        });
+    }
+    return Result;
+}

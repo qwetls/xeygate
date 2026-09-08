@@ -41,6 +41,24 @@ export async function getProviderByIdDB(id: string): Promise<ProviderConfig | nu
     return mapProviderRow(Row);
 }
 
+/**
+ * Resolve a provider row by its provider_id, alias, or id (case-insensitive).
+ * request_logs store whichever identifier routed the request — for custom
+ * creator connections that is the alias or the row id, not necessarily the
+ * canonical id — so billing needs the wider lookup.
+ */
+export async function getProviderByAliasDB(aliasOrProviderId: string): Promise<ProviderConfig | null> {
+    const Key = aliasOrProviderId.toLowerCase();
+    const Row = (await db
+        .prepare(
+            "SELECT * FROM providers WHERE LOWER(provider_id) = ? OR LOWER(alias) = ? OR LOWER(id) = ? LIMIT 1"
+        )
+        .get(Key, Key, Key)) as unknown as ProviderRow | undefined;
+
+    if (!Row) return null;
+    return mapProviderRow(Row);
+}
+
 export async function getProvidersByOwnerDB(ownerId: string): Promise<ProviderConfig[]> {
     const Rows = (await db
         .prepare("SELECT * FROM providers WHERE owner_id = ? ORDER BY created_at DESC")
