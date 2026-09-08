@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+    Banknote,
     BarChart2,
     Boxes,
     Coins,
@@ -31,6 +32,7 @@ import {
 const mainNavItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { to: "/admin/users", label: "Users", icon: Users },
+    { to: "/admin/payouts", label: "Payouts", icon: Banknote },
     { to: "/admin/keys", label: "API Keys", icon: KeyRound },
     { to: "/admin/providers", label: "Providers", icon: Boxes },
     { to: "/admin/playground", label: "Playground", icon: Terminal }

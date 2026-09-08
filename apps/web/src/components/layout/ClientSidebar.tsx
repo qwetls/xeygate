@@ -6,6 +6,7 @@ import {
     LogOut,
     Store,
     Terminal,
+    Wallet,
     Zap
 } from "lucide-react";
 import {
@@ -36,7 +37,8 @@ const baseNavItems = [
 ] as const;
 
 const creatorNavItems = [
-    { to: "/dashboard/my-apis", label: "My APIs", icon: Store }
+    { to: "/dashboard/my-apis", label: "My APIs", icon: Store },
+    { to: "/dashboard/payouts", label: "Payouts", icon: Wallet }
 ] as const;
 
 export function ClientSidebar({ role, email, credits }: ClientSidebarProps) {

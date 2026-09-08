@@ -18,6 +18,7 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminComboRouteImport } from './routes/admin.combo'
 import { Route as AdminKeysRouteImport } from './routes/admin.keys'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
 import { Route as AdminPlaygroundRouteImport } from './routes/admin.playground'
 import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
@@ -29,6 +30,7 @@ import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashb
 import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
 import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
 import { Route as ClientDashboardMyApisRouteImport } from './routes/_client.dashboard.my-apis'
+import { Route as ClientDashboardPayoutsRouteImport } from './routes/_client.dashboard.payouts'
 import { Route as ClientDashboardPlaygroundRouteImport } from './routes/_client.dashboard.playground'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -78,6 +80,11 @@ const AdminKeysRoute = AdminKeysRouteImport.update({
 const AdminLogsRoute = AdminLogsRouteImport.update({
   id: '/logs',
   path: '/logs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPlaygroundRoute = AdminPlaygroundRouteImport.update({
@@ -150,6 +157,11 @@ const ClientDashboardMyApisRoute = ClientDashboardMyApisRouteImport.update({
   path: '/my-apis',
   getParentRoute: () => ClientDashboardRoute,
 } as any)
+const ClientDashboardPayoutsRoute = ClientDashboardPayoutsRouteImport.update({
+  id: '/payouts',
+  path: '/payouts',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
 const ClientDashboardPlaygroundRoute = ClientDashboardPlaygroundRouteImport.update({
   id: '/playground',
   path: '/playground',
@@ -178,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
@@ -189,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
+  '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers/': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
@@ -205,6 +219,7 @@ export interface FileRoutesByTo {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
@@ -213,6 +228,7 @@ export interface FileRoutesByTo {
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
+  '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
@@ -231,6 +247,7 @@ export interface FileRoutesById {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/payouts': typeof AdminPayoutsRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
@@ -242,6 +259,7 @@ export interface FileRoutesById {
   '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
   '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
   '/_client/dashboard/my-apis': typeof ClientDashboardMyApisRoute
+  '/_client/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/_client/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers/': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
@@ -260,6 +278,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/payouts'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
@@ -271,6 +290,7 @@ export interface FileRouteTypes {
     | '/dashboard/keys'
     | '/dashboard/usage'
     | '/dashboard/my-apis'
+    | '/dashboard/payouts'
     | '/dashboard/playground'
     | '/admin/providers/'
     | '/admin/providers/$providerId'
@@ -287,6 +307,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/payouts'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/quota'
@@ -295,6 +316,7 @@ export interface FileRouteTypes {
     | '/dashboard/keys'
     | '/dashboard/usage'
     | '/dashboard/my-apis'
+    | '/dashboard/payouts'
     | '/dashboard/playground'
     | '/admin/providers'
     | '/admin/providers/$providerId'
@@ -312,6 +334,7 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/payouts'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
@@ -323,6 +346,7 @@ export interface FileRouteTypes {
     | '/_client/dashboard/keys'
     | '/_client/dashboard/usage'
     | '/_client/dashboard/my-apis'
+    | '/_client/dashboard/payouts'
     | '/_client/dashboard/playground'
     | '/admin/providers/'
     | '/admin/providers/$providerId'
@@ -403,6 +427,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLogsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/payouts': {
+      id: '/admin/payouts'
+      path: '/payouts'
+      fullPath: '/admin/payouts'
+      preLoaderRoute: typeof AdminPayoutsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/playground': {
       id: '/admin/playground'
       path: '/playground'
@@ -480,6 +511,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardMyApisRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
+    '/_client/dashboard/payouts': {
+      id: '/_client/dashboard/payouts'
+      path: '/payouts'
+      fullPath: '/dashboard/payouts'
+      preLoaderRoute: typeof ClientDashboardPayoutsRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
     '/_client/dashboard/playground': {
       id: '/_client/dashboard/playground'
       path: '/playground'
@@ -545,6 +583,7 @@ interface AdminRouteChildren {
   AdminComboRoute: typeof AdminComboRoute
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLogsRoute: typeof AdminLogsRoute
+  AdminPayoutsRoute: typeof AdminPayoutsRoute
   AdminPlaygroundRoute: typeof AdminPlaygroundRoute
   AdminPricingRoute: typeof AdminPricingRoute
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
@@ -559,6 +598,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComboRoute: AdminComboRoute,
   AdminKeysRoute: AdminKeysRoute,
   AdminLogsRoute: AdminLogsRoute,
+  AdminPayoutsRoute: AdminPayoutsRoute,
   AdminPlaygroundRoute: AdminPlaygroundRoute,
   AdminPricingRoute: AdminPricingRoute,
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
@@ -574,6 +614,7 @@ interface ClientDashboardRouteChildren {
   ClientDashboardKeysRoute: typeof ClientDashboardKeysRoute
   ClientDashboardUsageRoute: typeof ClientDashboardUsageRoute
   ClientDashboardMyApisRoute: typeof ClientDashboardMyApisRoute
+  ClientDashboardPayoutsRoute: typeof ClientDashboardPayoutsRoute
   ClientDashboardPlaygroundRoute: typeof ClientDashboardPlaygroundRoute
 }
 
@@ -582,6 +623,7 @@ const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
   ClientDashboardKeysRoute: ClientDashboardKeysRoute,
   ClientDashboardUsageRoute: ClientDashboardUsageRoute,
   ClientDashboardMyApisRoute: ClientDashboardMyApisRoute,
+  ClientDashboardPayoutsRoute: ClientDashboardPayoutsRoute,
   ClientDashboardPlaygroundRoute: ClientDashboardPlaygroundRoute,
 }
 

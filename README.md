@@ -167,6 +167,8 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Creator Approval Workflow:** Upgrades to creator require admin approval — the account keeps the buyer role until approved.
 - **Registration Gate (optional):** Toggle admin approval for new sign-ups from the admin settings.
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
+- **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
+- **Quality-Weighted Marketplace Routing:** Bare model requests (`"gpt-4o"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
 
 ---
 

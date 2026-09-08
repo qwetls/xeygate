@@ -4,8 +4,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
     Ban,
+    Check,
     CheckCircle2,
     KeyRound,
+    Percent,
+    Pencil,
     ShieldAlert,
     ShieldCheck,
     Store,
@@ -43,6 +46,7 @@ interface AdminUser {
     role: "buyer" | "creator";
     status: UserStatus;
     creatorStatus: CreatorStatus;
+    creatorShare?: number;
     createdAt: number;
     updatedAt: number;
 }
@@ -107,6 +111,8 @@ function CreatorBadge({ status }: { status: CreatorStatus }) {
 function AdminUsersPage() {
     const queryClient = useQueryClient();
     const [actingId, setActingId] = useState<string | null>(null);
+    const [editingShareId, setEditingShareId] = useState<string | null>(null);
+    const [shareDraft, setShareDraft] = useState("");
 
     const { data, isPending, isError, error, refetch } = useQuery({
         queryKey: ["admin-users"],
@@ -130,6 +136,26 @@ function AdminUsersPage() {
             }
         } catch (err) {
             const msg = err instanceof Error ? err.message : "Action failed";
+            toast.error(msg);
+        } finally {
+            setActingId(null);
+        }
+    };
+
+    const saveShare = async (userId: string) => {
+        const share = Number(shareDraft);
+        if (!share || share < 0.01 || share > 1) {
+            toast.error("Share must be between 0.01 and 1");
+            return;
+        }
+        setActingId(`${userId}:share`);
+        try {
+            await api.patch(`/v1/admin/users/${userId}/share`, { share });
+            queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+            toast.success("Creator share updated");
+            setEditingShareId(null);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : "Failed to update share";
             toast.error(msg);
         } finally {
             setActingId(null);
@@ -243,6 +269,7 @@ function AdminUsersPage() {
                                 <TableHead>User</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Creator</TableHead>
+                                <TableHead>Share</TableHead>
                                 <TableHead>Credits</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
@@ -273,6 +300,76 @@ function AdminUsersPage() {
                                         </TableCell>
                                         <TableCell>
                                             <CreatorBadge status={user.creatorStatus} />
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.role === "creator" &&
+                                            user.creatorStatus === "approved" ? (
+                                                editingShareId === user.id ? (
+                                                    <div className="flex items-center gap-1">
+                                                        <input
+                                                            type="number"
+                                                            min={0.01}
+                                                            max={1}
+                                                            step="0.01"
+                                                            value={shareDraft}
+                                                            onChange={(e) =>
+                                                                setShareDraft(e.target.value)
+                                                            }
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    void saveShare(user.id);
+                                                                }
+                                                                if (e.key === "Escape") {
+                                                                    setEditingShareId(null);
+                                                                }
+                                                            }}
+                                                            className="h-6.5 w-16 rounded-md border border-border/80 bg-background px-1.5 text-[11px] tabular-nums text-foreground outline-none focus:border-foreground/40"
+                                                            autoFocus
+                                                        />
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon-sm"
+                                                            className="size-6 text-emerald-500 cursor-pointer"
+                                                            disabled={actingId === `${user.id}:share`}
+                                                            onClick={() => void saveShare(user.id)}
+                                                            title="Save share"
+                                                        >
+                                                            <Check className="size-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Percent
+                                                            className="size-3 text-muted-foreground"
+                                                            strokeWidth={1.75}
+                                                        />
+                                                        <span className="tabular-nums text-muted-foreground">
+                                                            {((user.creatorShare ?? 0.8) * 100).toFixed(0)}%
+                                                        </span>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon-sm"
+                                                            className="size-6 text-muted-foreground hover:text-foreground cursor-pointer"
+                                                            disabled={busy}
+                                                            onClick={() => {
+                                                                setEditingShareId(user.id);
+                                                                setShareDraft(
+                                                                    String(user.creatorShare ?? 0.8)
+                                                                );
+                                                            }}
+                                                            title="Edit revenue share"
+                                                        >
+                                                            <Pencil className="size-3" />
+                                                        </Button>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <span className="text-[11px] text-muted-foreground/60">
+                                                    —
+                                                </span>
+                                            )}
                                         </TableCell>
                                         <TableCell className="tabular-nums text-muted-foreground">
                                             {formatCompactNumber(user.credits)}
