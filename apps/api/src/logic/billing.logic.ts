@@ -2,6 +2,7 @@ import {
     createTransactionDB,
     createCreatorEarningDB,
     getProviderByIdDB,
+    getProviderByAliasDB,
     getAPIKeyByIdDB,
     getModelPricingDB,
     userAuthStore,
@@ -10,10 +11,11 @@ import {
 import { calculateCostFromTokens } from "@srouter/pricing";
 
 /**
- * Platform fee share taken from each marketplace usage (e.g. 0.3 = 30%).
- * TODO(Fase C): make this configurable per-provider via system_settings.
+ * Default creator revenue share (80% creator / 20% platform fee). Admin can
+ * override per creator via users.creator_share; the share is read at settle
+ * time so changes apply to new traffic immediately.
  */
-export const PLATFORM_FEE_RATE = 0.3;
+export const DEFAULT_CREATOR_SHARE = 0.8;
 
 export interface BillingResult {
     charged: boolean;
@@ -91,18 +93,32 @@ export async function settleMarketplaceUsage(options: {
         const apiKey = await getAPIKeyByIdDB(apiKeyId);
         if (!apiKey?.user_id) return;
 
+        // The router may record the connection under its alias (custom creator
+        // rows) and the model under its rewritten "alias/bare" form, while
+        // pricing overrides and ownership are keyed by the canonical row id
+        // and the bare model. Re-resolve both before pricing/crediting.
+        let provider = await getProviderByIdDB(providerId);
+        if (!provider) provider = await getProviderByAliasDB(providerId);
+        const canonicalProviderId = provider?.id ?? providerId;
+        const bareModel = model.includes("/") ? model.slice(model.indexOf("/") + 1) : model;
+
         // Buyer-facing price: admin override wins, else static estimate.
         const amount = await resolveMarketplacePrice({
-            providerId,
-            model,
+            providerId: canonicalProviderId,
+            model: bareModel,
             fallback: options.amount,
             breakdown: options.breakdown
         });
         if (!(amount > 0)) return;
 
-        const provider = await getProviderByIdDB(providerId);
         const creatorId = provider?.ownerId ?? undefined;
-        const platformFee = Math.round(amount * PLATFORM_FEE_RATE * 1e6) / 1e6;
+        const creatorShare = creatorId
+            ? (await userAuthStore.getUserById(creatorId))?.creatorShare ?? DEFAULT_CREATOR_SHARE
+            : 0;
+        // Creator share defaults to 80%; admin can override per creator. The
+        // platform fee is the remainder (1 - share). Admin-owned providers have
+        // no creator share, so the platform keeps the full amount.
+        const platformFee = Math.round(amount * (1 - creatorShare) * 1e6) / 1e6;
         const creatorNet = Math.max(0, amount - platformFee);
 
         // Debit buyer ledger + balance.
@@ -121,7 +137,7 @@ export async function settleMarketplaceUsage(options: {
         if (creatorId) {
             await createCreatorEarningDB({
                 userId: creatorId,
-                providerId,
+                providerId: canonicalProviderId,
                 grossAmount: amount,
                 platformFee,
                 netAmount: creatorNet,

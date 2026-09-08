@@ -13,7 +13,9 @@ import {
     deleteModelPricingDB,
     type User,
 } from "@srouter/db";
-import { resolveMarketplacePrice, settleMarketplaceUsage, PLATFORM_FEE_RATE } from "@/logic/billing.logic.js";
+import { resolveMarketplacePrice, settleMarketplaceUsage, DEFAULT_CREATOR_SHARE } from "@/logic/billing.logic.js";
+
+const FEE_RATE = 1 - DEFAULT_CREATOR_SHARE;
 
 let creator: User;
 let buyer: User;
@@ -145,7 +147,7 @@ test("settleMarketplaceUsage charges admin override when breakdown is provided",
 
     const earnings = await getCreatorEarningsDB(creator.id);
     assert.equal(earnings[0].grossAmount, 40);
-    assert.equal(earnings[0].platformFee, Math.round(40 * PLATFORM_FEE_RATE * 1e6) / 1e6);
+    assert.equal(earnings[0].platformFee, Math.round(40 * FEE_RATE * 1e6) / 1e6);
 
     await deleteModelPricingDB(providerId, "gpt-4o");
 });

@@ -12,3 +12,7 @@ AdminUsersRouter.post("/admin/users/:id/unban", RequireAdmin, AdminUsersControll
 AdminUsersRouter.post("/admin/users/:id/revoke-api-access", RequireAdmin, AdminUsersController.RevokeApiAccess);
 AdminUsersRouter.post("/admin/users/:id/approve-creator", RequireAdmin, AdminUsersController.ApproveCreator);
 AdminUsersRouter.post("/admin/users/:id/reject-creator", RequireAdmin, AdminUsersController.RejectCreator);
+AdminUsersRouter.patch("/admin/users/:id/share", RequireAdmin, AdminUsersController.SetCreatorShare);
+
+AdminUsersRouter.get("/admin/payouts", RequireAdmin, AdminUsersController.ListPayouts);
+AdminUsersRouter.post("/admin/payouts/:id/process", RequireAdmin, AdminUsersController.ProcessPayout);

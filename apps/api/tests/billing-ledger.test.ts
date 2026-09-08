@@ -13,7 +13,9 @@ import {
     deleteAPIKeyDB,
     type User
 } from "@srouter/db";
-import { settleMarketplaceUsage, PLATFORM_FEE_RATE } from "@/logic/billing.logic.js";
+import { settleMarketplaceUsage, DEFAULT_CREATOR_SHARE } from "@/logic/billing.logic.js";
+
+const FEE_RATE = 1 - DEFAULT_CREATOR_SHARE;
 
 let creator: User;
 let buyer: User;
@@ -77,7 +79,7 @@ test("settleMarketplaceUsage debits buyer and credits creator", async () => {
     assert.equal(buyerAfter, 90);
 
     // Creator credited with net (amount - platform fee)
-    const expectedNet = amount - Math.round(amount * PLATFORM_FEE_RATE * 1e6) / 1e6;
+    const expectedNet = amount - Math.round(amount * FEE_RATE * 1e6) / 1e6;
     const creatorAfter = await store.getUserCredits(creator.id);
     assert.equal(creatorAfter, expectedNet);
 
@@ -93,7 +95,7 @@ test("settleMarketplaceUsage debits buyer and credits creator", async () => {
     assert.equal(earnings.length, 1);
     assert.equal(earnings[0].grossAmount, amount);
     assert.equal(earnings[0].netAmount, expectedNet);
-    assert.equal(earnings[0].platformFee, Math.round(amount * PLATFORM_FEE_RATE * 1e6) / 1e6);
+    assert.equal(earnings[0].platformFee, Math.round(amount * FEE_RATE * 1e6) / 1e6);
 });
 
 test("settleMarketplaceUsage is no-op for zero amount", async () => {
@@ -199,6 +201,6 @@ test("getEarningsSummaryDB aggregates correctly", async () => {
     const summary = await getEarningsSummaryDB(creator.id);
     assert.equal(summary.requestCount, 2);
     assert.equal(summary.totalGross, 30);
-    assert.equal(summary.totalFees, Math.round(30 * PLATFORM_FEE_RATE * 1e6) / 1e6);
+    assert.equal(summary.totalFees, Math.round(30 * FEE_RATE * 1e6) / 1e6);
     assert.equal(summary.pendingAmount, summary.totalNet);
 });

@@ -5,6 +5,7 @@ import {
     incrementAPIKeyUsageDB
 } from "@srouter/db";
 import { settleMarketplaceUsage } from "./billing.logic.js";
+import { ResolveMarketplaceRoute } from "./routing.logic.js";
 import { applyTokenSaver, estimateCostForUsage, extractUsageBreakdown } from "@srouter/translator";
 import { providerTypeForAlias } from "@srouter/constants";
 import type {
@@ -178,7 +179,17 @@ export class ChatLogic {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
-        const candidates = await ResolveCandidates(originalModel);
+        let candidates = await ResolveCandidates(originalModel);
+
+        // Bare marketplace models ("gpt-4o") route across every creator
+        // listing that model; the marketplace chain replaces local fallback
+        // candidates because failover there is mandatory.
+        if (!originalModel.includes("/")) {
+            const marketplaceChain = await ResolveMarketplaceRoute(originalModel);
+            if (marketplaceChain && marketplaceChain.length > 0) {
+                candidates = marketplaceChain.map((m) => ({ model: m }));
+            }
+        }
 
         let lastError: Error | ErrorWithStatus | string | null = null;
         const fallbackPath: string[] = [originalModel];
@@ -301,7 +312,17 @@ export class ChatLogic {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
         const originalModel = effectiveBody.model;
-        const candidates = await ResolveCandidates(originalModel);
+        let candidates = await ResolveCandidates(originalModel);
+
+        // Bare marketplace models ("gpt-4o") route across every creator
+        // listing that model; the marketplace chain replaces local fallback
+        // candidates because failover there is mandatory.
+        if (!originalModel.includes("/")) {
+            const marketplaceChain = await ResolveMarketplaceRoute(originalModel);
+            if (marketplaceChain && marketplaceChain.length > 0) {
+                candidates = marketplaceChain.map((m) => ({ model: m }));
+            }
+        }
 
         let lastError: Error | ErrorWithStatus | string | null = null;
         const fallbackPath: string[] = [originalModel];
