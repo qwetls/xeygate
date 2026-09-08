@@ -169,6 +169,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
 - **Quality-Weighted Marketplace Routing:** Bare model requests (`"gpt-4o"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
+- **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
 
 ---
 

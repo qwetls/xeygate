@@ -101,12 +101,44 @@ export function useProvider(providerId: string) {
         }
     });
 
+    const addModelsBulkMutation = useMutation({
+        mutationFn: (modelIds: string[]) =>
+            api.post<{ added: number }>(`/v1/providers/${providerId}/models/bulk`, {
+                models: modelIds
+            }),
+        onSuccess: (data) => {
+            void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
+            void queryClient.invalidateQueries({ queryKey: ["models"] });
+            toast.success(`Added ${data.added} model${data.added === 1 ? "" : "s"} to the catalog`);
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to add models");
+        }
+    });
+
+    const deleteModelsBulkMutation = useMutation({
+        mutationFn: (modelIds: string[]) =>
+            api.post<{ deleted: number }>(`/v1/providers/${providerId}/models/bulk-delete`, {
+                models: modelIds
+            }),
+        onSuccess: (data) => {
+            void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
+            void queryClient.invalidateQueries({ queryKey: ["models"] });
+            toast.success(`Removed ${data.deleted} model${data.deleted === 1 ? "" : "s"} from the catalog`);
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to delete models");
+        }
+    });
+
     return {
         ...query,
         addMutation,
         deleteMutation,
         toggleRoundRobinMutation,
         addModelMutation,
-        deleteModelMutation
+        deleteModelMutation,
+        addModelsBulkMutation,
+        deleteModelsBulkMutation
     };
 }

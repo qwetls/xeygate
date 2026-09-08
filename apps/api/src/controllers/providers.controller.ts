@@ -3,7 +3,7 @@ import type { CreateProviderPayload } from "@/logic/providers.logic.js";
 import type { ProviderConfig } from "@srouter/types";
 import { ProvidersLogic } from "@/logic/providers.logic.js";
 import { deleteProviderDB, getProviderByIdDB } from "@srouter/db";
-import { AddCustomModelSchema, CreateProviderSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
+import { AddCustomModelSchema, BulkModelsSchema, CreateProviderSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -111,6 +111,42 @@ export class ProvidersController {
             return Ok(c, { message: "Custom model deleted" });
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Failed to delete model", 404);
+        }
+    }
+
+    public static async AddCustomModelsBulk(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = BulkModelsSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid models payload", 400);
+        }
+
+        try {
+            const Result = await ProvidersLogic.AddCustomModels(ProviderId, Parsed.data.models);
+            return Ok(c, Result, 201);
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Invalid models payload", 400);
+        }
+    }
+
+    public static async DeleteCustomModelsBulk(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = BulkModelsSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid models payload", 400);
+        }
+
+        try {
+            const Result = await ProvidersLogic.DeleteCustomModels(ProviderId, Parsed.data.models);
+            return Ok(c, Result);
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Failed to delete models", 400);
         }
     }
 

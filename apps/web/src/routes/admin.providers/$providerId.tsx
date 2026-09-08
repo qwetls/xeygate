@@ -14,10 +14,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-    AddModelDialog,
     ConnectOAuthModal,
     ConnectionCard,
     ConnectionForm,
+    ManageModelsDialog,
     ProviderIcon,
     ProviderModelCard,
     ProviderModelTable,
@@ -47,7 +47,9 @@ function ProviderDetailPage() {
         deleteMutation,
         toggleRoundRobinMutation,
         addModelMutation,
-        deleteModelMutation
+        deleteModelMutation,
+        addModelsBulkMutation,
+        deleteModelsBulkMutation
     } = useProvider(providerId);
 
     const [modelSearch, setModelSearch] = useState("");
@@ -93,36 +95,41 @@ function ProviderDetailPage() {
     };
 
     const handleDeleteModel = (modelId: string) => {
-        setDeletedModelIds((prev) => {
-            const updated = prev.includes(modelId) ? prev : [...prev, modelId];
-            try {
-                localStorage.setItem(storageKey, JSON.stringify(updated));
-            } catch {}
-            return updated;
-        });
-        toast.info(`Model "${modelId}" hidden from list`, {
-            action: {
-                label: "Undo",
-                onClick: () => handleRestoreModel(modelId)
-            }
-        });
+        const model = provider?.models?.find((m) => m.id === modelId);
+        if (model?.custom) {
+            deleteModelMutation.mutate(modelId);
+        } else {
+            setDeletedModelIds((prev) => {
+                const updated = prev.includes(modelId) ? prev : [...prev, modelId];
+                try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
+                return updated;
+            });
+            toast.info(`Model "${modelId}" hidden from list`, {
+                action: { label: "Undo", onClick: () => handleRestoreModel(modelId) }
+            });
+        }
     };
 
     const handleDeleteMultipleModels = (modelIds: string[]) => {
-        setDeletedModelIds((prev) => {
-            const set = new Set([...prev, ...modelIds]);
-            const updated = Array.from(set);
-            try {
-                localStorage.setItem(storageKey, JSON.stringify(updated));
-            } catch {}
-            return updated;
-        });
-        toast.info(`Hidden ${modelIds.length} model${modelIds.length > 1 ? "s" : ""} from list`, {
-            action: {
-                label: "Undo",
-                onClick: () => handleRestoreMultiple(modelIds)
-            }
-        });
+        const customIds: string[] = [];
+        const liveIds: string[] = [];
+        for (const id of modelIds) {
+            const model = provider?.models?.find((m) => m.id === id);
+            if (model?.custom) customIds.push(id);
+            else liveIds.push(id);
+        }
+        if (customIds.length > 0) deleteModelsBulkMutation.mutate(customIds);
+        if (liveIds.length > 0) {
+            setDeletedModelIds((prev) => {
+                const set = new Set([...prev, ...liveIds]);
+                const updated = Array.from(set);
+                try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
+                return updated;
+            });
+            toast.info(`Hidden ${liveIds.length} live model${liveIds.length > 1 ? "s" : ""} from list`, {
+                action: { label: "Undo", onClick: () => handleRestoreMultiple(liveIds) }
+            });
+        }
     };
 
     const handleRestoreAllModels = () => {
@@ -303,7 +310,7 @@ function ProviderDetailPage() {
                         className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
                     >
                         <Plus className="size-3.5" />
-                        <span>Add Model</span>
+                        <span>Manage Models</span>
                     </Button>
                     <Button
                         type="button"
@@ -483,20 +490,42 @@ function ProviderDetailPage() {
                 onOpenChange={setIsOAuthModalOpen}
             />
 
-            {/* Add Custom Model Dialog */}
-            <AddModelDialog
+            {/* Manage Models Dialog — fetch/select upstream, manual add, bulk remove */}
+            <ManageModelsDialog
                 open={isAddModelOpen}
                 onOpenChange={setIsAddModelOpen}
                 providerName={provider.name}
-                isPending={addModelMutation.isPending}
-                onSubmit={(modelId) =>
-                    addModelMutation.mutate(modelId, {
-                        onSuccess: () => {
-                            setIsAddModelOpen(false);
-                            toast.success(`Model "${modelId}" added to ${provider.name}`);
-                        }
-                    })
-                }
+                protocol={provider.protocol}
+                baseUrl={provider.default_base_url}
+                existingModelIds={provider.models?.map((m) => m.id) ?? []}
+                isAdding={addModelMutation.isPending || addModelsBulkMutation.isPending}
+                isBulkDeleting={deleteModelsBulkMutation.isPending}
+                onAddModels={(modelIds) => {
+                    if (modelIds.length === 1) {
+                        addModelMutation.mutate(modelIds[0]!);
+                    } else {
+                        addModelsBulkMutation.mutate(modelIds);
+                    }
+                }}
+                onDeleteModels={(modelIds) => {
+                    const customIds: string[] = [];
+                    const liveIds: string[] = [];
+                    for (const id of modelIds) {
+                        const model = provider.models?.find((m) => m.id === id);
+                        if (model?.custom) customIds.push(id);
+                        else liveIds.push(id);
+                    }
+                    if (customIds.length > 0) deleteModelsBulkMutation.mutate(customIds);
+                    if (liveIds.length > 0) {
+                        setDeletedModelIds((prev) => {
+                            const set = new Set([...prev, ...liveIds]);
+                            const updated = Array.from(set);
+                            try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
+                            return updated;
+                        });
+                        toast.info(`Hidden ${liveIds.length} live model${liveIds.length > 1 ? "s" : ""} from list`);
+                    }
+                }}
             />
         </div>
     );

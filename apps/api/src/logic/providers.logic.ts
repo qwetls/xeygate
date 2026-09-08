@@ -395,7 +395,7 @@ export class ProvidersLogic {
         ) {
             throw new Error(`Provider '${ProviderId}' not found`);
         }
-        const Trimmed = ModelId.trim();
+        const Trimmed = ProvidersLogic.StripProviderPrefix(Id, ModelId.trim());
         if (!Trimmed) throw new Error("Model ID is required");
         if (Trimmed.length > 200 || !/^[A-Za-z0-9._\-/: ]+$/.test(Trimmed))
             throw new Error(
@@ -405,13 +405,88 @@ export class ProvidersLogic {
         await addCustomModelDB(Id, Trimmed);
         const FullId = `${RuntimeAliasFor(Id)}/${Trimmed}`;
         registry.clearModelsCache();
-        return { id: FullId, object: "model", owned_by: RuntimeAliasFor(Id) };
+        return { id: FullId, object: "model", owned_by: RuntimeAliasFor(Id), custom: true };
     }
 
     public static async DeleteCustomModel(ProviderId: string, ModelId: string): Promise<void> {
-        const Deleted = await deleteCustomModelDB(ProviderId.toLowerCase(), ModelId);
+        const Bare = ProvidersLogic.StripProviderPrefix(ProviderId, ModelId);
+        const Deleted = await deleteCustomModelDB(ProviderId.toLowerCase(), Bare);
         if (!Deleted) throw new Error(`Custom model '${ModelId}' not found for '${ProviderId}'`);
         registry.clearModelsCache();
+    }
+
+    /**
+     * Bulk-list models under a provider (marketplace catalog rows). Ids are
+     * normalized the same way as the single add: a leading provider alias or
+     * base-id segment is stripped so the stored key stays the bare upstream
+     * model id. Re-adding an existing model is a no-op (INSERT OR IGNORE).
+     */
+    public static async AddCustomModels(
+        ProviderId: string,
+        ModelIds: string[]
+    ): Promise<{ added: number; models: ModelObject[] }> {
+        const Id = ProviderId.toLowerCase();
+        if (
+            !DEFAULT_PROVIDER_MAP[Id] &&
+            !(await getAllProvidersDB()).some((P) => BaseIdOf(P.providerId || P.id) === Id)
+        ) {
+            throw new Error(`Provider '${ProviderId}' not found`);
+        }
+
+        const Seen = new Set<string>();
+        const Models: ModelObject[] = [];
+        for (const Raw of ModelIds) {
+            const Trimmed = ProvidersLogic.StripProviderPrefix(Id, Raw.trim());
+            if (!Trimmed || Seen.has(Trimmed)) continue;
+            if (Trimmed.length > 200 || !/^[A-Za-z0-9._\-/: ]+$/.test(Trimmed)) {
+                throw new Error(
+                    `Invalid model ID '${Raw}': letters, numbers, dots, dashes, underscores, slashes, colons, and spaces only (max 200 chars)`
+                );
+            }
+            Seen.add(Trimmed);
+            await addCustomModelDB(Id, Trimmed);
+            Models.push({ id: `${RuntimeAliasFor(Id)}/${Trimmed}`, object: "model", owned_by: RuntimeAliasFor(Id), custom: true });
+        }
+
+        registry.clearModelsCache();
+        return { added: Models.length, models: Models };
+    }
+
+    /**
+     * Bulk-remove custom models. Ids missing from the table are skipped
+     * (idempotent), so a partial selection never fails the whole request.
+     */
+    public static async DeleteCustomModels(
+        ProviderId: string,
+        ModelIds: string[]
+    ): Promise<{ deleted: number }> {
+        const Id = ProviderId.toLowerCase();
+        let Deleted = 0;
+        for (const Raw of ModelIds) {
+            const Bare = ProvidersLogic.StripProviderPrefix(Id, Raw.trim());
+            if (!Bare) continue;
+            if (await deleteCustomModelDB(Id, Bare)) Deleted += 1;
+        }
+        if (Deleted > 0) registry.clearModelsCache();
+        return { deleted: Deleted };
+    }
+
+    /**
+     * The admin detail view shows live models as "<baseId>/<id>" and custom
+     * rows as "<alias>/<id>", but custom_models stores the bare id. Strip a
+     * leading segment only when it matches this provider's own alias/baseId,
+     * so ids that legitimately contain slashes survive untouched.
+     */
+    private static StripProviderPrefix(ProviderId: string, ModelId: string): string {
+        if (!ModelId.includes("/")) return ModelId;
+        const Alias = RuntimeAliasFor(ProviderId).toLowerCase();
+        const Base = providerBaseId(ProviderId).toLowerCase();
+        const Head = ModelId.slice(0, ModelId.indexOf("/")).toLowerCase();
+        if (Head === Alias || Head === Base) {
+            const Rest = ModelId.slice(ModelId.indexOf("/") + 1).trim();
+            if (Rest) return Rest;
+        }
+        return ModelId;
     }
 
     public static async SetRoundRobin(ProviderId: string, Enabled: boolean): Promise<ProviderDefinition> {

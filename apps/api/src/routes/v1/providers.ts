@@ -111,6 +111,16 @@ ProvidersRouter.post(
     RequireAdmin,
     ProvidersController.AddCustomModel
 );
+ProvidersRouter.post(
+    "/providers/:providerId/models/bulk",
+    RequireAdmin,
+    ProvidersController.AddCustomModelsBulk
+);
+ProvidersRouter.post(
+    "/providers/:providerId/models/bulk-delete",
+    RequireAdmin,
+    ProvidersController.DeleteCustomModelsBulk
+);
 ProvidersRouter.delete(
     "/providers/:providerId/models/:modelId{.+}",
     RequireAdmin,

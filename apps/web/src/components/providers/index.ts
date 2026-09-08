@@ -1,4 +1,5 @@
 export { AddModelDialog } from "./providers.add-model-dialog";
+export { ManageModelsDialog } from "./providers.manage-models-dialog";
 export { ProviderCard } from "./providers.card";
 export { CatalogToolbar } from "./providers.catalog-toolbar";
 export { Catalog } from "./providers.catalog";
