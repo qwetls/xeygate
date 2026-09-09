@@ -87,6 +87,25 @@ export function ToContentfulStatusCode(status?: number): ContentfulStatusCode {
     return 500;
 }
 
+/**
+ * HTTP status for an inference failure raised below the controller layer.
+ * Registry/provider errors arrive as plain Errors, so the message is the only
+ * carrier of intent: an admin's disable veto is a definitive client error (400
+ * — retrying is pointless), an unroutable model is a 404, anything else is a
+ * gateway failure.
+ */
+export function InferenceErrorStatus(error: unknown): ContentfulStatusCode {
+    const Carrier = error as { status?: number; statusCode?: number } | null;
+    const Explicit = Carrier?.status || Carrier?.statusCode;
+    if (typeof Explicit === "number" && Explicit >= 400 && Explicit <= 599) {
+        return Explicit as ContentfulStatusCode;
+    }
+    const Message = error instanceof Error ? error.message : String(error);
+    if (/is disabled on this gateway/i.test(Message)) return 400;
+    if (/no active provider connection|not found/i.test(Message)) return 404;
+    return 500;
+}
+
 export function FormatAnthropicErrorPayload(
     message: string,
     status: number = 500,

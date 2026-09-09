@@ -1,6 +1,7 @@
 import {
     getCustomModelsByProviderDB,
     getCustomModelsForProviderDB,
+    getDisabledModelIdsForProviderDB,
     userAuthStore,
     type CustomModelRow
 } from "@srouter/db";
@@ -71,4 +72,27 @@ export async function SelectMarketplaceRows(
     return base === key
         ? getCustomModelsByProviderDB(key)
         : getCustomModelsForProviderDB(key, base);
+}
+
+/**
+ * Model ids disabled for one provider row.
+ *
+ * A rule lives under the key it was written at: platform rules under the
+ * shared base id (so they shadow every connection of that driver), creator
+ * rules under the connection id (a UUID, which can never collide with a base
+ * id). Both are consulted here — the same union `IsModelDisabled` applies at
+ * routing time — so a listing is never advertised while every connection that
+ * could serve it is vetoed.
+ */
+export async function SelectDisabledModelIds(
+    row: { id: string; providerId?: string | null }
+): Promise<Set<string>> {
+    const key = (row.providerId || row.id).toLowerCase();
+    const base = providerBaseId(key).toLowerCase();
+    if (base === key) return getDisabledModelIdsForProviderDB(key);
+    const [own, inherited] = await Promise.all([
+        getDisabledModelIdsForProviderDB(key),
+        getDisabledModelIdsForProviderDB(base)
+    ]);
+    return new Set([...own, ...inherited]);
 }

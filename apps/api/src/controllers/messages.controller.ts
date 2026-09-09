@@ -11,6 +11,7 @@ import type { MarketplaceScope } from "@/logic/official.logic.js";
 import {
     AnthropicErr,
     FormatAnthropicErrorPayload,
+    InferenceErrorStatus,
     Ok,
     ToContentfulStatusCode
 } from "@/utils/response.js";
@@ -90,14 +91,7 @@ export class MessagesController {
                         });
                     }
                 } catch (error) {
-                    const status =
-                        (error as { status?: number; statusCode?: number })?.status ||
-                        (error as { status?: number; statusCode?: number })?.statusCode ||
-                        (/no active provider connection|not found/i.test(
-                            error instanceof Error ? error.message : String(error)
-                        )
-                            ? 404
-                            : 500);
+                    const status = InferenceErrorStatus(error);
                     const errorMessage =
                         error instanceof Error ? error.message : "Error occurred during streaming";
                     await stream.writeSSE({
@@ -123,14 +117,7 @@ export class MessagesController {
             });
             return Ok(c, AnthropicRes);
         } catch (error) {
-            const status =
-                (error as { status?: number; statusCode?: number })?.status ||
-                (error as { status?: number; statusCode?: number })?.statusCode ||
-                (/no active provider connection|not found/i.test(
-                    error instanceof Error ? error.message : String(error)
-                )
-                    ? 404
-                    : 500);
+            const status = InferenceErrorStatus(error);
             const errorMessage = error instanceof Error ? error.message : "Internal server error";
             return AnthropicErr(c, errorMessage, ToContentfulStatusCode(status));
         }

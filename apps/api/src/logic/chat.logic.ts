@@ -55,6 +55,9 @@ function ExtractStatusCode(
         }
     }
     const msg = typeof err === "string" ? err : err.message || String(err);
+    if (/is disabled on this gateway/i.test(msg)) {
+        return 400;
+    }
     if (/no active provider connection|not found|unknown model|invalid model|no provider found/i.test(msg)) {
         return 404;
     }
@@ -68,10 +71,14 @@ function ShouldTriggerFallback(
     err: Error | ErrorWithStatus | string | null | undefined
 ): boolean {
     if (!rule.enabled) return false;
+    // An admin veto is definitive — never launder a disabled-model refusal
+    // through a fallback rule's trigger list, regardless of the configured
+    // status codes.
+    const msg = typeof err === "string" ? err : err ? err.message || String(err) : "";
+    if (/is disabled on this gateway/i.test(msg)) return false;
     if (!rule.triggerOnStatus || rule.triggerOnStatus.length === 0) return true;
     const status = ExtractStatusCode(err);
     if (status && rule.triggerOnStatus.includes(status)) return true;
-    const msg = typeof err === "string" ? err : err ? err.message || String(err) : "";
     if (
         /rate\s*limit|too\s+many\s+requests|quota|exhausted|capacity|high\s+traffic|overloaded|no active provider connection|not found|unknown model|invalid model|no provider found|insufficient tokens|insufficient_quota|billing_error/i.test(
             msg

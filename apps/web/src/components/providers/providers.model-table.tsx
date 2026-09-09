@@ -13,11 +13,13 @@ import {
     ArrowDown,
     ArrowUp,
     ArrowUpDown,
+    Ban,
     Bot,
     Check,
     ChevronLeft,
     ChevronRight,
     Copy,
+    RotateCcw,
     Star,
     Trash2,
     X
@@ -39,8 +41,13 @@ interface ProviderModelTableProps {
     models: ModelObject[];
     copied: string | null;
     onCopy: (modelId: string) => void;
+    /** Hard-remove a custom listing. Live models are disabled, never deleted. */
     onDelete?: (modelId: string) => void;
-    onDeleteMultiple?: (modelIds: string[]) => void;
+    /** Server-side disable: hides the model from routing and every listing. */
+    onDisable?: (modelId: string) => void;
+    onEnable?: (modelId: string) => void;
+    onDisableMultiple?: (modelIds: string[]) => void;
+    onEnableMultiple?: (modelIds: string[]) => void;
 }
 
 export function ProviderModelTable({
@@ -48,7 +55,10 @@ export function ProviderModelTable({
     copied,
     onCopy,
     onDelete,
-    onDeleteMultiple
+    onDisable,
+    onEnable,
+    onDisableMultiple,
+    onEnableMultiple
 }: ProviderModelTableProps) {
     const [sorting, setSorting] = useState<SortingState>([]);
     const [pagination, setPagination] = useState<PaginationState>({
@@ -64,6 +74,9 @@ export function ProviderModelTable({
             return models;
         }
         return [...models].sort((a, b) => {
+            const disabledA = a.disabled ? 1 : 0;
+            const disabledB = b.disabled ? 1 : 0;
+            if (disabledA !== disabledB) return disabledA - disabledB;
             const favA = isFavorite(a.id) ? 1 : 0;
             const favB = isFavorite(b.id) ? 1 : 0;
             if (favA !== favB) return favB - favA;
@@ -118,23 +131,36 @@ export function ProviderModelTable({
         });
     };
 
+    const clearSelection = () => {
+        setSelectedIds([]);
+        setLastSelectedId(null);
+    };
+
     const handleBulkFavorite = () => {
         addMultipleFavorites(selectedIds);
         toast.success(
             `Pinned ${selectedIds.length} model${selectedIds.length > 1 ? "s" : ""} to favorites`
         );
-        setSelectedIds([]);
-        setLastSelectedId(null);
+        clearSelection();
     };
 
-    const handleBulkDelete = () => {
+    const handleBulkDisable = () => {
         const targets = [...selectedIds];
-        setSelectedIds([]);
-        setLastSelectedId(null);
-        if (onDeleteMultiple) {
-            onDeleteMultiple(targets);
-        } else if (onDelete) {
-            targets.forEach((id) => onDelete(id));
+        clearSelection();
+        if (onDisableMultiple) {
+            onDisableMultiple(targets);
+        } else if (onDisable) {
+            targets.forEach((id) => onDisable(id));
+        }
+    };
+
+    const handleBulkEnable = () => {
+        const targets = [...selectedIds];
+        clearSelection();
+        if (onEnableMultiple) {
+            onEnableMultiple(targets);
+        } else if (onEnable) {
+            targets.forEach((id) => onEnable(id));
         }
     };
 
@@ -230,9 +256,11 @@ export function ProviderModelTable({
 
                             <span
                                 className={`font-bold truncate max-w-[220px] sm:max-w-md md:max-w-lg block text-xs ${
-                                    isFav
-                                        ? "text-amber-500 dark:text-amber-400"
-                                        : "text-[var(--ink)]"
+                                    model.disabled
+                                        ? "text-[var(--ink-3)] line-through"
+                                        : isFav
+                                          ? "text-amber-500 dark:text-amber-400"
+                                          : "text-[var(--ink)]"
                                 }`}
                                 title={model.id}
                             >
@@ -264,13 +292,21 @@ export function ProviderModelTable({
                 id: "status",
                 header: "Status",
                 cell: ({ row }) => {
-                    const isFav = isFavorite(row.original.id);
+                    const model = row.original;
+                    const isFav = isFavorite(model.id);
                     return (
                         <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[10.5px] font-semibold">
-                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <span>Active</span>
-                            </span>
+                            {model.disabled ? (
+                                <span className="inline-flex items-center gap-1 rounded-[4px] bg-[var(--field)] px-1.5 py-0.2 text-[9.5px] font-bold text-[var(--ink-3)] border border-[var(--line-strong)]">
+                                    <Ban className="size-2.5" />
+                                    <span>Disabled</span>
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-[10.5px] font-semibold">
+                                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span>Active</span>
+                                </span>
+                            )}
                             {isFav && (
                                 <span className="hidden md:inline-flex items-center gap-0.5 rounded-[4px] bg-amber-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-amber-500 border border-amber-500/20">
                                     ★ Pinned
@@ -287,12 +323,35 @@ export function ProviderModelTable({
                     const model = row.original;
                     return (
                         <div className="flex items-center justify-end gap-2">
-                            {onDelete && (
+                            {model.disabled
+                                ? onEnable && (
+                                      <button
+                                          type="button"
+                                          onClick={() => onEnable(model.id)}
+                                          className="inline-flex items-center gap-1 rounded-[4px] px-2 py-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                                          title="Enable model — restore routing"
+                                      >
+                                          <RotateCcw className="size-3" />
+                                          <span>Enable</span>
+                                      </button>
+                                  )
+                                : onDisable && (
+                                      <button
+                                          type="button"
+                                          onClick={() => onDisable(model.id)}
+                                          className="inline-flex items-center gap-1 rounded-[4px] px-2 py-1 text-[10.5px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                          title="Disable model — removes it from routing and listings"
+                                      >
+                                          <Ban className="size-3" />
+                                          <span>Disable</span>
+                                      </button>
+                                  )}
+                            {onDelete && model.custom && (
                                 <button
                                     type="button"
                                     onClick={() => onDelete(model.id)}
                                     className="text-[var(--ink-3)] hover:text-rose-500 hover:bg-rose-500/10 p-1 rounded transition-colors cursor-pointer"
-                                    title="Hide model from list"
+                                    title="Delete custom model"
                                 >
                                     <Trash2 className="size-3" />
                                 </button>
@@ -306,6 +365,8 @@ export function ProviderModelTable({
             copied,
             onCopy,
             onDelete,
+            onDisable,
+            onEnable,
             isFavorite,
             toggleFavorite,
             selectedIds,
@@ -362,15 +423,27 @@ export function ProviderModelTable({
                             <span>Favorite</span>
                         </button>
 
-                        {(onDeleteMultiple || onDelete) && (
+                        {(onDisableMultiple || onDisable) && (
                             <button
                                 type="button"
-                                onClick={handleBulkDelete}
-                                className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 hover:bg-destructive/20 px-3 py-1.5 text-xs font-semibold text-destructive transition-all cursor-pointer border border-destructive/30 shadow-2xs hover:scale-105 active:scale-95"
-                                title="Hide selected models from list"
+                                onClick={handleBulkDisable}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 transition-all cursor-pointer border border-amber-500/30 shadow-2xs hover:scale-105 active:scale-95"
+                                title="Disable selected models — removes them from routing and listings"
                             >
-                                <Trash2 className="size-3.5" />
-                                <span>Hide</span>
+                                <Ban className="size-3.5" />
+                                <span>Disable</span>
+                            </button>
+                        )}
+
+                        {(onEnableMultiple || onEnable) && (
+                            <button
+                                type="button"
+                                onClick={handleBulkEnable}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer border border-emerald-500/30 shadow-2xs hover:scale-105 active:scale-95"
+                                title="Enable selected models — restore routing"
+                            >
+                                <RotateCcw className="size-3.5" />
+                                <span>Enable</span>
                             </button>
                         )}
 
@@ -428,6 +501,8 @@ export function ProviderModelTable({
                                 <TableRow
                                     key={row.id}
                                     className={`group transition-colors ${
+                                        row.original.disabled ? "opacity-60" : ""
+                                    } ${
                                         isSelected
                                             ? "bg-amber-500/10 hover:bg-amber-500/15 dark:bg-amber-500/15 dark:hover:bg-amber-500/20"
                                             : "hover:bg-[var(--hover)]/30"

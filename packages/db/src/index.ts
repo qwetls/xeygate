@@ -9,6 +9,7 @@ export * from "./settings.js";
 export * from "./fallbacks.js";
 export * from "./tokenSaver.js";
 export * from "./customModels.js";
+export * from "./disabledModels.js";
 export * from "./row-utils.js";
 export * from "./client.js";
 export * from "./transactions.js";

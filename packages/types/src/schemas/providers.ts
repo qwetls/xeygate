@@ -104,3 +104,35 @@ export const ToggleRoundRobinSchema = z.object({
 });
 
 export type ToggleRoundRobinZod = z.infer<typeof ToggleRoundRobinSchema>;
+
+export const DisableModelSchema = z.object({
+    model_id: z
+        .string({ required_error: "Field 'model_id' is required" })
+        .min(1, "Field 'model_id' cannot be empty")
+        .max(200, "Model ID too long")
+        .regex(
+            /^[A-Za-z0-9._\-/: ]+$/,
+            "Model IDs may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
+        ),
+    reason: z.string().max(500).optional()
+});
+
+export type DisableModelZod = z.infer<typeof DisableModelSchema>;
+
+export const BulkDisableModelsSchema = z.object({
+    models: z
+        .array(
+            z
+                .string()
+                .max(200, "Model ID too long")
+                .regex(
+                    /^[A-Za-z0-9._\-/: ]+$/,
+                    "Model IDs may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
+                )
+        )
+        .min(1, "At least one model ID is required")
+        .max(300, "Too many models"),
+    reason: z.string().max(500).optional()
+});
+
+export type BulkDisableModelsZod = z.infer<typeof BulkDisableModelsSchema>;

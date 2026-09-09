@@ -7,6 +7,7 @@ import { isSeedProvider, providerAlias, providerBaseId } from "@srouter/constant
 import { registry } from "@/services/registry.js";
 import {
     IsOfficialProviderRow,
+    SelectDisabledModelIds,
     SelectMarketplaceRows,
     type MarketplaceScope
 } from "@/logic/official.logic.js";
@@ -28,6 +29,16 @@ const MIN_SUCCESS_RATE = 0.5;
 
 const ROUTE_CACHE_TTL_MS = 30_000;
 const routeCache = new Map<string, { expires: number; chain: string[] | null }>();
+
+/**
+ * Drops cached marketplace chains so a freshly toggled disable/enable rule is
+ * visible on the next request instead of up to ROUTE_CACHE_TTL_MS later.
+ * Without a model argument the whole cache is cleared (cheap — entries are
+ * rebuilt lazily on demand).
+ */
+export function InvalidateRouteCache(): void {
+    routeCache.clear();
+}
 
 function clamp01(value: number): number {
     return Math.min(1, Math.max(0, value));
@@ -131,8 +142,11 @@ export async function ResolveMarketplaceRoute(
         // by every official connection of that driver; creator listings stay
         // connection-scoped, so the two key spaces never cross.
         const rows = await SelectMarketplaceRows(provider, isOfficial);
+        if (rows.length === 0) continue;
+        const Disabled = await SelectDisabledModelIds(provider);
         for (const row of rows) {
             if (row.modelId.toLowerCase() !== Bare) continue;
+            if (Disabled.has(row.modelId.toLowerCase())) continue;
 
             const stats =
                 quality.get(provider.id.toLowerCase()) ??

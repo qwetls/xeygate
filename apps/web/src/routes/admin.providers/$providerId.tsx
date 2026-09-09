@@ -3,6 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
     AlertTriangle,
     ArrowLeft,
+    Ban,
     ExternalLink,
     LayoutGrid,
     List,
@@ -43,13 +44,18 @@ function ProviderDetailPage() {
         isLoading,
         error,
         refetch,
+        disabledModels,
         addMutation,
         deleteMutation,
         toggleRoundRobinMutation,
         addModelMutation,
         deleteModelMutation,
         addModelsBulkMutation,
-        deleteModelsBulkMutation
+        deleteModelsBulkMutation,
+        disableModelMutation,
+        enableModelMutation,
+        disableModelsBulkMutation,
+        enableModelsBulkMutation
     } = useProvider(providerId);
 
     const [modelSearch, setModelSearch] = useState("");
@@ -61,84 +67,26 @@ function ProviderDetailPage() {
     const { copied, copy } = useCopy();
     const { isFavorite } = useFavorites();
 
-    const storageKey = `xeygate_deleted_models_${providerId}`;
-    const [deletedModelIds, setDeletedModelIds] = useState<string[]>(() => {
-        try {
-            const saved = localStorage.getItem(storageKey);
-            return saved ? JSON.parse(saved) : [];
-        } catch {
-            return [];
-        }
-    });
-
-    const handleRestoreModel = (modelId: string) => {
-        setDeletedModelIds((prev) => {
-            const updated = prev.filter((id) => id !== modelId);
-            try {
-                localStorage.setItem(storageKey, JSON.stringify(updated));
-            } catch {}
-            return updated;
-        });
-        toast.success(`Model "${modelId}" restored`);
-    };
-
-    const handleRestoreMultiple = (modelIds: string[]) => {
-        const removeSet = new Set(modelIds);
-        setDeletedModelIds((prev) => {
-            const updated = prev.filter((id) => !removeSet.has(id));
-            try {
-                localStorage.setItem(storageKey, JSON.stringify(updated));
-            } catch {}
-            return updated;
-        });
-        toast.success(`Restored ${modelIds.length} hidden model${modelIds.length > 1 ? "s" : ""}`);
-    };
+    // The denylist is server state (`disabled_models`) and the detail endpoint
+    // flags each listing with `disabled`, so nothing is hidden client-side.
+    const disabledEntries = disabledModels.data?.data ?? [];
 
     const handleDeleteModel = (modelId: string) => {
         const model = provider?.models?.find((m) => m.id === modelId);
-        if (model?.custom) {
-            deleteModelMutation.mutate(modelId);
-        } else {
-            setDeletedModelIds((prev) => {
-                const updated = prev.includes(modelId) ? prev : [...prev, modelId];
-                try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
-                return updated;
-            });
-            toast.info(`Model "${modelId}" hidden from list`, {
-                action: { label: "Undo", onClick: () => handleRestoreModel(modelId) }
-            });
-        }
+        if (model?.custom) deleteModelMutation.mutate(modelId);
+        else disableModelMutation.mutate({ modelId });
     };
 
-    const handleDeleteMultipleModels = (modelIds: string[]) => {
-        const customIds: string[] = [];
-        const liveIds: string[] = [];
-        for (const id of modelIds) {
-            const model = provider?.models?.find((m) => m.id === id);
-            if (model?.custom) customIds.push(id);
-            else liveIds.push(id);
-        }
-        if (customIds.length > 0) deleteModelsBulkMutation.mutate(customIds);
-        if (liveIds.length > 0) {
-            setDeletedModelIds((prev) => {
-                const set = new Set([...prev, ...liveIds]);
-                const updated = Array.from(set);
-                try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
-                return updated;
-            });
-            toast.info(`Hidden ${liveIds.length} live model${liveIds.length > 1 ? "s" : ""} from list`, {
-                action: { label: "Undo", onClick: () => handleRestoreMultiple(liveIds) }
-            });
-        }
+    const handleDisableMultipleModels = (modelIds: string[]) => {
+        disableModelsBulkMutation.mutate({ modelIds });
     };
 
-    const handleRestoreAllModels = () => {
-        const count = deletedModelIds.length;
-        setDeletedModelIds([]);
-        try {
-            localStorage.removeItem(storageKey);
-        } catch {}
-        toast.success(`Restored ${count} hidden model${count > 1 ? "s" : ""}`);
+    const handleEnableMultipleModels = (modelIds: string[]) => {
+        enableModelsBulkMutation.mutate(modelIds);
+    };
+
+    const handleEnableAllDisabled = () => {
+        enableModelsBulkMutation.mutate(disabledEntries.map((entry) => entry.model_id));
     };
 
     const handleAddConnection = () => {
@@ -176,10 +124,12 @@ function ProviderDetailPage() {
         });
     };
 
-    const activeModels = useMemo(() => {
-        if (!provider?.models) return [];
-        return provider.models.filter((m) => !deletedModelIds.includes(m.id));
-    }, [provider?.models, deletedModelIds]);
+    const activeModels = useMemo(() => provider?.models ?? [], [provider?.models]);
+
+    const disabledCount = useMemo(
+        () => activeModels.filter((m) => m.disabled).length,
+        [activeModels]
+    );
 
     const filteredModels = useMemo(() => {
         return activeModels.filter((m) => m.id.toLowerCase().includes(modelSearch.toLowerCase()));
@@ -355,23 +305,36 @@ function ProviderDetailPage() {
             <div className="space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60 pb-3">
                     <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <h2 className="text-xs font-bold uppercase tracking-wider text-foreground">
                                 Available Models ({activeModels.length})
                             </h2>
-                            {deletedModelIds.length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={handleRestoreAllModels}
-                                    className="text-[10.5px] text-amber-500 hover:text-amber-400 hover:underline cursor-pointer flex items-center gap-1"
-                                >
-                                    <RotateCcw className="size-3" />
-                                    <span>Restore {deletedModelIds.length} deleted</span>
-                                </button>
+                            {disabledCount > 0 && (
+                                <>
+                                    <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border border-[var(--line-strong)] bg-[var(--field)] text-[var(--ink-3)]">
+                                        <Ban className="size-2.5" />
+                                        <span>{disabledCount} disabled</span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={handleEnableAllDisabled}
+                                        disabled={enableModelsBulkMutation.isPending}
+                                        className="text-[10.5px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                        title="Re-enable all disabled models on this endpoint"
+                                    >
+                                        <RotateCcw className="size-3" />
+                                        <span>Enable all</span>
+                                    </button>
+                                </>
                             )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Models exposed by {provider.name} and routed through this gateway.
+                            {disabledCount > 0 && (
+                                <span className="text-[var(--ink-3)]">
+                                    {" "}Disabled models are hidden from public listings and no longer serve traffic.
+                                </span>
+                            )}
                         </p>
                     </div>
 
@@ -437,15 +400,11 @@ function ProviderDetailPage() {
                                 ? `No models matched your search query "${modelSearch}".`
                                 : "No models currently available."}
                         </EmptyTitle>
-                        {deletedModelIds.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={handleRestoreAllModels}
-                                className="inline-flex items-center gap-1 text-xs text-amber-500 hover:underline cursor-pointer"
-                            >
-                                <RotateCcw className="size-3" />
-                                <span>Restore all {deletedModelIds.length} models</span>
-                            </button>
+                        {disabledCount > 0 && (
+                            <EmptyDescription>
+                                Disabled models stay listed here with a restore toggle — enable them
+                                to bring routing back.
+                            </EmptyDescription>
                         )}
                     </Empty>
                 ) : viewMode === "table" ? (
@@ -454,7 +413,10 @@ function ProviderDetailPage() {
                         copied={copied}
                         onCopy={(id) => void copy(id)}
                         onDelete={handleDeleteModel}
-                        onDeleteMultiple={handleDeleteMultipleModels}
+                        onDisable={handleDeleteModel}
+                        onEnable={handleEnableModel}
+                        onDisableMultiple={handleDisableMultipleModels}
+                        onEnableMultiple={handleEnableMultipleModels}
                     />
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -465,6 +427,8 @@ function ProviderDetailPage() {
                                 copied={copied === m.id}
                                 onCopy={(id) => void copy(id)}
                                 onDelete={handleDeleteModel}
+                                onDisable={handleDeleteModel}
+                                onEnable={handleEnableModel}
                             />
                         ))}
                     </div>
@@ -499,7 +463,9 @@ function ProviderDetailPage() {
                 baseUrl={provider.default_base_url}
                 existingModelIds={provider.models?.map((m) => m.id) ?? []}
                 isAdding={addModelMutation.isPending || addModelsBulkMutation.isPending}
-                isBulkDeleting={deleteModelsBulkMutation.isPending}
+                isBulkDeleting={
+                    deleteModelsBulkMutation.isPending || disableModelsBulkMutation.isPending
+                }
                 onAddModels={(modelIds) => {
                     if (modelIds.length === 1) {
                         addModelMutation.mutate(modelIds[0]!);
@@ -517,13 +483,10 @@ function ProviderDetailPage() {
                     }
                     if (customIds.length > 0) deleteModelsBulkMutation.mutate(customIds);
                     if (liveIds.length > 0) {
-                        setDeletedModelIds((prev) => {
-                            const set = new Set([...prev, ...liveIds]);
-                            const updated = Array.from(set);
-                            try { localStorage.setItem(storageKey, JSON.stringify(updated)); } catch {}
-                            return updated;
+                        disableModelsBulkMutation.mutate({
+                            modelIds: liveIds,
+                            reason: "Removed from catalog"
                         });
-                        toast.info(`Hidden ${liveIds.length} live model${liveIds.length > 1 ? "s" : ""} from list`);
                     }
                 }}
             />

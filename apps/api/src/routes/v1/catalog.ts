@@ -3,7 +3,7 @@ import { getAllProvidersDB, listModelPricingDB } from "@srouter/db";
 import type { ProviderConfig } from "@srouter/types";
 import { isSeedProvider, providerBaseId } from "@srouter/constants";
 import { getPricingForModel } from "@srouter/pricing";
-import { IsOfficialProviderRow, SelectMarketplaceRows } from "@/logic/official.logic.js";
+import { IsOfficialProviderRow, SelectDisabledModelIds, SelectMarketplaceRows } from "@/logic/official.logic.js";
 import { RuntimeAliasFor, StorefrontName } from "@/logic/providers.logic.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -28,6 +28,24 @@ interface CatalogItem {
 function BareModelId(modelWithPrefix: string): string {
     const slash = modelWithPrefix.indexOf("/");
     return slash >= 0 ? modelWithPrefix.slice(slash + 1) : modelWithPrefix;
+}
+
+/**
+ * Storefront listings for one card, minus the models the platform disabled.
+ * The denylist consults both the connection key and the shared base id so a
+ * platform-wide rule always hides the model regardless of which scope it was
+ * written at.
+ */
+async function EnabledListings(
+    p: ProviderConfig,
+    official: boolean
+): Promise<Awaited<ReturnType<typeof SelectMarketplaceRows>>> {
+    const [rows, disabled] = await Promise.all([
+        SelectMarketplaceRows(p, official),
+        SelectDisabledModelIds(p)
+    ]);
+    if (disabled.size === 0) return rows;
+    return rows.filter((r) => !disabled.has(r.modelId.toLowerCase()));
 }
 
 /**
@@ -73,7 +91,7 @@ CatalogRouter.get("/catalog", async (c) => {
     const cards = await MarketplaceCards();
     const items: CatalogItem[] = await Promise.all(
         cards.map(async ({ row: p, official }) => {
-            const customModels = await SelectMarketplaceRows(p, official);
+            const customModels = await EnabledListings(p, official);
             const alias = RuntimeAliasFor((p.providerId || p.id).toLowerCase());
             const models = customModels.map((mr) => {
                 const modelId = mr.modelId;
@@ -149,7 +167,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
 
     for (const { row: p, official } of await MarketplaceCards()) {
         if (seen.has(p.providerId)) continue;
-        const rows = await SelectMarketplaceRows(p, official);
+        const rows = await EnabledListings(p, official);
         const firstModel = rows.find((mr) => {
             const bare = BareModelId(mr.modelId).toLowerCase();
             return bare === target || mr.modelId.toLowerCase() === targetFull;

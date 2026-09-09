@@ -145,6 +145,12 @@ export interface ModelObject {
     owned_by: string;
     /** True when the entry was manually added by the user (custom_models table). */
     custom?: boolean;
+    /**
+     * True when the platform disabled the model (disabled_models denylist).
+     * Only surfaced on the provider detail view — public listings drop
+     * disabled entries entirely.
+     */
+    disabled?: boolean;
 }
 
 export interface ModelListResponse {

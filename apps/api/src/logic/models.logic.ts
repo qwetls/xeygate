@@ -1,6 +1,7 @@
 import type { ModelObject } from "@srouter/types";
 import {
     getAllCustomModelsDB,
+    getAllDisabledModelsDB,
     getAllFallbackRulesDB,
     getAllProvidersDB
 } from "@srouter/db";
@@ -21,7 +22,72 @@ export class ModelsLogic {
         const Models = await registry.listAllModels(Provider, ForceRefresh);
         const Scoped = Scope === "all" ? Models : await this.FilterModelsByScope(Models, Scope);
         const Merged = await this.MergeCustomModels(Scoped, Provider, Scope);
-        return Scope === "all" ? this.MergeComboModels(Merged) : Merged;
+        return this.ExcludeDisabled(
+            Scope === "all" ? this.MergeComboModels(Merged) : Merged
+        );
+    }
+
+    /**
+     * Drop listings the platform disabled. `disabled_models` is keyed by
+     * provider id (base id for a platform rule, connection id for a
+     * connection-scoped one) while listing ids are prefixed with the runtime
+     * alias, so the denylist is re-keyed to aliases before filtering. A key
+     * fans out to every alias it owns — all connections of a driver, plus
+     * custom creator aliases — mirroring the union `IsModelDisabled` applies
+     * at routing time, so nothing stays advertised while its only supplier is
+     * vetoed. Combo listings are virtual gateway products, never disabled
+     * rows, so they survive.
+     */
+    private static async ExcludeDisabled(
+        Models: ModelObject[]
+    ): Promise<ModelObject[]> {
+        const Rows = await getAllDisabledModelsDB();
+        if (Rows.length === 0) return Models;
+
+        // Both index spaces a disable rule can be written under → aliases.
+        const AliasesByKey = new Map<string, Set<string>>();
+        const Track = (Key: string, Alias: string) => {
+            let Bucket = AliasesByKey.get(Key);
+            if (!Bucket) {
+                Bucket = new Set();
+                AliasesByKey.set(Key, Bucket);
+            }
+            Bucket.add(Alias);
+        };
+        for (const P of registry.getAllProviders().values()) {
+            if (!P.id || !P.alias) continue;
+            const Alias = P.alias.toLowerCase();
+            const Id = P.id.toLowerCase();
+            Track(Id, Alias);
+            Track(providerBaseId(Id), Alias);
+        }
+
+        const DisabledByAlias = new Map<string, Set<string>>();
+        for (const Row of Rows) {
+            const Key = Row.providerId.toLowerCase();
+            const Aliases = AliasesByKey.get(Key);
+            const Targets =
+                Aliases && Aliases.size > 0 ? [...Aliases] : [providerAlias(Key).toLowerCase()];
+            for (const Alias of Targets) {
+                let Bucket = DisabledByAlias.get(Alias);
+                if (!Bucket) {
+                    Bucket = new Set();
+                    DisabledByAlias.set(Alias, Bucket);
+                }
+                Bucket.add(Row.modelId.toLowerCase());
+            }
+        }
+
+        return Models.filter((M) => {
+            const Alias = M.owned_by.toLowerCase();
+            const Bucket = DisabledByAlias.get(Alias);
+            if (!Bucket) return true;
+            const Prefix = `${Alias}/`;
+            const Bare = M.id.toLowerCase().startsWith(Prefix)
+                ? M.id.slice(Prefix.length)
+                : M.id;
+            return !Bucket.has(Bare.toLowerCase());
+        });
     }
 
     /**
@@ -162,8 +228,9 @@ export class ModelsLogic {
         const Models = await registry.listAllModels(undefined, ForceRefresh);
         const Scoped = Scope === "all" ? Models : await this.FilterModelsByScope(Models, Scope);
         const CleanId = ModelId.replace(/^srouter\//, "");
+        const Candidates = await this.ExcludeDisabled(Scoped);
 
-        return Scoped.find(
+        return Candidates.find(
             (M) =>
                 M.id.replace(/^srouter\//, "") === CleanId ||
                 M.id.endsWith(`/${CleanId}`) ||

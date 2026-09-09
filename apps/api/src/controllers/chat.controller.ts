@@ -3,7 +3,7 @@ import { streamSSE } from "hono/streaming";
 import type { ChatCompletionRequest, APIKeyZod } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
 import type { MarketplaceScope } from "@/logic/official.logic.js";
-import { Err, FormatErrorPayload, Ok, ToContentfulStatusCode } from "@/utils/response.js";
+import { Err, FormatErrorPayload, InferenceErrorStatus, Ok, ToContentfulStatusCode } from "@/utils/response.js";
 
 function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequest {
     for (const msg of Body.messages) {
@@ -53,14 +53,7 @@ export class ChatController {
                         data: "[DONE]"
                     });
                 } catch (error) {
-                    const status =
-                        (error as { status?: number; statusCode?: number })?.status ||
-                        (error as { status?: number; statusCode?: number })?.statusCode ||
-                        (/no active provider connection|not found/i.test(
-                            error instanceof Error ? error.message : String(error)
-                        )
-                            ? 404
-                            : 500);
+                    const status = InferenceErrorStatus(error);
                     const ErrorMessage =
                         error instanceof Error ? error.message : "Error occurred during streaming";
                     await stream.writeSSE({
@@ -82,14 +75,7 @@ export class ChatController {
             );
             return Ok(c, ResponseData);
         } catch (error) {
-            const status =
-                (error as { status?: number; statusCode?: number })?.status ||
-                (error as { status?: number; statusCode?: number })?.statusCode ||
-                (/no active provider connection|not found/i.test(
-                    error instanceof Error ? error.message : String(error)
-                )
-                    ? 404
-                    : 500);
+            const status = InferenceErrorStatus(error);
             const ErrorMessage = error instanceof Error ? error.message : "Internal server error";
             return Err(c, ErrorMessage, ToContentfulStatusCode(status));
         }

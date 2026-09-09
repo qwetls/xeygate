@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { ImageGenerationRequest } from "@srouter/types";
 import { ImagesLogic } from "@/logic/images.logic.js";
+import { GetErrorTypeFromStatus, InferenceErrorStatus } from "@/utils/response.js";
 
 export class ImagesController {
     public static async generate(c: Context) {
@@ -27,11 +28,12 @@ export class ImagesController {
                 throw err;
             }
             const message = err instanceof Error ? err.message : String(err);
-            throw new HTTPException(500, {
+            const status = InferenceErrorStatus(err);
+            throw new HTTPException(status, {
                 message: JSON.stringify({
                     error: {
                         message,
-                        type: "server_error",
+                        type: GetErrorTypeFromStatus(status),
                         code: "image_generation_failed"
                     }
                 })

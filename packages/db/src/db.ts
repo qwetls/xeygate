@@ -229,6 +229,17 @@ const TABLES: TableDef[] = [
         ]
     },
     {
+        name: "disabled_models",
+        columns: [
+            { name: "provider_id", definition: "TEXT NOT NULL" },
+            { name: "model_id", definition: "TEXT NOT NULL" },
+            { name: "disabled_by", definition: "TEXT NOT NULL" },
+            { name: "reason", definition: "TEXT" },
+            { name: "created_at", definition: "INTEGER NOT NULL" },
+            { name: "PRIMARY KEY (provider_id, model_id)", definition: "" }
+        ]
+    },
+    {
         name: "transactions",
         columns: [
             { name: "id", definition: "TEXT PRIMARY KEY" },
@@ -295,6 +306,7 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_fallback_rules_priority ON fallback_rules(priority ASC, created_at ASC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_providers_provider_id ON providers(provider_id);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_custom_models_provider ON custom_models(provider_id, created_at ASC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_disabled_models_provider ON disabled_models(provider_id);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_transactions_user_created ON transactions(user_id, created_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_user_created ON creator_earnings(user_id, created_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_provider ON creator_earnings(provider_id, created_at DESC);" },

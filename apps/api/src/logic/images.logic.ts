@@ -37,6 +37,9 @@ function ExtractStatusCode(
         }
     }
     const msg = typeof err === "string" ? err : err.message || String(err);
+    if (/is disabled on this gateway/i.test(msg)) {
+        return 400;
+    }
     if (/no active provider connection|not found|unknown model|invalid model|no provider found/i.test(msg)) {
         return 404;
     }
@@ -44,6 +47,10 @@ function ExtractStatusCode(
 }
 
 function ShouldTriggerFallback(rule: FallbackRule, error: Error | ErrorWithStatus | string): boolean {
+    // An admin veto is definitive — never launder a disabled-model refusal
+    // through a fallback rule's trigger list.
+    const msg = typeof error === "string" ? error : error ? error.message || String(error) : "";
+    if (/is disabled on this gateway/i.test(msg)) return false;
     const errorStatusCode = ExtractStatusCode(error);
     if (!rule.triggerOnStatus || rule.triggerOnStatus.length === 0) {
         return true;

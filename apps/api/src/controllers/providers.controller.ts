@@ -3,7 +3,7 @@ import type { CreateProviderPayload } from "@/logic/providers.logic.js";
 import type { ProviderConfig } from "@srouter/types";
 import { ProvidersLogic } from "@/logic/providers.logic.js";
 import { deleteProviderDB, getProviderByIdDB } from "@srouter/db";
-import { AddCustomModelSchema, BulkModelsSchema, CreateProviderSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
+import { AddCustomModelSchema, BulkDisableModelsSchema, BulkModelsSchema, CreateProviderSchema, DisableModelSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -168,6 +168,119 @@ export class ProvidersController {
             return Ok(c, Result);
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Failed to toggle round-robin mode", 400);
+        }
+    }
+
+    // Server-side model disable rules. The model id travels in the body —
+    // upstream ids legitimately contain slashes, which cannot be a path param
+    // without colliding with the action segment.
+    public static async DisableModel(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = DisableModelSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid model payload", 400);
+        }
+
+        try {
+            const Row = await ProvidersLogic.DisableModel(
+                ProviderId,
+                Parsed.data.model_id,
+                (c.get("userId") as string) || "admin",
+                Parsed.data.reason
+            );
+            return Ok(c, {
+                object: "model.disable",
+                provider: ProviderId.toLowerCase(),
+                model: Row.modelId,
+                disabled: true,
+                disabled_at: Row.createdAt,
+                reason: Row.reason ?? null
+            });
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Failed to disable model", 400);
+        }
+    }
+
+    public static async EnableModel(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = DisableModelSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid model payload", 400);
+        }
+
+        try {
+            await ProvidersLogic.EnableModel(ProviderId, Parsed.data.model_id);
+            return Ok(c, {
+                object: "model.disable",
+                provider: ProviderId.toLowerCase(),
+                model: Parsed.data.model_id,
+                disabled: false
+            });
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Failed to enable model", 400);
+        }
+    }
+
+    public static async ListDisabledModels(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const Rows = await ProvidersLogic.ListDisabledModels(ProviderId);
+        return Ok(c, {
+            object: "list",
+            data: Rows.map((R) => ({
+                model_id: R.modelId,
+                disabled_by: R.disabledBy,
+                reason: R.reason ?? null,
+                disabled_at: R.createdAt
+            }))
+        });
+    }
+
+    public static async DisableModelsBulk(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = BulkDisableModelsSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid models payload", 400);
+        }
+
+        try {
+            const Result = await ProvidersLogic.DisableModels(
+                ProviderId,
+                Parsed.data.models,
+                (c.get("userId") as string) || "admin",
+                Parsed.data.reason
+            );
+            return Ok(c, { object: "list.disable", provider: ProviderId.toLowerCase(), ...Result });
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Failed to disable models", 400);
+        }
+    }
+
+    public static async EnableModelsBulk(c: Context): Promise<Response> {
+        const ProviderId = c.req.param("providerId");
+        if (!ProviderId) return Err(c, "Provider ID is required", 400);
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = BulkModelsSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid models payload", 400);
+        }
+
+        try {
+            const Result = await ProvidersLogic.EnableModels(ProviderId, Parsed.data.models);
+            return Ok(c, { object: "list.enable", provider: ProviderId.toLowerCase(), ...Result });
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Failed to enable models", 400);
         }
     }
 

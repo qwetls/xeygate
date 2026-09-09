@@ -133,3 +133,32 @@ ProvidersRouter.patch(
     RequireAdmin,
     ProvidersController.ToggleRoundRobin
 );
+
+// Server-side model disable rules (platform governance). Registered before
+// "/providers/:providerId" is irrelevant — that GET is on a different verb,
+// but the ":providerId" wildcard must not swallow these action segments.
+ProvidersRouter.post(
+    "/providers/:providerId/models/disable",
+    RequireAdmin,
+    ProvidersController.DisableModel
+);
+ProvidersRouter.post(
+    "/providers/:providerId/models/enable",
+    RequireAdmin,
+    ProvidersController.EnableModel
+);
+ProvidersRouter.get(
+    "/providers/:providerId/models/disabled",
+    RequireAdmin,
+    ProvidersController.ListDisabledModels
+);
+ProvidersRouter.post(
+    "/providers/:providerId/models/bulk-disable",
+    RequireAdmin,
+    ProvidersController.DisableModelsBulk
+);
+ProvidersRouter.post(
+    "/providers/:providerId/models/bulk-enable",
+    RequireAdmin,
+    ProvidersController.EnableModelsBulk
+);

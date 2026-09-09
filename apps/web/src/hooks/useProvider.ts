@@ -17,6 +17,13 @@ export interface AddConnectionPayload {
     api_key?: string;
 }
 
+export interface DisabledModelEntry {
+    model_id: string;
+    disabled_by: string;
+    reason: string | null;
+    disabled_at: number;
+}
+
 /**
  * Loads a provider definition and exposes add/delete connection mutations with
  * query invalidation for both the detail view and the catalog.
@@ -131,14 +138,102 @@ export function useProvider(providerId: string) {
         }
     });
 
+    /**
+     * Server-side disable rules for this endpoint. The provider detail view
+     * already carries the `disabled` flag per model; this query adds the
+     * governance metadata (who disabled it, when, why).
+     */
+    const disabledModelsQuery = useQuery({
+        queryKey: ["providers", providerId, "disabled-models"],
+        queryFn: () =>
+            api.get<{ object: "list"; data: DisabledModelEntry[] }>(
+                `/v1/providers/${providerId}/models/disabled`
+            ),
+        enabled: Boolean(providerId)
+    });
+
+    const invalidateModelLists = () => {
+        void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
+        void queryClient.invalidateQueries({
+            queryKey: ["providers", providerId, "disabled-models"]
+        });
+        void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+        void queryClient.invalidateQueries({ queryKey: ["models"] });
+    };
+
+    const disableModelMutation = useMutation({
+        mutationFn: (payload: { modelId: string; reason?: string }) =>
+            api.post<{ model: string }>(`/v1/providers/${providerId}/models/disable`, {
+                model_id: payload.modelId,
+                reason: payload.reason
+            }),
+        onSuccess: (data) => {
+            invalidateModelLists();
+            toast.success(`Model "${data.model}" disabled — it no longer serves traffic`);
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to disable model");
+        }
+    });
+
+    const enableModelMutation = useMutation({
+        mutationFn: (modelId: string) =>
+            api.post<{ model: string }>(`/v1/providers/${providerId}/models/enable`, {
+                model_id: modelId
+            }),
+        onSuccess: () => {
+            invalidateModelLists();
+            toast.success("Model enabled — routing restored");
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to enable model");
+        }
+    });
+
+    const disableModelsBulkMutation = useMutation({
+        mutationFn: (payload: { modelIds: string[]; reason?: string }) =>
+            api.post<{ disabled: number }>(
+                `/v1/providers/${providerId}/models/bulk-disable`,
+                { models: payload.modelIds, reason: payload.reason }
+            ),
+        onSuccess: (data) => {
+            invalidateModelLists();
+            toast.success(
+                `Disabled ${data.disabled} model${data.disabled === 1 ? "" : "s"} — they no longer serve traffic`
+            );
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to disable models");
+        }
+    });
+
+    const enableModelsBulkMutation = useMutation({
+        mutationFn: (modelIds: string[]) =>
+            api.post<{ enabled: number }>(`/v1/providers/${providerId}/models/bulk-enable`, {
+                models: modelIds
+            }),
+        onSuccess: (data) => {
+            invalidateModelLists();
+            toast.success(`Enabled ${data.enabled} model${data.enabled === 1 ? "" : "s"}`);
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to enable models");
+        }
+    });
+
     return {
         ...query,
+        disabledModels: disabledModelsQuery,
         addMutation,
         deleteMutation,
         toggleRoundRobinMutation,
         addModelMutation,
         deleteModelMutation,
         addModelsBulkMutation,
-        deleteModelsBulkMutation
+        deleteModelsBulkMutation,
+        disableModelMutation,
+        enableModelMutation,
+        disableModelsBulkMutation,
+        enableModelsBulkMutation
     };
 }

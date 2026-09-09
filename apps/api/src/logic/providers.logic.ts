@@ -19,16 +19,27 @@ import {
     addCustomModelDB,
     deleteCustomModelDB,
     deleteCustomModelsByProviderDB,
+    disableModelDB,
+    disableModelsDB,
+    enableModelDB,
+    enableModelsDB,
     getAllProvidersDB,
     getCustomModelsByProviderDB,
     getCustomModelsForProviderDB,
+    getDisabledModelsByProviderDB,
     getProvidersByOwnerDB,
     getRoundRobinDB,
     setRoundRobinDB,
     upsertProviderDB,
-    userAuthStore
+    userAuthStore,
+    type DisabledModelRow
 } from "@srouter/db";
-import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
+import {
+    InvalidateDisabledModelsCache,
+    loadSavedProvidersFromDB,
+    registry
+} from "@/services/registry.js";
+import { InvalidateRouteCache } from "@/logic/routing.logic.js";
 import { AssertPublicUrl } from "@/utils/ssrf.js";
 
 export interface GroupedCatalog {
@@ -252,6 +263,16 @@ export class ProvidersLogic {
                 Merged.set(M.id.toLowerCase(), M);
             }
             LiveModels = Array.from(Merged.values());
+        }
+
+        // Annotate disabled state so the admin detail view can show
+        // a "Disabled" chip with a restore toggle.
+        const Disabled = await ProvidersLogic.GetDisabledModelIdSet(ProviderId);
+        if (Disabled.size > 0) {
+            LiveModels = LiveModels.map((M) => {
+                const Bare = ProvidersLogic.StripProviderPrefix(ProviderId, M.id).toLowerCase();
+                return Disabled.has(Bare) ? { ...M, disabled: true } : M;
+            });
         }
 
         return {
@@ -491,6 +512,123 @@ export class ProvidersLogic {
         }
         if (Deleted > 0) registry.clearModelsCache();
         return { deleted: Deleted };
+    }
+
+    /**
+     * Server-side model disable. Unlike removing a custom_models row (which
+     * only covers manually registered listings), this hides a model from
+     * routing and every listing surface regardless of whether it came from the
+     * upstream driver or the local catalog. The rule is keyed by the provider
+     * base id, so for platform supply it shadows all connections of that
+     * driver; creator listings keep their own key space.
+     */
+    public static async DisableModel(
+        ProviderId: string,
+        ModelId: string,
+        DisabledBy: string,
+        Reason?: string
+    ): Promise<DisabledModelRow> {
+        const Id = ProviderId.toLowerCase();
+        if (!(await ProvidersLogic.ProviderExists(Id))) {
+            throw new Error(`Provider '${ProviderId}' not found`);
+        }
+        const Bare = ProvidersLogic.StripProviderPrefix(Id, ModelId.trim());
+        if (!Bare) throw new Error("Model ID is required");
+        const Row = await disableModelDB(
+            providerBaseId(Id).toLowerCase(),
+            Bare,
+            DisabledBy,
+            Reason?.trim() || undefined
+        );
+        ProvidersLogic.InvalidateRoutingCaches(Id);
+        return Row;
+    }
+
+    public static async EnableModel(ProviderId: string, ModelId: string): Promise<void> {
+        const Id = ProviderId.toLowerCase();
+        if (!(await ProvidersLogic.ProviderExists(Id))) {
+            throw new Error(`Provider '${ProviderId}' not found`);
+        }
+        const Bare = ProvidersLogic.StripProviderPrefix(Id, ModelId.trim());
+        if (!Bare) throw new Error("Model ID is required");
+        const Removed = await enableModelDB(providerBaseId(Id).toLowerCase(), Bare);
+        if (!Removed) throw new Error(`Model '${ModelId}' is not disabled for '${ProviderId}'`);
+        ProvidersLogic.InvalidateRoutingCaches(Id);
+    }
+
+    public static async ListDisabledModels(ProviderId: string): Promise<DisabledModelRow[]> {
+        return getDisabledModelsByProviderDB(providerBaseId(ProviderId.toLowerCase()).toLowerCase());
+    }
+
+    /**
+     * Bulk disable. Invalid model ids are skipped rather than failing the whole
+     * batch, because the caller selects from a listing that may have drifted.
+     */
+    public static async DisableModels(
+        ProviderId: string,
+        ModelIds: string[],
+        DisabledBy: string,
+        Reason?: string
+    ): Promise<{ disabled: number }> {
+        const Id = ProviderId.toLowerCase();
+        if (!(await ProvidersLogic.ProviderExists(Id))) {
+            throw new Error(`Provider '${ProviderId}' not found`);
+        }
+        const Bare = ProvidersLogic.UniqueBareModelIds(Id, ModelIds);
+        if (Bare.length === 0) throw new Error("At least one model ID is required");
+        const Count = await disableModelsDB(
+            providerBaseId(Id).toLowerCase(),
+            Bare,
+            DisabledBy,
+            Reason?.trim() || undefined
+        );
+        ProvidersLogic.InvalidateRoutingCaches(Id);
+        return { disabled: Count };
+    }
+
+    public static async EnableModels(
+        ProviderId: string,
+        ModelIds: string[]
+    ): Promise<{ enabled: number }> {
+        const Id = ProviderId.toLowerCase();
+        if (!(await ProvidersLogic.ProviderExists(Id))) {
+            throw new Error(`Provider '${ProviderId}' not found`);
+        }
+        const Bare = ProvidersLogic.UniqueBareModelIds(Id, ModelIds);
+        if (Bare.length === 0) throw new Error("At least one model ID is required");
+        const Count = await enableModelsDB(providerBaseId(Id).toLowerCase(), Bare);
+        ProvidersLogic.InvalidateRoutingCaches(Id);
+        return { enabled: Count };
+    }
+
+    private static UniqueBareModelIds(ProviderId: string, ModelIds: string[]): string[] {
+        const Out = new Set<string>();
+        for (const Raw of ModelIds) {
+            const Bare = ProvidersLogic.StripProviderPrefix(ProviderId, Raw.trim());
+            if (Bare) Out.add(Bare);
+        }
+        return [...Out];
+    }
+
+    /** Disabled model ids for a provider, lower-cased for set lookups. */
+    public static async GetDisabledModelIdSet(ProviderId: string): Promise<Set<string>> {
+        const Rows = await ProvidersLogic.ListDisabledModels(ProviderId);
+        return new Set(Rows.map((R) => R.modelId.toLowerCase()));
+    }
+
+    private static InvalidateRoutingCaches(ProviderId: string): void {
+        InvalidateDisabledModelsCache();
+        InvalidateRouteCache();
+        // A rule stored under the base id shadows every connection of the
+        // driver, so the whole model cache is dropped rather than just this
+        // connection's slice.
+        registry.clearModelsCache();
+    }
+
+    private static async ProviderExists(Id: string): Promise<boolean> {
+        if (DEFAULT_PROVIDER_MAP[Id] !== undefined) return true;
+        const Rows = await getAllProvidersDB();
+        return Rows.some((P) => BaseIdOf(P.providerId || P.id) === Id);
     }
 
     /**

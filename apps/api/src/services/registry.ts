@@ -17,7 +17,7 @@ import {
     TABITOKEN_BASE_URL,
     TOKENROUTER_BASE_URL
 } from "@srouter/constants";
-import { deleteProviderDB, getAllProvidersDB, getRoundRobinDB, upsertProviderDB } from "@srouter/db";
+import { deleteProviderDB, getAllProvidersDB, getAllDisabledModelsDB, getRoundRobinDB, upsertProviderDB } from "@srouter/db";
 import {
     AntigravityExecutor,
     AnthropicExecutor,
@@ -39,6 +39,61 @@ import { ProviderRegistry } from "@srouter/providers";
 
 // Create a global ProviderRegistry instance
 export const registry = new ProviderRegistry();
+
+// ── Server-side model gate ──────────────────────────────────────────────
+// disabled_models is consulted on every routing candidate check, so the whole
+// (tiny) table is cached briefly and flushed explicitly when a rule is
+// toggled. The TTL is the cross-process safety net.
+const DISABLED_GATE_TTL_MS = 30_000;
+let disabledGateCache: { at: number; pairs: Set<string> } | null = null;
+let disabledGateInflight: Promise<Set<string>> | null = null;
+
+function disabledPairKey(providerId: string, modelId: string): string {
+    return `${providerId}\u0000${modelId}`;
+}
+
+async function disabledModelPairs(): Promise<Set<string>> {
+    if (disabledGateCache && Date.now() - disabledGateCache.at < DISABLED_GATE_TTL_MS) {
+        return disabledGateCache.pairs;
+    }
+    if (!disabledGateInflight) {
+        disabledGateInflight = getAllDisabledModelsDB()
+            .then((rows) => {
+                const pairs = new Set<string>();
+                for (const row of rows) {
+                    pairs.add(
+                        disabledPairKey(row.providerId.toLowerCase(), row.modelId.toLowerCase())
+                    );
+                }
+                disabledGateCache = { at: Date.now(), pairs };
+                return pairs;
+            })
+            .finally(() => {
+                disabledGateInflight = null;
+            });
+    }
+    return disabledGateInflight;
+}
+
+/**
+ * Official rules are stored under the shared base id, so they must shadow
+ * every connection of that driver; creator rules are stored under the
+ * connection id and can never collide with a base id.
+ */
+export async function IsModelDisabled(providerId: string, bareModelId: string): Promise<boolean> {
+    const pairs = await disabledModelPairs();
+    const model = bareModelId.toLowerCase();
+    const connection = providerId.toLowerCase();
+    if (pairs.has(disabledPairKey(connection, model))) return true;
+    const base = providerBaseId(connection).toLowerCase();
+    return base !== connection && pairs.has(disabledPairKey(base, model));
+}
+
+export function InvalidateDisabledModelsCache(): void {
+    disabledGateCache = null;
+}
+
+registry.setModelGate(IsModelDisabled);
 
 /**
  * Seed built-in driver rows into the providers table on first startup, so the

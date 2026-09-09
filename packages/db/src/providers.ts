@@ -1,6 +1,7 @@
 import type { ProviderCategory, ProviderConfig, ProviderProtocol } from "@srouter/types";
 import { db } from "./db.js";
 import { EncryptSecret, DecryptSecret } from "./encryption.js";
+import { deleteDisabledModelsByProviderDB } from "./disabledModels.js";
 import { num, optStr, str } from "./row-utils.js";
 
 interface ProviderRow {
@@ -129,7 +130,14 @@ export function createProviderDB(
 
 export async function deleteProviderDB(id: string): Promise<boolean> {
     const Result = await db.prepare("DELETE FROM providers WHERE id = ?").run(id);
-    return num(Result.changes) > 0;
+    const Deleted = num(Result.changes) > 0;
+    if (Deleted) {
+        // Denylist rules keyed by this connection id die with it. Official
+        // rules live under the shared base id instead, so they intentionally
+        // survive one connection's deletion.
+        await deleteDisabledModelsByProviderDB(id);
+    }
+    return Deleted;
 }
 
 export interface UpdateProviderTokensInput {

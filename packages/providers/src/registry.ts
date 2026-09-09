@@ -16,6 +16,32 @@ import type {
 } from "@srouter/types";
 import { CircuitBreaker, circuitBreaker as defaultCircuitBreaker } from "./circuitBreaker.js";
 
+/**
+ * Raised when the injected {@link ModelGate} blocks every candidate for a
+ * model, or blocks the default-fallback provider. Callers MUST surface it
+ * verbatim: reporting it as "no available connections" (503) tells the client
+ * to retry a request that will never succeed while hiding the real reason.
+ */
+export class ModelDisabledError extends Error {
+    readonly modelId: string;
+
+    constructor(modelId: string) {
+        super(`Model "${modelId}" is disabled on this gateway.`);
+        this.name = "ModelDisabledError";
+        this.modelId = modelId;
+    }
+}
+
+/**
+ * Server-side model gate. Returns true when the (provider connection id,
+ * bare model id) pair is administratively disabled and must not route.
+ * Installed via setModelGate by the host application; null disables gating.
+ */
+export type ModelGate = (
+    providerId: string,
+    bareModelId: string
+) => Promise<boolean>;
+
 export function getProviderAlias(providerId: string): string {
     return providerAlias(providerBaseId(providerId));
 }
@@ -91,6 +117,27 @@ export class ProviderRegistry {
     private modelsFetchTimeoutMs: number = DEFAULT_MODELS_FETCH_TIMEOUT_MS;
     private roundRobinEnabled: Map<string, boolean> = new Map();
     private roundRobinIndex: Map<string, number> = new Map();
+    private modelGate: ModelGate | null = null;
+
+    /**
+     * Installs the server-side model gate. Returns true when a (connection,
+     * bare model id) pair is administratively disabled and must not route.
+     * The gate lives outside this package so the registry stays DB-agnostic.
+     */
+    setModelGate(gate: ModelGate | null): void {
+        this.modelGate = gate;
+    }
+
+    private async isModelBlocked(providerId: string, bareModelId: string): Promise<boolean> {
+        if (!this.modelGate) return false;
+        return this.modelGate(providerId, bareModelId);
+    }
+
+    /** "openai/gpt-4o" -> "gpt-4o"; a bare id passes through unchanged. */
+    private static bareModelId(modelId: string): string {
+        const slash = modelId.indexOf("/");
+        return slash >= 0 ? modelId.slice(slash + 1) : modelId;
+    }
 
     constructor(
         defaultProvider?: AIProvider,
@@ -361,22 +408,30 @@ export class ProviderRegistry {
             })
         );
 
+        let sawBlocked = false;
+
         for (const { provider, models } of modelLists) {
             const alias = providerAliasFor(provider);
             const baseId = providerBaseId(provider.id);
-            if (
-                models.some((m) => {
-                    const bareId = stripModelPrefix(m.id, alias, provider.id);
-                    return (
-                        m.id === modelId ||
-                        `${alias}/${bareId}` === modelId ||
-                        `${baseId}/${bareId}` === modelId ||
-                        bareId === modelId
-                    );
-                })
-            ) {
-                candidates.push(provider);
+            let matchedBare: string | null = null;
+            for (const m of models) {
+                const bareId = stripModelPrefix(m.id, alias, provider.id);
+                if (
+                    m.id === modelId ||
+                    `${alias}/${bareId}` === modelId ||
+                    `${baseId}/${bareId}` === modelId ||
+                    bareId === modelId
+                ) {
+                    matchedBare = bareId;
+                    break;
+                }
             }
+            if (matchedBare === null) continue;
+            if (await this.isModelBlocked(provider.id, matchedBare)) {
+                sawBlocked = true;
+                continue;
+            }
+            candidates.push(provider);
         }
 
         // 2. Prefix matching for provider ID or alias (e.g., qd/*, qoder/*, antigravity/*, openai/*).
@@ -385,12 +440,14 @@ export class ProviderRegistry {
         // falling back to built-in provider type resolution.
         if (candidates.length === 0) {
             const prefix = modelId.includes("/") ? (modelId.split("/")[0] ?? modelId) : modelId;
+            const bare = ProviderRegistry.bareModelId(modelId);
             const exactAlias = Array.from(this.providers.values()).find(
                 (provider) =>
                     provider.id !== "default" && provider.alias && provider.alias === prefix
             );
             if (exactAlias) {
-                candidates.push(exactAlias);
+                if (await this.isModelBlocked(exactAlias.id, bare)) sawBlocked = true;
+                else candidates.push(exactAlias);
             } else {
                 // Fallback: derived alias (via constants catalog) or base ID matching
                 const derivedAlias = Array.from(this.providers.values()).find(
@@ -398,7 +455,8 @@ export class ProviderRegistry {
                         provider.id !== "default" && providerAliasFor(provider) === prefix
                 );
                 if (derivedAlias) {
-                    candidates.push(derivedAlias);
+                    if (await this.isModelBlocked(derivedAlias.id, bare)) sawBlocked = true;
+                    else candidates.push(derivedAlias);
                 } else {
                     const targetBaseId = providerTypeForAlias(prefix) ?? prefix;
                     for (const [id, provider] of this.providers.entries()) {
@@ -411,7 +469,8 @@ export class ProviderRegistry {
                             prefix === alias ||
                             targetBaseId === baseId
                         ) {
-                            candidates.push(provider);
+                            if (await this.isModelBlocked(id, bare)) sawBlocked = true;
+                            else candidates.push(provider);
                         }
                     }
                 }
@@ -437,6 +496,21 @@ export class ProviderRegistry {
                 }
             }
             return sorted;
+        }
+
+        // The gate vetoed every matching connection: report the real reason
+        // rather than falling through to "no available connections" / 503 or
+        // silently resurrecting the model via the default provider.
+        if (sawBlocked && modelId) {
+            throw new ModelDisabledError(modelId);
+        }
+
+        // Last resort: a disabled model must not silently fall through to the
+        // default connection — that would resurrect it after a veto.
+        if (this.modelGate && modelId) {
+            if (await this.isModelBlocked(this.defaultProvider.id, ProviderRegistry.bareModelId(modelId))) {
+                throw new ModelDisabledError(modelId);
+            }
         }
 
         if (this.defaultProvider.id !== "default") {

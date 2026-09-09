@@ -183,6 +183,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
 - **Public Marketplace Analytics:** OpenRouter-style aggregate endpoints — no authentication, no caller-identifying data (`api_key_id`, IP, user agent, spend are never returned), and the finest window is 24h so per-request activity cannot be correlated from the outside. The same data surfaces in `/dashboard/analytics` for both buyers and creators, with a 24h/7d/30d window picker, traffic and token charts, model leaderboard, and endpoint performance tables.
 - **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
+- **Server-Side Model Disable:** Disabling a model is a platform rule, not a browser preference. `disabled_models` is keyed like the listings (`custom_models`) — platform rules under the shared base provider id so every key of that driver inherits them, custom connections keeping their own UUID key space — and is enforced at one central chokepoint in the provider registry plus the marketplace routing chain. A disabled model disappears from `/v1/models`, the namespace lists, and the public storefront, and any request naming it fails closed with `400` instead of silently serving another account's key or being laundered through a fallback rule. Admins still see disabled entries on the provider page (with reason + who/when) and can re-enable individually or in bulk.
 
 ---
 
@@ -219,6 +220,11 @@ All gateway endpoints are served under `/v1`:
 | `POST` | `/v1/admin/users/:id/promote` | Grant the admin flag to an account |
 | `POST` | `/v1/admin/users/:id/demote` | Revoke the admin flag (409 on last admin) |
 | `POST` | `/v1/users/change-password` | Rotate password, revoking all prior sessions |
+| `POST` | `/v1/providers/:providerId/models/disable` | Disable a model for a provider (requires admin session) |
+| `POST` | `/v1/providers/:providerId/models/enable` | Re-enable a previously disabled model (requires admin session) |
+| `GET` | `/v1/providers/:providerId/models/disabled` | List disabled models for a provider (requires admin session) |
+| `POST` | `/v1/providers/:providerId/models/bulk-disable` | Disable multiple models at once (requires admin session) |
+| `POST` | `/v1/providers/:providerId/models/bulk-enable` | Re-enable multiple models at once (requires admin session) |
 
 ---
 
