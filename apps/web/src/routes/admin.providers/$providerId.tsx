@@ -72,9 +72,15 @@ function ProviderDetailPage() {
     const disabledEntries = disabledModels.data?.data ?? [];
 
     const handleDeleteModel = (modelId: string) => {
-        const model = provider?.models?.find((m) => m.id === modelId);
-        if (model?.custom) deleteModelMutation.mutate(modelId);
-        else disableModelMutation.mutate({ modelId });
+        deleteModelMutation.mutate(modelId);
+    };
+
+    const handleDisableModel = (modelId: string) => {
+        disableModelMutation.mutate({ modelId });
+    };
+
+    const handleEnableModel = (modelId: string) => {
+        enableModelMutation.mutate(modelId);
     };
 
     const handleDisableMultipleModels = (modelIds: string[]) => {
@@ -413,7 +419,7 @@ function ProviderDetailPage() {
                         copied={copied}
                         onCopy={(id) => void copy(id)}
                         onDelete={handleDeleteModel}
-                        onDisable={handleDeleteModel}
+                        onDisable={handleDisableModel}
                         onEnable={handleEnableModel}
                         onDisableMultiple={handleDisableMultipleModels}
                         onEnableMultiple={handleEnableMultipleModels}
@@ -427,7 +433,7 @@ function ProviderDetailPage() {
                                 copied={copied === m.id}
                                 onCopy={(id) => void copy(id)}
                                 onDelete={handleDeleteModel}
-                                onDisable={handleDeleteModel}
+                                onDisable={handleDisableModel}
                                 onEnable={handleEnableModel}
                             />
                         ))}
