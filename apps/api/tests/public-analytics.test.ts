@@ -379,6 +379,20 @@ test("overview reports platform totals and a zero-filled series", async () => {
     assert.equal(body.models, 1);
     assert.equal(body.endpoints, 2, "only attributable endpoints — bare failure excluded");
     assert.equal(body.series.length, 24);
+    assert.equal(
+        body.series.reduce((sum: number, p: { requests: number }) => sum + p.requests, 0),
+        6,
+        "the plotted window accounts for every request in the window"
+    );
+    assert.equal(
+        body.series.reduce((sum: number, p: { tokens: number }) => sum + p.tokens, 0),
+        105,
+        "the plotted window accounts for every token in the window"
+    );
+    assert.ok(
+        body.series.slice(-2).some((p: { requests: number }) => p.requests > 0),
+        "fresh traffic lands in the current bucket, not just historical ones"
+    );
     assert.equal(body.topModels.length, 1);
     assert.equal(body.topModels[0].model, ALPHA);
     assert.equal(body.avgLatencyMs, 342);

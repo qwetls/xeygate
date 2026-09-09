@@ -401,8 +401,11 @@ async function BuildSeries(
     }
 
     // Zero-fill so the client can plot the window without guessing gaps.
+    // Align the LAST bucket to the current time-window (floor of now) so
+    // traffic logged "now" is included, mirroring the private analytics.
     const Now = Date.now();
-    const Start = Math.floor((Now - Spec.windowMs) / Spec.bucketSizeMs) * Spec.bucketSizeMs;
+    const End = Math.floor(Now / Spec.bucketSizeMs) * Spec.bucketSizeMs;
+    const Start = End - (Spec.bucketCount - 1) * Spec.bucketSizeMs;
     const points: MarketplaceStatPoint[] = [];
     for (let i = 0; i < Spec.bucketCount; i++) {
         const ts = Start + i * Spec.bucketSizeMs;
