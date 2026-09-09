@@ -6,6 +6,13 @@ services:
             dockerfile: Dockerfile
         container_name: xeygate
         restart: unless-stopped
+        # Without this, /opt/xeygate/.env is only used for the ${PORT} mappings
+        # below and NEVER reaches the app: JWT_SECRET (at-rest credential
+        # encryption) and the SROUTER_ADMIN_* recovery path would stay inert.
+        # Entries in `environment:` still win, so the host PORT cannot leak in
+        # and move the in-container listener away from the published port.
+        env_file:
+            - .env
         ports:
             # XEYGATE Unified Gateway & Web Dashboard
             - "${PORT:-3000}:3000"

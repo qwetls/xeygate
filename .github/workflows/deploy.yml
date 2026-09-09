@@ -5,85 +5,101 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# One shared instance, one deploy at a time — never let two pushes rebuild the
+# same container concurrently.
+concurrency:
+  group: deploy-xeygate
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - uses: pnpm/action-setup@v4
-
-      - name: Install & Build
-        run: |
-          pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-          pnpm build
-
-      - name: Deploy to VPS
+      # The public instance is the Docker Compose stack created by setup.sh
+      # (container `xeygate`, host :3000). Everything is built inside the image,
+      # so there is no reason to install Node/pnpm here — that build was never
+      # what the container ran.
+      - name: Deploy to VPS (Docker Compose)
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
+          script_stop: true
           script: |
             set -e
-
-            # Install Node.js 22 if missing
-            if ! command -v node &>/dev/null || [[ "$(node -v | cut -d. -f1 | tr -d 'v')" -lt 22 ]]; then
-              curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-              apt-get install -y -qq nodejs
-            fi
-
-            # Install pnpm
-            command -v pnpm &>/dev/null || npm install -g pnpm@latest
-
-            # Clone or pull
             APP_DIR=/opt/xeygate
+
+            # The legacy systemd unit started a *second* gateway on :4000 against a
+            # different database (and setup.sh killed it to free :1455). Deploying to
+            # it changed nothing that visitors saw, so retire it permanently.
+            systemctl disable --now xeygate >/dev/null 2>&1 || true
+            rm -f /etc/systemd/system/xeygate.service
+            systemctl daemon-reload >/dev/null 2>&1 || true
+
+            command -v docker >/dev/null 2>&1 || { echo "::error::docker missing on VPS - run setup.sh once"; exit 1; }
+            docker compose version >/dev/null 2>&1 || { echo "::error::compose plugin missing - run setup.sh once"; exit 1; }
+
             if [ -d "$APP_DIR/.git" ]; then
               cd "$APP_DIR"
-              git fetch origin main
+              git fetch --depth 1 origin main
               git reset --hard origin/main
             else
               git clone --branch main --depth 1 https://github.com/qwetls/xeygate.git "$APP_DIR"
               cd "$APP_DIR"
             fi
 
-            # Build
-            pnpm install --frozen-lockfile 2>/dev/null || pnpm install
-            pnpm build
+            mkdir -p data
 
-            # Setup systemd
-            mkdir -p "$APP_DIR/data"
-            cat > /etc/systemd/system/xeygate.service << 'EOF'
-            [Unit]
-            Description=XEYGATE AI Gateway
-            After=network.target
+            # .env carries JWT_SECRET, which doubles as the at-rest data key for
+            # provider credentials. Only ever create it: regenerating the key would
+            # leave every stored secret undecryptable.
+            if [ ! -f .env ]; then
+              SECRET=$(openssl rand -hex 32 2>/dev/null || tr -dc 'a-f0-9' < /proc/sys/kernel/random/uuid; cat /proc/sys/kernel/random/uuid /proc/sys/kernel/random/uuid)
+              printf 'PORT=3000\nOAUTH_PORT=1455\nNODE_ENV=production\nDATABASE_PATH=/app/data/xeygate.db\nJWT_SECRET=%s\n' "$SECRET" > .env
+              echo "created .env with a fresh JWT_SECRET"
+            fi
 
-            [Service]
-            Type=simple
-            WorkingDirectory=/opt/xeygate
-            ExecStart=/usr/bin/node apps/api/dist/index.js
-            Restart=on-failure
-            RestartSec=5
-            Environment=NODE_ENV=production
-            Environment=PORT=4000
-            Environment=DATABASE_PATH=/opt/xeygate/data/xeygate.db
+            docker compose up -d --build --remove-orphans
+            docker image prune -f >/dev/null 2>&1 || true
 
-            [Install]
-            WantedBy=multi-user.target
-            EOF
+            # Fail the run if the container we just built is not actually serving.
+            # Checked from inside the container so a firewall on the host cannot
+            # mask a dead process.
+            healthy=0
+            for i in $(seq 1 30); do
+              if docker exec xeygate node -e "fetch('http://localhost:'+(process.env.PORT||3000)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then
+                healthy=1
+                break
+              fi
+              sleep 4
+            done
+            if [ "$healthy" != 1 ]; then
+              docker compose ps
+              docker compose logs --tail 60
+              exit 1
+            fi
+            echo "container healthy on :3000"
 
-            systemctl daemon-reload
-            systemctl enable xeygate
-            systemctl restart xeygate
-            echo "✅ XEYGATE deployed on port 4000"
-
-      - name: Health check
+      # Outside-in check: proves the public port is the stack we just deployed and
+      # that the image on :3000 contains this commit's API surface. A green badge
+      # that does not look at the real host is how the split-brain went unnoticed.
+      - name: Verify public endpoint
         run: |
-          sleep 5
-          curl -sf http://${{ secrets.VPS_HOST }}:4000/health || echo "⚠️ Health check pending — server may still start"
+          set -euo pipefail
+          base="http://${{ secrets.VPS_HOST }}:3000"
+          ok=0
+          for i in $(seq 1 20); do
+            if curl -sf --max-time 5 "$base/health" >/dev/null 2>&1; then ok=1; break; fi
+            sleep 5
+          done
+          if [ "$ok" != 1 ]; then
+            echo "::error::$base/health is not reachable from the public internet"
+            exit 1
+          fi
+          body=$(curl -sf --max-time 10 "$base/v1/analytics/overview?window=24h" || true)
+          case "$body" in
+            *'"object":"marketplace.analytics.overview"'*) echo "public analytics route serving JSON" ;;
+            *) echo "::error::/v1/analytics/overview did not return the expected JSON: ${body:-<empty>}"; exit 1 ;;
+          esac

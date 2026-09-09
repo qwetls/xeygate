@@ -1,4 +1,11 @@
-import type { AnalyticsReport, AnalyticsWindow } from "@srouter/types";
+import type {
+    AnalyticsReport,
+    AnalyticsWindow,
+    MarketplaceAnalyticsOverview,
+    MarketplaceAnalyticsWindow,
+    MarketplaceLeaderboard,
+    MarketplaceProviderStats
+} from "@srouter/types";
 
 export class ApiError extends Error {
     status: number;
@@ -87,5 +94,26 @@ export function getGatewayBaseUrl(): string {
 
 export const Api = {
     getAnalytics: (window: AnalyticsWindow): Promise<AnalyticsReport> =>
-        api.get<AnalyticsReport>(`/v1/logs/analytics?window=${window}`)
+        api.get<AnalyticsReport>(`/v1/logs/analytics?window=${window}`),
+
+    // Marketplace-wide aggregates. Unauthenticated by design (see AGENTS.md),
+    // so the client portal can show them without an admin session.
+    getMarketplaceOverview: (
+        window: MarketplaceAnalyticsWindow,
+        limit = 10
+    ): Promise<MarketplaceAnalyticsOverview> =>
+        api.get<MarketplaceAnalyticsOverview>(
+            `/v1/analytics/overview?window=${window}&limit=${limit}`
+        ),
+    getMarketplaceModels: (
+        window: MarketplaceAnalyticsWindow,
+        limit = 25
+    ): Promise<MarketplaceLeaderboard> =>
+        api.get<MarketplaceLeaderboard>(
+            `/v1/analytics/models?window=${window}&limit=${limit}`
+        ),
+    getMarketplaceEndpoints: (
+        window: MarketplaceAnalyticsWindow
+    ): Promise<MarketplaceProviderStats> =>
+        api.get<MarketplaceProviderStats>(`/v1/analytics/endpoints?window=${window}`)
 };

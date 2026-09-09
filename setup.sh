@@ -169,6 +169,12 @@ OAUTH_PORT=$OAUTH_PORT
 NODE_ENV=production
 DATABASE_PATH=/app/data/xeygate.db
 JWT_SECRET=$JWT_SECRET
+
+# Admin recovery — uncomment to let every boot reset this admin account's
+# password (the documented path for a forgotten admin password).
+# SROUTER_ADMIN_EMAIL=admin@xeycompany.com
+# SROUTER_ADMIN_PASSWORD=change-me
+
 # PUBLIC_URL=https://your-domain.com
 EOF
     echo "   ✅ Generated JWT_SECRET"

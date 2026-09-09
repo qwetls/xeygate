@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import {
+    Activity,
     BarChart2,
     KeyRound,
     LayoutDashboard,
@@ -35,7 +36,8 @@ const baseNavItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/dashboard/keys", label: "API Keys", icon: KeyRound },
     { to: "/dashboard/playground", label: "Playground", icon: Terminal },
-    { to: "/dashboard/usage", label: "Usage", icon: BarChart2 }
+    { to: "/dashboard/usage", label: "Usage", icon: BarChart2 },
+    { to: "/dashboard/analytics", label: "Analytics", icon: Activity }
 ] as const;
 
 const creatorNavItems = [
