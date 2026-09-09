@@ -34,6 +34,7 @@ routes/v1 → controllers → logic → services / packages/{db,executors,provid
 ## Hono practice
 
 - All gateway endpoints mount under `/v1` in `apps/api/src/index.ts`. The marketplace namespaces `/user/v1` (creator supply only) and `/official/v1` (platform/admin-account supply only) reuse the same routers behind `MarketplaceScopeMiddleware`; bare-model routing and `/models` are scoped per namespace while `/v1` keeps serving both key spaces. Apart from these, root-level API paths do not exist; `/health` and `/v1` discovery are the only exceptions.
+- Public analytics (`/v1/analytics/*`) is the one unauthenticated read surface: aggregate-only marketplace stats. Keep it that way — no `api_key_id`, IP, user agent or spend in the response shapes, no window finer than 24h, and never mount it inside the `/user` / `/official` namespaces (it describes supply across both).
 - Attach auth guards inside the feature router (`TunnelRouter.use(...)`) so protection travels with the route — mounting `app.use(...)` after the fact invites gaps.
 - Reads use `apiKeyAuth`, mutations use `adminAuth`. Admins are ordinary user accounts flagged `is_admin` — `adminAuth` verifies the `xeygate_user_session` cookie against the user store and rejects non-admin or banned accounts. A valid admin session also satisfies `apiKeyAuth` (Playground/CLI convenience). Loopback bypass only applies when `require_api_key` is off.
 - Validate request bodies with Zod (`@hono/zod-validator`) at the route; infer types with `z.infer`, never hand-write mirrored interfaces.

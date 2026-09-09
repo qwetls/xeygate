@@ -181,6 +181,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
 - **Quality-Weighted Marketplace Routing:** Bare model requests (`"gpt-4o"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
 - **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
+- **Public Marketplace Analytics:** OpenRouter-style aggregate endpoints — no authentication, no caller-identifying data (`api_key_id`, IP, user agent, spend are never returned), and the finest window is 24h so per-request activity cannot be correlated from the outside.
 - **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
 
 ---
@@ -208,6 +209,10 @@ All gateway endpoints are served under `/v1`:
 | `GET` / `POST` | `/v1/providers` | Read or connect provider accounts |
 | `GET` / `POST` | `/v1/keys` | Manage virtual API keys |
 | `GET` | `/v1/logs` | Query request audit logs and token telemetry |
+| `GET` | `/v1/analytics/overview` | Public platform totals + time series (`?window=24h\|7d\|30d`) |
+| `GET` | `/v1/analytics/models` | Public model leaderboard by token volume (`&limit=1..100`) |
+| `GET` | `/v1/analytics/models/:model` | Public per-model page: endpoints serving it + series (404 when no traffic) |
+| `GET` | `/v1/analytics/endpoints` | Public supply-side stats per connection (creator storefronts + official) |
 | `GET` / `POST` | `/v1/tunnel/*` | Manage Cloudflare Tunnel daemon state |
 | `GET` | `/v1/admin/status` | Setup probe — `{ setupRequired }` while no admin exists |
 | `POST` | `/v1/admin/bootstrap` | First-run admin claim (rejected with 409 once an admin exists) |

@@ -1,10 +1,10 @@
 import { Hono } from "hono";
-import { getAllProvidersDB, listModelPricingDB, userAuthStore } from "@srouter/db";
+import { getAllProvidersDB, listModelPricingDB } from "@srouter/db";
 import type { ProviderConfig } from "@srouter/types";
 import { isSeedProvider, providerBaseId } from "@srouter/constants";
 import { getPricingForModel } from "@srouter/pricing";
 import { IsOfficialProviderRow, SelectMarketplaceRows } from "@/logic/official.logic.js";
-import { RuntimeAliasFor } from "@/logic/providers.logic.js";
+import { RuntimeAliasFor, StorefrontName } from "@/logic/providers.logic.js";
 import { Err, Ok } from "@/utils/response.js";
 
 export const CatalogRouter = new Hono();
@@ -28,21 +28,6 @@ interface CatalogItem {
 function BareModelId(modelWithPrefix: string): string {
     const slash = modelWithPrefix.indexOf("/");
     return slash >= 0 ? modelWithPrefix.slice(slash + 1) : modelWithPrefix;
-}
-
-// Storefront display name: creators run a provider under their account name,
-// so the marketplace shows the account name; official providers show their
-// own name (the admin's account name would be misleading).
-const creatorNameCache = new Map<string, string | null>();
-
-async function StorefrontName(ownerId: string | null | undefined, fallback: string): Promise<string> {
-    if (!ownerId) return fallback;
-    const cached = creatorNameCache.get(ownerId);
-    if (cached !== undefined) return cached || fallback;
-    const user = await userAuthStore.getUserById(ownerId);
-    const name = user?.name?.trim() || null;
-    creatorNameCache.set(ownerId, name);
-    return name || fallback;
 }
 
 /**

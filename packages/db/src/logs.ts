@@ -452,3 +452,203 @@ export async function getMarketplaceQualityDB(
     }
     return Result;
 }
+
+// --- Public marketplace analytics (aggregate-only, OpenRouter-style) ---
+//
+// All queries below read request_logs only. The shapes deliberately exclude
+// every caller-identifying column (api_key_id, ip_address, user_agent) so the
+// API layer cannot leak them into unauthenticated responses.
+
+/** Numeric aggregate columns shared between model-provider and bucket rows. */
+interface MarketplaceCounters {
+    totalRequests: number;
+    successRequests: number;
+    errorRequests: number;
+    promptTokens: number;
+    completionTokens: number;
+    cachedTokens: number;
+    totalTokens: number;
+    latencySumMs: number;
+}
+
+interface MarketplaceModelProviderAggregateRow extends MarketplaceCounters {
+    model: string;
+    providerId: string;
+    lastSeenAt: number;
+}
+
+interface MarketplaceBucketAggregateRow extends MarketplaceCounters {
+    bucket: number;
+    model: string;
+}
+
+const MARKETPLACE_SUCCESS = `SUM(CASE WHEN status_code >= 200 AND status_code < 300 THEN 1 ELSE 0 END)`;
+const MARKETPLACE_ERRORS = `SUM(CASE WHEN status_code >= 400 THEN 1 ELSE 0 END)`;
+
+/** Raw aggregate shape: Postgres returns COUNT/SUM/MAX over bigint as strings. */
+interface MarketplaceAggregateShape {
+    totalRequests: unknown;
+    successRequests: unknown;
+    errorRequests: unknown;
+    promptTokens: unknown;
+    completionTokens: unknown;
+    cachedTokens: unknown;
+    totalTokens: unknown;
+    latencySumMs: unknown;
+}
+
+function MapMarketplaceCounts(Row: MarketplaceAggregateShape): MarketplaceCounters {
+    return {
+        totalRequests: num(Row.totalRequests),
+        successRequests: num(Row.successRequests),
+        errorRequests: num(Row.errorRequests),
+        promptTokens: num(Row.promptTokens),
+        completionTokens: num(Row.completionTokens),
+        cachedTokens: num(Row.cachedTokens),
+        totalTokens: num(Row.totalTokens),
+        latencySumMs: num(Row.latencySumMs)
+    };
+}
+
+export async function getMarketplaceModelProviderStatsDB(
+    windowMs: number
+): Promise<MarketplaceModelProviderAggregateRow[]> {
+    const Rows = (await db
+        .prepare(
+            `SELECT
+                model                                           AS "model",
+                provider_id                                     AS "providerId",
+                COUNT(*)                                        AS "totalRequests",
+                ${MARKETPLACE_SUCCESS}                          AS "successRequests",
+                ${MARKETPLACE_ERRORS}                           AS "errorRequests",
+                COALESCE(SUM(prompt_tokens), 0)                 AS "promptTokens",
+                COALESCE(SUM(completion_tokens), 0)             AS "completionTokens",
+                COALESCE(SUM(cached_tokens), 0)                 AS "cachedTokens",
+                COALESCE(SUM(total_tokens), 0)                  AS "totalTokens",
+                COALESCE(SUM(latency_ms), 0)                    AS "latencySumMs",
+                MAX(created_at)                                 AS "lastSeenAt"
+            FROM request_logs
+            WHERE created_at >= ?
+            GROUP BY model, provider_id
+            ORDER BY "totalRequests" DESC`
+        )
+        .all(Date.now() - windowMs)) as unknown as Array<
+        MarketplaceAggregateShape & { model: unknown; providerId: unknown; lastSeenAt: unknown }
+    >;
+    return Rows.map((Row) => ({
+        model: str(Row.model),
+        providerId: str(Row.providerId),
+        ...MapMarketplaceCounts(Row),
+        lastSeenAt: num(Row.lastSeenAt)
+    }));
+}
+
+export async function getMarketplaceTimeSeriesDB(
+    windowMs: number,
+    bucketSizeMs: number
+): Promise<MarketplaceBucketAggregateRow[]> {
+    const Rows = (await db
+        .prepare(
+            `SELECT
+                CAST(created_at / ? AS BIGINT) * ?              AS "bucket",
+                model                                           AS "model",
+                COUNT(*)                                        AS "totalRequests",
+                ${MARKETPLACE_SUCCESS}                          AS "successRequests",
+                ${MARKETPLACE_ERRORS}                           AS "errorRequests",
+                COALESCE(SUM(prompt_tokens), 0)                 AS "promptTokens",
+                COALESCE(SUM(completion_tokens), 0)             AS "completionTokens",
+                COALESCE(SUM(cached_tokens), 0)                 AS "cachedTokens",
+                COALESCE(SUM(total_tokens), 0)                  AS "totalTokens",
+                COALESCE(SUM(latency_ms), 0)                    AS "latencySumMs"
+            FROM request_logs
+            WHERE created_at >= ?
+            GROUP BY "bucket", model
+            ORDER BY "bucket" ASC`
+        )
+        .all(bucketSizeMs, bucketSizeMs, Date.now() - windowMs)) as unknown as Array<
+        MarketplaceAggregateShape & { bucket: unknown; model: unknown }
+    >;
+    return Rows.map((Row) => ({
+        bucket: num(Row.bucket),
+        model: str(Row.model),
+        ...MapMarketplaceCounts(Row)
+    }));
+}
+
+/**
+ * p50/p95 latency per raw logged model string via a windowed scan.
+ *
+ * Keys are the raw model strings from request_logs (bare or "alias/bare");
+ * the API layer merges them per bare marketplace model. `models` restricts the
+ * scan to the spellings that are actually being displayed — ranking latencies
+ * for every model in the window costs a full sort, so callers pass the handful
+ * of rows a leaderboard page needs.
+ */
+export async function getMarketplaceLatencyPercentilesDB(
+    windowMs: number,
+    models: string[]
+): Promise<Map<string, { p50: number; p95: number }>> {
+    const Result = new Map<string, { p50: number; p95: number }>();
+    if (models.length === 0) return Result;
+
+    const Placeholders = models.map(() => "?").join(", ");
+    const Rows = (await db
+        .prepare(
+            `WITH ranked AS (
+                SELECT
+                    model,
+                    latency_ms,
+                    ROW_NUMBER() OVER (PARTITION BY model ORDER BY latency_ms) AS rn,
+                    COUNT(*)    OVER (PARTITION BY model)                      AS cnt
+                FROM request_logs
+                WHERE created_at >= ? AND model IN (${Placeholders})
+            )
+            SELECT model, latency_ms,
+                   CAST((cnt * 50 + 99) / 100 AS INTEGER) AS p50rn,
+                   CAST((cnt * 95 + 99) / 100 AS INTEGER) AS p95rn,
+                   rn
+            FROM ranked
+            WHERE rn IN (CAST((cnt * 50 + 99) / 100 AS INTEGER),
+                         CAST((cnt * 95 + 99) / 100 AS INTEGER))`
+        )
+        .all(Date.now() - windowMs, ...models)) as unknown as Array<{
+        model: string;
+        latency_ms: number;
+        p50rn: number;
+        p95rn: number;
+        rn: number;
+    }>;
+
+    for (const row of Rows) {
+        const Key = str(row.model);
+        const entry = Result.get(Key) ?? { p50: 0, p95: 0 };
+        const Latency = num(row.latency_ms);
+        if (num(row.rn) === num(row.p95rn)) entry.p95 = Latency;
+        if (num(row.rn) === num(row.p50rn)) entry.p50 = Latency;
+        Result.set(Key, entry);
+    }
+    return Result;
+}
+
+/**
+ * Platform-wide p95 latency over the window (single value, no grouping).
+ */
+export async function getMarketplaceGlobalP95DB(windowMs: number): Promise<number> {
+    const Row = (await db
+        .prepare(
+            `WITH ranked AS (
+                SELECT
+                    latency_ms,
+                    ROW_NUMBER() OVER (ORDER BY latency_ms) AS rn,
+                    COUNT(*)    OVER ()                     AS cnt
+                FROM request_logs
+                WHERE created_at >= ?
+            )
+            SELECT latency_ms FROM ranked
+            WHERE rn = CAST((cnt * 95 + 99) / 100 AS INTEGER)`
+        )
+        .get(Date.now() - windowMs)) as unknown as
+        | { latency_ms: number }
+        | undefined;
+    return Row ? num(Row.latency_ms) : 0;
+}

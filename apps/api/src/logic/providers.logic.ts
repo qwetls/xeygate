@@ -25,7 +25,8 @@ import {
     getProvidersByOwnerDB,
     getRoundRobinDB,
     setRoundRobinDB,
-    upsertProviderDB
+    upsertProviderDB,
+    userAuthStore
 } from "@srouter/db";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { AssertPublicUrl } from "@/utils/ssrf.js";
@@ -163,6 +164,26 @@ function RuntimeAliasFor(ProviderId: string): string {
 }
 
 export { RuntimeAliasFor };
+
+/**
+ * Storefront display name: creators run a provider under their account name,
+ * so the marketplace shows the account name; official providers show their
+ * own name (the admin's account name would be misleading).
+ */
+const storefrontNameCache = new Map<string, string | null>();
+
+export async function StorefrontName(
+    ownerId: string | null | undefined,
+    fallback: string
+): Promise<string> {
+    if (!ownerId) return fallback;
+    const cached = storefrontNameCache.get(ownerId);
+    if (cached !== undefined) return cached || fallback;
+    const user = await userAuthStore.getUserById(ownerId);
+    const name = user?.name?.trim() || null;
+    storefrontNameCache.set(ownerId, name);
+    return name || fallback;
+}
 
 export class ProvidersLogic {
     public static async ListProviders(): Promise<ProviderDefinition[]> {
