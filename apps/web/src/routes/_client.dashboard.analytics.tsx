@@ -1,11 +1,24 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { useAnalytics } from "@/hooks/useAnalytics";
 import {
     useMarketplaceEndpoints,
     useMarketplaceModels,
     useMarketplaceOverview
 } from "@/hooks/useMarketplaceAnalytics";
+import { AnalyticsSkeleton } from "@/components/skeletons";
+import {
+    AnalyticsHeader,
+    AnalyticsStatCards,
+    TrafficChart,
+    LatencyChart,
+    TokenUsageChart,
+    BreakdownTabsCard
+} from "@/components/analytics";
 import type {
+    AnalyticsWindow,
     MarketplaceAnalyticsWindow,
     MarketplaceModelStat,
     MarketplaceProviderStat,
@@ -32,15 +45,118 @@ import {
     ResponsiveContainer
 } from "recharts";
 import type { TooltipValueType } from "recharts";
+import {
+    Empty,
+    EmptyTitle
+} from "@/components/ui/empty";
 
 // ── Route ──────────────────────────────────────────────────────────────
 
 export const Route = createFileRoute("/_client/dashboard/analytics")({
     staticData: { title: "Analytics" },
-    component: MarketplaceAnalyticsPage
+    component: DashboardAnalyticsPage
 });
 
-// ── Constants ──────────────────────────────────────────────────────────
+/** Minimal shape of the cached user record (set by _client layout). */
+interface ClientUser {
+    isAdmin: boolean;
+}
+
+// ── Top-level page: role gate ──────────────────────────────────────────
+
+function DashboardAnalyticsPage() {
+    const { data: user } = useQuery<ClientUser>({
+        queryKey: ["user-auth-status"],
+        queryFn: () => api.get<ClientUser>("/v1/users/me"),
+        // Read from the warm cache populated by the _client layout.
+        // enabled: false means we never fire a network request ourselves.
+        enabled: false
+    });
+
+    if (user?.isAdmin) return <AdminAnalyticsView />;
+    return <MarketplaceView />;
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ADMIN VIEW — mirrors admin.analytics.tsx using shared components
+// ═══════════════════════════════════════════════════════════════════════
+
+function AdminAnalyticsView() {
+    const [window, setWindow] = useState<AnalyticsWindow>("24h");
+    const { data, isLoading, isPlaceholderData, error } = useAnalytics(window);
+
+    if (isLoading && !data) {
+        return (
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 font-mono">
+                <AnalyticsSkeleton />
+            </div>
+        );
+    }
+
+    if (error || !data) {
+        return (
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 font-mono">
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive font-mono">
+                    Failed to load analytics:{" "}
+                    {error instanceof Error ? error.message : "Unknown error"}
+                </div>
+            </div>
+        );
+    }
+
+    const hasData = data.totalRequests > 0;
+
+    return (
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 font-mono">
+            <div
+                className={`flex flex-col gap-6 transition-opacity duration-200 ${isPlaceholderData ? "opacity-60" : "opacity-100"}`}
+            >
+                <AnalyticsHeader
+                    window={window}
+                    onWindowChange={setWindow}
+                    lastUpdated={data.generatedAt}
+                />
+
+                <AnalyticsStatCards
+                    requestsPerSecond={data.requestsPerSecond}
+                    totalRequests={data.totalRequests}
+                    errorRate={data.errorRate}
+                    p95LatencyMs={data.p95LatencyMs}
+                />
+
+                {!hasData ? (
+                    <Empty className="p-12">
+                        <EmptyTitle>No requests in this window.</EmptyTitle>
+                    </Empty>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <TrafficChart
+                                buckets={data.buckets}
+                                bucketSizeMs={data.bucketSizeMs}
+                            />
+                            <LatencyChart buckets={data.buckets} />
+                        </div>
+                        <TokenUsageChart
+                            buckets={data.buckets}
+                            bucketSizeMs={data.bucketSizeMs}
+                        />
+                        <BreakdownTabsCard
+                            models={data.topModels}
+                            agents={data.topAgents}
+                            providers={data.providers}
+                            totalRequests={data.totalRequests}
+                        />
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  MARKETPLACE VIEW — public /v1/analytics/* for buyers & creators
+// ═══════════════════════════════════════════════════════════════════════
 
 const WINDOWS: { value: MarketplaceAnalyticsWindow; label: string }[] = [
     { value: "24h", label: "24h" },
@@ -55,9 +171,7 @@ const TOOLTIP_STYLE = {
     fontSize: "12px"
 } as const;
 
-// ── Page ───────────────────────────────────────────────────────────────
-
-function MarketplaceAnalyticsPage() {
+function MarketplaceView() {
     const [window, setWindow] = useState<MarketplaceAnalyticsWindow>("24h");
     const overview = useMarketplaceOverview(window);
     const models = useMarketplaceModels(window);
