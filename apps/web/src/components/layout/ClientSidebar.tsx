@@ -34,6 +34,7 @@ interface ClientSidebarProps {
 
 const baseNavItems = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/catalog", label: "Marketplace", icon: Store },
     { to: "/dashboard/keys", label: "API Keys", icon: KeyRound },
     { to: "/dashboard/playground", label: "Playground", icon: Terminal },
     { to: "/dashboard/usage", label: "Usage", icon: BarChart2 },

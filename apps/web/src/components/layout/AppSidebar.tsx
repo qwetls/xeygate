@@ -7,6 +7,7 @@ import {
     Cpu,
     Gauge,
     GitFork,
+    Globe,
     KeyRound,
     LayoutDashboard,
     LogOut,
@@ -34,6 +35,7 @@ import { api } from "@/lib/api";
 
 const mainNavItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/catalog", label: "Marketplace", icon: Globe },
     { to: "/admin/users", label: "Users", icon: Users },
     { to: "/admin/payouts", label: "Payouts", icon: Banknote },
     { to: "/admin/keys", label: "API Keys", icon: KeyRound },
