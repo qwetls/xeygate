@@ -24,7 +24,7 @@ interface BulkConnectionFormProps {
     onSubmit: (payload: BulkConnectionFormInput) => void;
 }
 
-const MAX_KEYS = 100;
+const MAX_KEYS = 500;
 
 function parseKeys(text: string): { unique: string[]; duplicates: number } {
     const lines = text

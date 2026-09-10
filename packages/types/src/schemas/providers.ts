@@ -54,7 +54,7 @@ export const BulkCreateProviderSchema = z.object({
     api_keys: z
         .array(z.string().min(1, "API key cannot be empty").max(512, "API key too long"))
         .min(1, "At least one API key is required")
-        .max(100, "Too many keys in one batch (max 100)")
+        .max(500, "Too many keys in one batch (max 500)")
 });
 
 export type BulkCreateProviderZod = z.infer<typeof BulkCreateProviderSchema>;

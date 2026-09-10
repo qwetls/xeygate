@@ -31,10 +31,11 @@ test("BulkCreateProviderSchema enforces required fields and bounds", () => {
     // provider_id must be a safe slug
     assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(["k1"]), provider_id: "bad id!" }).success, false);
     assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(["k1"]), provider_id: "" }).success, false);
-    // api_keys: non-empty array, no empty strings, capped at 100
+    // api_keys: non-empty array, no empty strings, capped at 500
     assert.equal(BulkCreateProviderSchema.safeParse({ ...payload([]) }).success, false);
     assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(["", "  "]) }).success, false);
-    assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(Array.from({ length: 101 }, (_, i) => `k${i}`)) }).success, false);
+    assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(Array.from({ length: 500 }, (_, i) => `k${i}`)) }).success, true);
+    assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(Array.from({ length: 501 }, (_, i) => `k${i}`)) }).success, false);
     // base_url must be a real URL
     assert.equal(BulkCreateProviderSchema.safeParse({ ...payload(["k1"]), base_url: "not-a-url" }).success, false);
 });
