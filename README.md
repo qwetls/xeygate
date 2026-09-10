@@ -183,6 +183,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
 - **Public Marketplace Analytics:** OpenRouter-style aggregate endpoints — no authentication, no caller-identifying data (`api_key_id`, IP, user agent, spend are never returned), and the finest window is 24h so per-request activity cannot be correlated from the outside. The same data surfaces in `/dashboard/analytics` for both buyers and creators, with a 24h/7d/30d window picker, traffic and token charts, model leaderboard, and endpoint performance tables.
 - **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
+- **Bulk API Key Import:** On any provider page, *Bulk Keys* accepts a pasted list (one key per line, or comma-separated; up to 100 per batch) and registers one connection per key under the same driver. Connection ids fold back to the driver base id, so the catalog card and round-robin pool treat them as one endpoint group. Duplicate keys are deduped in the batch and skipped when the same owner already has that key saved — re-pasting a list never doubles the pool. Available on both the admin surface (`POST /v1/providers/bulk`) and the creator surface (`POST /v1/providers/mine/bulk`).
 - **Server-Side Model Disable:** Disabling a model is a platform rule, not a browser preference. `disabled_models` is keyed like the listings (`custom_models`) — platform rules under the shared base provider id so every key of that driver inherits them, custom connections keeping their own UUID key space — and is enforced at one central chokepoint in the provider registry plus the marketplace routing chain. A disabled model disappears from `/v1/models`, the namespace lists, and the public storefront, and any request naming it fails closed with `400` instead of silently serving another account's key or being laundered through a fallback rule. Admins still see disabled entries on the provider page (with reason + who/when) and can re-enable individually or in bulk.
 
 ---
@@ -208,6 +209,8 @@ All gateway endpoints are served under `/v1`:
 | `GET` | `/health` | Server health check |
 | `GET` | `/v1/quota` | Real-time provider balance & reset countdowns |
 | `GET` / `POST` | `/v1/providers` | Read or connect provider accounts |
+| `POST` | `/v1/providers/bulk` | Add many upstream keys as one connection each (admin session) |
+| `POST` | `/v1/providers/mine/bulk` | Same for creator-owned connections (creator session) |
 | `GET` / `POST` | `/v1/keys` | Manage virtual API keys |
 | `GET` | `/v1/logs` | Query request audit logs and token telemetry |
 | `GET` | `/v1/analytics/overview` | Public platform totals + time series (`?window=24h\|7d\|30d`) |

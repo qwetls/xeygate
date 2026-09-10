@@ -6,6 +6,7 @@ import {
     providerBaseId
 } from "@srouter/constants";
 import type {
+    BulkCreateProviderZod,
     CreateProviderZod,
     ModelObject,
     ProviderCategory,
@@ -55,6 +56,13 @@ export interface CatalogSummary {
 }
 
 export type CreateProviderPayload = CreateProviderZod;
+
+export interface BulkAddKeysResult {
+    requested: number;
+    added: number;
+    skipped: number;
+    connections: Array<{ id: string; name: string }>;
+}
 
 function isProviderProtocol(Value: string): Value is ProviderProtocol {
     return ["openai", "anthropic", "gemini", "custom"].includes(Value);
@@ -360,6 +368,80 @@ export class ProvidersLogic {
         await loadSavedProvidersFromDB();
 
         return ProviderDefinitionFromConfig(Config);
+    }
+
+    /**
+     * Bulk-add provider API keys: one upstream key per connection, all under
+     * the same driver. Ids fold back to the driver via providerBaseId(), so
+     * catalog grouping and round-robin see them as one endpoint pool.
+     */
+    public static async BulkAddProvider(
+        Payload: BulkCreateProviderZod,
+        OwnerId?: string
+    ): Promise<BulkAddKeysResult> {
+        const Name = Payload.name.trim();
+        if (!Name) throw new Error("Provider name is required");
+        if (!isProviderCategory(Payload.category)) throw new Error("Invalid provider category");
+        if (!isProviderProtocol(Payload.protocol)) throw new Error("Invalid provider protocol");
+        const BaseUrl = Payload.base_url?.trim();
+        if (BaseUrl) {
+            try {
+                const Url = new URL(BaseUrl);
+                if (!["http:", "https:"].includes(Url.protocol))
+                    throw new Error("unsupported protocol");
+            } catch {
+                throw new Error("Base URL must be a valid HTTP or HTTPS URL");
+            }
+        }
+
+        const DriverId = Payload.provider_id.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+        if (!DriverId)
+            throw new Error("Provider ID must contain letters, numbers, underscores, or hyphens");
+
+        const Keys = [...new Set(Payload.api_keys.map((Key) => Key.trim()).filter(Boolean))];
+        if (Keys.length === 0) throw new Error("At least one non-empty API key is required");
+
+        const AllRows = await getAllProvidersDB();
+        // Skip keys already saved under the same owner — pasting the same
+        // list twice must not double the connection pool.
+        const TakenKeys = new Set(
+            AllRows.filter((Row) => (OwnerId ? Row.ownerId === OwnerId : Row.ownerId === null))
+                .map((Row) => Row.apiKey)
+                .filter(Boolean)
+        );
+
+        const Stamp = Date.now();
+        const Connections: Array<{ id: string; name: string }> = [];
+        let Skipped = 0;
+
+        for (const [Index, Key] of Keys.entries()) {
+            if (TakenKeys.has(Key)) {
+                Skipped++;
+                continue;
+            }
+            const Id = `${DriverId}-${Stamp}-${Index}`;
+            const Config = {
+                id: Id,
+                providerId: Id,
+                name: Keys.length > 1 ? `${Name} #${Index + 1}` : Name,
+                category: Payload.category,
+                protocol: Payload.protocol,
+                base_url: BaseUrl || undefined,
+                apiKey: Key,
+                ownerId: OwnerId ?? null,
+                enabled: true,
+                createdAt: Stamp
+            };
+            await upsertProviderDB(Config);
+            Connections.push({ id: Id, name: Config.name });
+        }
+
+        if (Connections.length > 0) {
+            await loadSavedProvidersFromDB();
+            await InvalidateRouteCache();
+        }
+
+        return { requested: Keys.length, added: Connections.length, skipped: Skipped, connections: Connections };
     }
 
     public static async ListMyProviders(

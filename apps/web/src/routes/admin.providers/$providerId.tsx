@@ -5,6 +5,7 @@ import {
     ArrowLeft,
     Ban,
     ExternalLink,
+    Layers,
     LayoutGrid,
     List,
     Plus,
@@ -18,13 +19,15 @@ import {
     ConnectOAuthModal,
     ConnectionCard,
     ConnectionForm,
+    BulkConnectionForm,
+    type BulkConnectionFormInput,
     ManageModelsDialog,
     ProviderIcon,
     ProviderModelCard,
     ProviderModelTable,
     type ConnectionFormInput
 } from "@/components/providers";
-import { useProvider, type AddConnectionPayload } from "@/hooks/useProvider";
+import { useProvider, type AddConnectionPayload, type BulkAddKeysPayload } from "@/hooks/useProvider";
 import { useCopy } from "@/hooks/useCopy";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "sonner";
@@ -46,6 +49,7 @@ function ProviderDetailPage() {
         refetch,
         disabledModels,
         addMutation,
+        bulkAddMutation,
         deleteMutation,
         toggleRoundRobinMutation,
         addModelMutation,
@@ -61,6 +65,7 @@ function ProviderDetailPage() {
     const [modelSearch, setModelSearch] = useState("");
     const [viewMode, setViewMode] = useState<"table" | "grid">("table");
     const [isAddOpen, setIsAddOpen] = useState(false);
+    const [isBulkOpen, setIsBulkOpen] = useState(false);
     const [isOAuthModalOpen, setIsOAuthModalOpen] = useState(false);
     const [isAddModelOpen, setIsAddModelOpen] = useState(false);
     const [formError, setFormError] = useState("");
@@ -124,6 +129,30 @@ function ProviderDetailPage() {
             },
             onError: (err: Error) => {
                 const msg = err.message || "Failed to add connection";
+                setFormError(msg);
+                toast.error(msg);
+            }
+        });
+    };
+
+    const handleBulkSubmit = (input: BulkConnectionFormInput) => {
+        if (!provider) return;
+        const payload: BulkAddKeysPayload = {
+            provider_id: provider.id,
+            name: input.name?.trim() || `${provider.name} Key`,
+            category: provider.category,
+            protocol: provider.protocol,
+            base_url: input.base_url || provider.default_base_url || undefined,
+            api_keys: input.apiKeys
+        };
+        setFormError("");
+        bulkAddMutation.mutate(payload, {
+            onSuccess: () => {
+                setIsBulkOpen(false);
+                setFormError("");
+            },
+            onError: (err: Error) => {
+                const msg = err.message || "Failed to add keys";
                 setFormError(msg);
                 toast.error(msg);
             }
@@ -276,6 +305,17 @@ function ProviderDetailPage() {
                         <Plus className="size-3.5" />
                         <span>{provider.requires_oauth ? "Connect Account" : "Add Key"}</span>
                     </Button>
+                    {!provider.requires_oauth && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsBulkOpen(true)}
+                            className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+                        >
+                            <Layers className="size-3.5" />
+                            <span>Bulk Keys</span>
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -451,6 +491,17 @@ function ProviderDetailPage() {
                 isSaving={addMutation.isPending}
                 error={formError}
                 onSubmit={handleAddSubmit}
+            />
+
+            {/* Bulk Add Keys Sheet */}
+            <BulkConnectionForm
+                open={isBulkOpen}
+                onOpenChange={setIsBulkOpen}
+                providerName={provider.name}
+                defaultBaseUrl={provider.default_base_url}
+                isSaving={bulkAddMutation.isPending}
+                error={formError}
+                onSubmit={handleBulkSubmit}
             />
 
             {/* Connect OAuth Modal */}

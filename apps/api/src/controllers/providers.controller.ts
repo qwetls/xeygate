@@ -3,7 +3,7 @@ import type { CreateProviderPayload } from "@/logic/providers.logic.js";
 import type { ProviderConfig } from "@srouter/types";
 import { ProvidersLogic } from "@/logic/providers.logic.js";
 import { deleteProviderDB, getProviderByIdDB } from "@srouter/db";
-import { AddCustomModelSchema, BulkDisableModelsSchema, BulkModelsSchema, CreateProviderSchema, DisableModelSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
+import { AddCustomModelSchema, BulkCreateProviderSchema, BulkDisableModelsSchema, BulkModelsSchema, CreateProviderSchema, DisableModelSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -58,6 +58,24 @@ export class ProvidersController {
             return Ok(c, Created);
         } catch (error) {
             return Err(c, error instanceof Error ? error.message : "Invalid provider payload", 400);
+        }
+    }
+
+    public static async BulkAddProvider(c: Context): Promise<Response> {
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = BulkCreateProviderSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid bulk provider payload", 400);
+        }
+
+        try {
+            const Result = await ProvidersLogic.BulkAddProvider(
+                Parsed.data,
+                c.get("userId") as string | undefined
+            );
+            return Ok(c, { object: "providers.bulk", ...Result });
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Invalid bulk provider payload", 400);
         }
     }
 

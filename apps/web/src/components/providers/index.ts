@@ -1,4 +1,5 @@
 export { AddModelDialog } from "./providers.add-model-dialog";
+export { BulkConnectionForm, type BulkConnectionFormInput } from "./providers.bulk-connection-form";
 export { ManageModelsDialog } from "./providers.manage-models-dialog";
 export { ProviderCard } from "./providers.card";
 export { CatalogToolbar } from "./providers.catalog-toolbar";

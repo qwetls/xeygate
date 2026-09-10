@@ -37,6 +37,28 @@ export const CreateProviderSchema = z.object({
 
 export type CreateProviderZod = z.infer<typeof CreateProviderSchema>;
 
+export const BulkCreateProviderSchema = z.object({
+    provider_id: z
+        .string({ required_error: "Field 'provider_id' is required" })
+        .min(1, "Provider ID is required")
+        .regex(
+            /^[A-Za-z0-9_-]{1,64}$/,
+            "Provider ID must be 1-64 chars: letters, numbers, dashes, or underscores"
+        ),
+    name: z
+        .string({ required_error: "Field 'name' is required" })
+        .min(1, "Field 'name' is required"),
+    category: ProviderCategorySchema,
+    protocol: ProviderProtocolSchema,
+    base_url: z.string().url().optional(),
+    api_keys: z
+        .array(z.string().min(1, "API key cannot be empty").max(512, "API key too long"))
+        .min(1, "At least one API key is required")
+        .max(100, "Too many keys in one batch (max 100)")
+});
+
+export type BulkCreateProviderZod = z.infer<typeof BulkCreateProviderSchema>;
+
 export const UpdateMyProviderSchema = z.object({
     name: z
         .string({ required_error: "Field 'name' is required" })

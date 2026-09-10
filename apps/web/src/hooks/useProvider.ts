@@ -17,6 +17,22 @@ export interface AddConnectionPayload {
     api_key?: string;
 }
 
+export interface BulkAddKeysPayload {
+    provider_id: string;
+    name: string;
+    category: ProviderCategory;
+    protocol: ProviderProtocol;
+    base_url?: string;
+    api_keys: string[];
+}
+
+export interface BulkAddKeysResult {
+    requested: number;
+    added: number;
+    skipped: number;
+    connections: Array<{ id: string; name: string }>;
+}
+
 export interface DisabledModelEntry {
     model_id: string;
     disabled_by: string;
@@ -48,6 +64,25 @@ export function useProvider(providerId: string) {
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to save connection");
+        }
+    });
+
+    const bulkAddMutation = useMutation({
+        mutationFn: (payload: BulkAddKeysPayload) =>
+            api.post<BulkAddKeysResult>("/v1/providers/bulk", payload),
+        onSuccess: (data) => {
+            void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
+            void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+            void queryClient.invalidateQueries({ queryKey: ["models"] });
+            const suffix = data.skipped > 0 ? ` (${data.skipped} duplicate skipped)` : "";
+            if (data.added > 0) {
+                toast.success(`Added ${data.added} key${data.added === 1 ? "" : "s"}${suffix}`);
+            } else {
+                toast.info("No new keys added — all were duplicates");
+            }
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to add keys");
         }
     });
 
@@ -225,6 +260,7 @@ export function useProvider(providerId: string) {
         ...query,
         disabledModels: disabledModelsQuery,
         addMutation,
+        bulkAddMutation,
         deleteMutation,
         toggleRoundRobinMutation,
         addModelMutation,

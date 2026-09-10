@@ -24,6 +24,7 @@ export const MIN_PAYOUT_AMOUNT = 10;
 // Registered before the ":providerId" wildcard so "mine" is not captured as an ID.
 ProvidersRouter.get("/providers/mine", RequireCreator, ProvidersController.ListMyProviders);
 ProvidersRouter.post("/providers/mine", RequireCreator, ProvidersController.AddMyProvider);
+ProvidersRouter.post("/providers/mine/bulk", RequireCreator, ProvidersController.BulkAddProvider);
 ProvidersRouter.post(
     "/providers/mine/verify",
     RequireCreator,
@@ -103,6 +104,7 @@ ProvidersRouter.get("/providers/:providerId", ApiKeyAuth, ProvidersController.Ge
 // Mutation endpoints require Admin Auth
 ProvidersRouter.post("/providers/verify", RequireAdmin, ProvidersController.VerifyProvider);
 ProvidersRouter.post("/providers", RequireAdmin, ProvidersController.AddProvider);
+ProvidersRouter.post("/providers/bulk", RequireAdmin, ProvidersController.BulkAddProvider);
 ProvidersRouter.delete("/providers/:id", RequireAdmin, ProvidersController.DeleteProvider);
 
 // Custom (user-added) models per provider driver
