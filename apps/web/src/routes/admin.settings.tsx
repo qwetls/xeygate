@@ -10,7 +10,6 @@ import {
     ScrollText,
     ShieldCheck,
     Sliders,
-    Sparkles,
     UploadCloud
 } from "lucide-react";
 import { api, getGatewayBaseUrl } from "@/lib/api";
@@ -60,7 +59,7 @@ function SettingsPage() {
         clearStorage,
         getStorageStats
     } = useSettings();
-    const { hasUpdate, latestVersion, currentVersion } = useVersion();
+    const { currentVersion } = useVersion();
     const [activeSection, setActiveSection] = useState<string>("security");
 
     const apiBase = getGatewayBaseUrl();
@@ -150,12 +149,6 @@ function SettingsPage() {
                             <span className="rounded-md border border-border/70 bg-secondary/50 px-2 py-0.5 text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">
                                 {currentVersion}
                             </span>
-                            {hasUpdate && latestVersion && (
-                                <span className="flex items-center gap-1 text-[9px] font-bold tracking-wider uppercase text-amber-500 bg-amber-500/10 border border-amber-500/30 rounded-md px-2 py-0.5">
-                                    <Sparkles className="size-2.5" />
-                                    Update: {latestVersion}
-                                </span>
-                            )}
                         </div>
                         <p className="text-xs text-muted-foreground max-w-2xl leading-relaxed">
                             Fine-tune routing policies, security gates, logging pipelines, and client

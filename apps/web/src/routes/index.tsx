@@ -64,7 +64,7 @@ function useLiveStats() {
 /* ------------------------------------------------------------------ */
 
 const marqueeItems = [
-    "ONE ENDPOINT · SETIAP PROVIDER AI",
+    "ONE ENDPOINT · EVERY AI PROVIDER",
     "OPENAI + ANTHROPIC COMPATIBLE",
     "VIRTUAL KEYS — sr-live-*",
     "QUOTAS & RATE LIMITS",
@@ -113,7 +113,7 @@ const client = new OpenAI({
 
 const stream = await client.chat.completions.create({
     model: "antigravity/gemini-3.7-flash-high",
-    messages: [{ role: "user", content: "Jelaskan vector embedding." }],
+    messages: [{ role: "user", content: "Explain vector embeddings in one sentence." }],
     stream: true
 });
 
@@ -129,7 +129,7 @@ client = OpenAI(
 
 stream = client.chat.completions.create(
     model="antigravity/gemini-3.7-flash-high",
-    messages=[{"role": "user", "content": "Jelaskan vector embedding."}],
+    messages=[{"role": "user", "content": "Explain vector embeddings in one sentence."}],
     stream=True
 )
 
@@ -140,7 +140,7 @@ for chunk in stream:
   -H "Content-Type: application/json" \\
   -d '{
     "model": "antigravity/gemini-3.7-flash-high",
-    "messages": [{"role": "user", "content": "Jelaskan vector embedding."}],
+    "messages": [{"role": "user", "content": "Explain vector embeddings in one sentence."}],
     "stream": true
   }'`
 };
@@ -160,19 +160,18 @@ function CodeShowcase() {
             <div className="grid items-start gap-8 lg:grid-cols-[1fr_1.1fr]">
                 <div className="space-y-5">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-500">
-                        SW1TCH PR0V1D3R — G4NT1 MOD3LNYA
+                        SW1TCH PR0V1D3R — JUST TH3 PR3FIX
                     </p>
                     <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                        Ganti provider cukup ganti <span className="text-emerald-500">prefix model</span>.
-                        Kode tidak berubah.
+                        Change providers by changing the <span className="text-emerald-500">model prefix</span>.
+                        Your code never moves.
                     </h2>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                        Satu base URL OpenAI-compatible untuk semua provider. Ganti{" "}
+                        One OpenAI-compatible base URL for every provider. Swap{" "}
                         <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">antigravity/…</code>{" "}
-                        dengan{" "}
+                        for{" "}
                         <code className="rounded bg-secondary px-1.5 py-0.5 text-xs">anthropic/…</code>{" "}
-                        dan request langsung dirutekan ke provider itu — lengkap dengan key virtual,
-                        quota, dan log.
+                        and the request is rerouted instantly — virtual keys, quotas, and logs included.
                     </p>
                     <div className="flex flex-wrap gap-2 pt-1">
                         {modelChips.map((c) => (
@@ -187,7 +186,7 @@ function CodeShowcase() {
                         ))}
                     </div>
                     <p className="text-xs text-muted-foreground/80">
-                        {">"} model apa saja yang tersedia? cek{" "}
+                        {">"} Hunting for a specific model? Check the{" "}
                         <Link to="/catalog" className="text-emerald-500 hover:underline">
                             marketplace →
                         </Link>
@@ -254,32 +253,32 @@ const useCases = [
     {
         icon: Workflow,
         title: "Chat & Reasoning Agents",
-        desc: "Route percakapan ke model terbaik per task — failover otomatis saat satu provider down."
+        desc: "Route every conversation to the best model for the job — with automatic failover the moment a provider drops."
     },
     {
         icon: FileSearch,
         title: "OCR & Document Analysis",
-        desc: "Kirim gambar & PDF ke model vision lewat endpoint yang sama, tanpa rewrite."
+        desc: "Push images and PDFs through vision models on the same endpoint. No rewrites, no new SDKs."
     },
     {
         icon: Code2,
         title: "SDK Integration",
-        desc: "Drop-in untuk OpenAI SDK, Anthropic SDK, dan tool apa pun yang OpenAI-compatible."
+        desc: "Drop-in for the OpenAI SDK, the Anthropic SDK, and anything else that speaks OpenAI."
     },
     {
         icon: Rocket,
         title: "AI Product Prototypes",
-        desc: "Satu API key untuk eksperimen lintas provider — naik ke production tanpa ganti kode."
+        desc: "One API key for cross-provider experiments — graduate to production without touching your code."
     },
     {
         icon: Layers,
         title: "Batch Processing",
-        desc: "Antrekan request besar dengan quota & rate limit per key, tetap tertib dan terukur."
+        desc: "Run heavy jobs through per-key quotas and rate limits that keep every pipeline orderly and measurable."
     },
     {
         icon: BarChart3,
         title: "Usage & Cost Tracking",
-        desc: "Log realtime per request: model, token, biaya, status — untuk audit & billing."
+        desc: "Realtime per-request logs — model, tokens, cost, status — audit-ready and billing-ready."
     }
 ];
 
@@ -287,50 +286,50 @@ const features = [
     {
         icon: Boxes,
         title: "Multi-Provider Routing",
-        desc: "Route ke OpenAI, Anthropic, Google, dan lainnya dengan failover & load balancing."
+        desc: "OpenAI, Anthropic, Google and more behind one gateway — failover and load balancing included."
     },
     {
         icon: KeyRound,
         title: "Virtual API Keys",
-        desc: "Terbitkan key sr-live-* per konsumen dengan scope, rotasi, dan audit trail penuh."
+        desc: "Issue sr-live-* keys per customer with scopes, rotation, and a full audit trail."
     },
     {
         icon: Gauge,
         title: "Quotas & Rate Limits",
-        desc: "Batas per key dan per model dengan sliding-window serta back-pressure yang halus."
+        desc: "Hard caps per key and per model with sliding windows and graceful back-pressure."
     },
     {
         icon: Zap,
         title: "Combo Routing",
-        desc: "Rantai provider jadi fallback combo — primary, secondary, tertiary — plus health check."
+        desc: "Chain providers into fallback combos — primary, secondary, tertiary — with live health checks."
     },
     {
         icon: ShieldCheck,
         title: "Official & Creator Listings",
-        desc: "Provider resmi XeyCompany berlabel Official, kreator bisa jual model mereka sendiri."
+        desc: "XeyCompany runs the official fleet; creators connect their own keys and sell model access."
     },
     {
         icon: Terminal,
         title: "Playground + Realtime Logs",
-        desc: "Uji prompt langsung di dashboard dan pantau tiap request sampai ke provider asal."
+        desc: "Test prompts right in the dashboard and trace every request to the provider that served it."
     }
 ];
 
 const officialSteps = [
     {
         icon: Cpu,
-        title: "Satu base URL",
-        desc: "Satu endpoint untuk semua model dari semua provider."
+        title: "One base URL",
+        desc: "A single endpoint serving every model from every provider."
     },
     {
         icon: KeyRound,
-        title: "Satu virtual key",
-        desc: "sr-live-* — gampang dirotasi, discope, dan di-audit."
+        title: "One virtual key",
+        desc: "sr-live-* — easy to rotate, scope, and audit."
     },
     {
         icon: BadgeCheck,
-        title: "Pricing transparan",
-        desc: "Tarif per 1M token diatur admin, tampil di marketplace."
+        title: "Transparent pricing",
+        desc: "Per-1M-token rates governed by the platform, published in the marketplace."
     }
 ];
 
@@ -398,16 +397,17 @@ function LandingPage() {
                                 AI Gateway · Marketplace · Multi-Provider
                             </p>
                             <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-                                SATU ENDPOINT.
+                                ONE ENDPOINT.
                                 <br />
-                                <span className="animate-shimmer-text">SEMUA MODEL AI.</span>
+                                <span className="animate-shimmer-text">EVERY AI MODEL.</span>
                                 <br />
                                 <span className="text-muted-foreground">FULL CONTROL.</span>
                             </h1>
                             <p className="mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-                                XEYGATE = gerbang AI cloud yang merutekan request ke OpenAI, Anthropic,
-                                Google, dan lainnya lewat satu API key. Kelola quota, pantau tiap request,
-                                dan beli/jual model di marketplace — dari dashboard yang sama.
+                                XEYGATE is the cloud AI gateway that routes your requests to OpenAI,
+                                Anthropic, Google and more with a single API key — quotas enforced, every
+                                request traced, and a live model marketplace where you buy the best price
+                                or sell your own supply. All from one dashboard.
                             </p>
                             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                                 <Button size="lg" render={<Link to="/register" />} className="cursor-pointer gap-2">
@@ -438,8 +438,7 @@ function LandingPage() {
                     </div>
                     {stats.data && stats.data.models === 0 ? (
                         <p className="pb-4 text-center text-[10px] text-muted-foreground/70">
-                            Katalog masih kosong — angka di atas live dari marketplace. Tambah provider lewat
-                            dashboard admin.
+                            The catalog is warming up — every number above is live from the marketplace.
                         </p>
                     ) : null}
                 </section>
@@ -454,9 +453,9 @@ function LandingPage() {
                     <div className="mx-auto max-w-5xl px-4">
                         <SectionHead
                             kicker="USE C4S3S"
-                            title="Dibuat untuk"
-                            leet="[A1 APPS, AG3NTS, T1M PRODUKS1]"
-                            desc="Dari chatbot sampai pipeline batch — kalau butuh banyak model AI, XEYGATE ada di tengahnya."
+                            title="Built for"
+                            leet="[A1 APPS, AG3NTS, PR0DUCT T34MS]"
+                            desc="From chatbots to batch pipelines — if it touches many AI models, XEYGATE sits in the middle."
                         />
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {useCases.map(({ icon: Icon, title, desc }) => (
@@ -483,9 +482,9 @@ function LandingPage() {
                     <div className="mx-auto max-w-5xl px-4">
                         <SectionHead
                             kicker="F3ATUR3S"
-                            title="Gateway yang bisa"
-                            leet="[D1PERCAYA T1M PRODUKS1]"
-                            desc="Fitur yang bikin satu key aman dipakai banyak konsumen — dan tiap rupiah token bisa dipertanggungjawabkan."
+                            title="The gateway"
+                            leet="[PR0DUCT10N TRU5TS]"
+                            desc="Everything that keeps one key safe to share across customers — and makes every token dollar accountable."
                         />
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {features.map(({ icon: Icon, title, desc }) => (
@@ -511,17 +510,19 @@ function LandingPage() {
                                     XEYGATE MARKETPLACE
                                 </p>
                                 <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                                    Jual model-mu. Pakai model <span className="text-emerald-500">Official</span>{" "}
-                                    XeyCompany.
+                                    Sell your models. Ship on <span className="text-emerald-500">Official</span>{" "}
+                                    supply.
                                 </h2>
                                 <p className="text-sm text-muted-foreground leading-relaxed">
-                                    Marketplace dua sisi: admin XeyCompany menerbitkan provider resmi berlabel{" "}
+                                    A two-sided marketplace: XeyCompany publishes official provider fleets,
+                                    badged{" "}
                                     <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                                         <BadgeCheck className="size-2.5" />
                                         Official
                                     </span>
-                                    , sementara kreator bisa connect API key mereka dan menjual subset model —
-                                    lengkap dengan pricing yang disetujui admin.
+                                    , while creators connect their own API keys and sell curated model
+                                    subsets — every price set in the open, every listing governed by the
+                                    platform.
                                 </p>
                                 <Button render={<Link to="/catalog" />} className="cursor-pointer gap-2">
                                     Browse marketplace
@@ -560,7 +561,8 @@ function LandingPage() {
                             BUILD W1TH <span className="animate-shimmer-text">XEYGATE</span>
                         </h2>
                         <p className="text-sm text-muted-foreground leading-relaxed">
-                            Satu akun, satu key, semua model AI. Gratis mulai sekarang — tanpa kartu kredit.
+                            One account, one key, every AI model. Free to start right now — no credit card,
+                            no sales call, five minutes to your first request.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                             <Button size="lg" render={<Link to="/register" />} className="cursor-pointer gap-2">
@@ -594,7 +596,7 @@ function LandingPage() {
                                 <span className="text-sm font-bold tracking-tight">XEYGATE</span>
                             </div>
                             <p className="text-xs text-muted-foreground leading-relaxed">
-                                Cloud AI gateway & marketplace oleh XeyCompany.
+                                The cloud AI gateway &amp; model marketplace by XeyCompany.
                             </p>
                         </div>
                         <div className="space-y-2 text-xs">
@@ -622,14 +624,6 @@ function LandingPage() {
                                 className="block text-muted-foreground transition-colors hover:text-foreground"
                             >
                                 XeyCompany
-                            </a>
-                            <a
-                                href="https://github.com/qwetls/xeygate"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="block text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                GitHub
                             </a>
                         </div>
                         <div className="space-y-2 text-xs">
