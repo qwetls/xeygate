@@ -82,13 +82,15 @@ jobs:
             fi
             echo "container healthy on :3000"
 
-      # Outside-in check: proves the public port is the stack we just deployed and
-      # that the image on :3000 contains this commit's API surface. A green badge
+      # Outside-in check: proves the public domain is the stack we just deployed
+      # and that the image contains this commit's API surface. A green badge
       # that does not look at the real host is how the split-brain went unnoticed.
+      # Checks the HTTPS domain, NOT ip:3000 — the app port is bound to
+      # 127.0.0.1 on the VPS (compose default), so only nginx may reach it.
       - name: Verify public endpoint
         run: |
           set -euo pipefail
-          base="http://${{ secrets.VPS_HOST }}:3000"
+          base="https://gate.xeycompany.com"
           ok=0
           for i in $(seq 1 20); do
             if curl -sf --max-time 5 "$base/health" >/dev/null 2>&1; then ok=1; break; fi

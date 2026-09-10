@@ -14,8 +14,11 @@ services:
         env_file:
             - .env
         ports:
-            # XEYGATE Unified Gateway & Web Dashboard
-            - "${PORT:-3000}:3000"
+            # XEYGATE Unified Gateway & Web Dashboard.
+            # Bound to loopback by default: the app must be fronted by a TLS
+            # reverse proxy (see README nginx section). Set GATE_BIND=0.0.0.0
+            # in .env only if you knowingly want raw plaintext HTTP on the port.
+            - "${GATE_BIND:-127.0.0.1}:${PORT:-3000}:3000"
             # OAuth PKCE Callback Server
             - "${OAUTH_PORT:-1455}:1455"
         environment:
