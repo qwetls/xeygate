@@ -3,7 +3,13 @@ import {
     getMarketplaceQualityDB,
     type ProviderQualityStats
 } from "@srouter/db";
-import { isSeedProvider, providerAlias, providerBaseId } from "@srouter/constants";
+import {
+    isKnownProvider,
+    isSeedProvider,
+    providerAlias,
+    providerBaseId,
+    providerTypeForAlias
+} from "@srouter/constants";
 import { registry } from "@/services/registry.js";
 import {
     IsOfficialProviderRow,
@@ -104,22 +110,35 @@ export function BuildMarketplaceChain(
 }
 
 /**
- * Resolve a bare marketplace model ("gpt-4o") to an ordered chain of full
- * candidate ids ("creatorAlias/gpt-4o") within one marketplace namespace.
- * Scope selects the key space: "user" routes only creator-owned connections,
- * "official" only platform-owned ones, "all" (default, backward-compatible
- * /v1) both. Returns null when the model is not bare, has no marketplace
- * listings, or nothing is currently registered — the caller then falls back
- * to existing candidate resolution (including its 404 path). Results are
- * cached briefly to keep the hot path cheap.
+ * Resolve a marketplace model to an ordered chain of full candidate ids
+ * ("creatorAlias/gpt-4o") within one marketplace namespace. Scope selects the
+ * key space: "user" routes only creator-owned connections, "official" only
+ * platform-owned ones, "all" (default, backward-compatible /v1) both.
+ *
+ * The requested model is matched exactly against stored listing ids. That
+ * covers slash-less bare names ("gpt-4o") and listings whose id legitimately
+ * contains a slash ("cx/gpt-6-astra") — the same string the storefront
+ * advertises. A slash-prefixed request whose leading segment names a real
+ * provider ("antigravity/gpt-4", a custom connection alias, …) is a direct
+ * registry call, never a marketplace lookup, so it returns null. Also returns
+ * null when nothing is currently listed — the caller then falls back to
+ * existing candidate resolution (including its 404 path). Results are cached
+ * briefly to keep the hot path cheap.
  */
 export async function ResolveMarketplaceRoute(
     model: string,
     scope: MarketplaceScope = "all"
 ): Promise<string[] | null> {
-    if (model.includes("/")) return null;
-
     const Bare = model.toLowerCase();
+    const slash = Bare.indexOf("/");
+    const head = slash >= 0 ? Bare.slice(0, slash) : "";
+
+    // Fast static bail: built-in provider namespaces are registry territory
+    // and must never be laundered through another account's marketplace row.
+    if (slash >= 0 && (isKnownProvider(head) || providerTypeForAlias(head))) {
+        return null;
+    }
+
     const CacheKey = `${scope}:${Bare}`;
     const cached = routeCache.get(CacheKey);
     if (cached && Date.now() < cached.expires) return cached.chain;
@@ -128,6 +147,24 @@ export async function ResolveMarketplaceRoute(
         getAllProvidersDB(),
         getMarketplaceQualityDB(Bare, QUALITY_WINDOW_MS)
     ]);
+
+    // Dynamic bail: the head may be a custom connection alias or id
+    // ("etc/cx/gpt-6-astra" = provider "etc", model "cx/gpt-6-astra").
+    if (
+        slash >= 0 &&
+        providers.some((p) => {
+            const id = (p.providerId || p.id).toLowerCase();
+            return (
+                id === head ||
+                p.id.toLowerCase() === head ||
+                providerBaseId(id) === head ||
+                (p.alias ?? "").toLowerCase() === head ||
+                providerAlias(providerBaseId(id)).toLowerCase() === head
+            );
+        })
+    ) {
+        return null;
+    }
 
     const enabled = providers.filter((p) => p.enabled && !isSeedProvider(p));
     const scored: ScoredMarketplaceCandidate[] = [];

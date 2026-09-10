@@ -76,11 +76,13 @@ async function seed(): Promise<{ admin: User; creator: User; adminPid: string; c
     trackedProviders.push(adminPid, creatorPid);
 
     // Listings: both offer "alpha-model"; only official offers "beta-model";
-    // only creator offers "gamma-model".
+    // only creator offers "gamma-model". "sub/delta-model" carries a slash of
+    // its own — a legitimate stored id that must survive verbatim.
     await addCustomModelDB(adminPid, "alpha-model");
     await addCustomModelDB(adminPid, "beta-model");
     await addCustomModelDB(creatorPid, "alpha-model");
     await addCustomModelDB(creatorPid, "gamma-model");
+    await addCustomModelDB(creatorPid, "sub/delta-model");
 
     return { admin, creator, adminPid, creatorPid };
 }
@@ -162,4 +164,32 @@ test("GET /v1/catalog/models?model= still returns per-provider offerings", async
     const providerIds = body.offerings.map((o: { providerId: string }) => o.providerId);
     assert.ok(providerIds.includes(adminPid));
     assert.ok(providerIds.includes(creatorPid));
+});
+
+// ── Slash ids: advertised verbatim, resolvable in every lookup shape ──
+
+test("flat list advertises stored ids verbatim, including ids with slashes", async () => {
+    await seed();
+    const { body } = await getJson("/v1/catalog/models");
+    const ids = body.models.map((m: { id: string }) => m.id);
+    assert.ok(
+        ids.includes("sub/delta-model"),
+        "a listing id containing a slash must not be flattened"
+    );
+    assert.ok(
+        !ids.includes("delta-model"),
+        "the old over-stripped display id must no longer appear"
+    );
+});
+
+test("?model= resolves a slash listing by exact id, provider-qualified id, and legacy bare id", async () => {
+    const { creatorPid } = await seed();
+    for (const q of ["sub/delta-model", "whateveralias/sub/delta-model", "delta-model"]) {
+        const { status, body } = await getJson(
+            `/v1/catalog/models?model=${encodeURIComponent(q)}`
+        );
+        assert.equal(status, 200, q);
+        assert.equal(body.total, 1, q);
+        assert.equal(body.offerings[0].providerId, creatorPid, q);
+    }
 });

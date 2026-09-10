@@ -190,18 +190,18 @@ export class ChatLogic {
         const originalModel = effectiveBody.model;
         let candidates = await ResolveCandidates(originalModel);
 
-        // Bare marketplace models ("gpt-4o") route across the listings of the
-        // request's namespace (creator-only on /user/v1, platform-official on
+        // Marketplace models route across the listings of the request's
+        // namespace (creator-only on /user/v1, platform-official on
         // /official/v1, both on /v1); the marketplace chain replaces local
-        // fallback candidates because failover there is mandatory.
-        if (!originalModel.includes("/")) {
-            const marketplaceChain = await ResolveMarketplaceRoute(
-                originalModel,
-                marketplaceScope
-            );
-            if (marketplaceChain && marketplaceChain.length > 0) {
-                candidates = marketplaceChain.map((m) => ({ model: m }));
-            }
+        // fallback candidates because failover there is mandatory. Provider-
+        // qualified ids ("alias/model") are rejected inside the resolver and
+        // keep using the direct registry path.
+        const marketplaceChain = await ResolveMarketplaceRoute(
+            originalModel,
+            marketplaceScope
+        );
+        if (marketplaceChain && marketplaceChain.length > 0) {
+            candidates = marketplaceChain.map((m) => ({ model: m }));
         }
 
         let lastError: Error | ErrorWithStatus | string | null = null;
@@ -329,18 +329,18 @@ export class ChatLogic {
         const originalModel = effectiveBody.model;
         let candidates = await ResolveCandidates(originalModel);
 
-        // Bare marketplace models ("gpt-4o") route across the listings of the
-        // request's namespace (creator-only on /user/v1, platform-official on
+        // Marketplace models route across the listings of the request's
+        // namespace (creator-only on /user/v1, platform-official on
         // /official/v1, both on /v1); the marketplace chain replaces local
-        // fallback candidates because failover there is mandatory.
-        if (!originalModel.includes("/")) {
-            const marketplaceChain = await ResolveMarketplaceRoute(
-                originalModel,
-                marketplaceScope
-            );
-            if (marketplaceChain && marketplaceChain.length > 0) {
-                candidates = marketplaceChain.map((m) => ({ model: m }));
-            }
+        // fallback candidates because failover there is mandatory. Provider-
+        // qualified ids ("alias/model") are rejected inside the resolver and
+        // keep using the direct registry path.
+        const marketplaceChain = await ResolveMarketplaceRoute(
+            originalModel,
+            marketplaceScope
+        );
+        if (marketplaceChain && marketplaceChain.length > 0) {
+            candidates = marketplaceChain.map((m) => ({ model: m }));
         }
 
         let lastError: Error | ErrorWithStatus | string | null = null;

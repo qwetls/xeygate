@@ -240,6 +240,50 @@ test("routing namespaces resolve disjoint chains", async () => {
     registry.unregisterProvider(`creatorconn-route-${TAG}`);
 });
 
+// ── Slash-containing listing ids ──────────────────────────────────────
+
+test("a listing id with a slash routes as an exact marketplace candidate", async () => {
+    const creator = (await store.createUser({
+        email: `ns_slash_creator_${TAG}@test.local`,
+        passwordHash: "x",
+        name: "NS Slash Creator"
+    }))! as User;
+
+    const slashModel = `cx/ns-slash-${TAG}`; // leading segment is not a provider alias
+    const connId = `creatorconn-slash-${TAG}`;
+    await trackCustomModel(connId, slashModel);
+    await trackProvider({
+        id: connId,
+        providerId: connId,
+        alias: "slashx",
+        name: "Slash Creator Conn",
+        category: "custom_provider",
+        protocol: "openai",
+        baseUrl: "https://slash.local/v1",
+        ownerId: creator.id,
+        enabled: true
+    });
+    registry.registerProvider(mockExecutor(connId));
+
+    // The advertised id is exactly the requestable id.
+    const chain = await ResolveMarketplaceRoute(slashModel, "user");
+    assert.ok(chain, "slash listing must produce a marketplace chain");
+    assert.deepEqual(chain, [`slashx/${slashModel}`]);
+
+    // Provider-qualified requests keep the direct registry path: a custom
+    // connection alias as head…
+    assert.equal(await ResolveMarketplaceRoute(`slashx/${slashModel}`, "user"), null);
+    // …and a built-in namespace can never be laundered through another
+    // account's row, even if one literally stored that name.
+    await trackCustomModel(connId, `anthropic/ns-poison-${TAG}`);
+    assert.equal(
+        await ResolveMarketplaceRoute(`anthropic/ns-poison-${TAG}`, "all"),
+        null
+    );
+
+    registry.unregisterProvider(connId);
+});
+
 // ── Public catalog endpoints ──────────────────────────────────────────
 
 const catalogApp = new Hono();

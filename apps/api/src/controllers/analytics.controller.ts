@@ -59,7 +59,10 @@ export class AnalyticsController {
 
     /** GET /v1/analytics/models/:model — public stats page for one model. */
     public static async GetModelStats(c: Context): Promise<Response> {
-        const Model = c.req.param("model");
+        const RawModel = c.req.param("model");
+        // Listing ids may contain slashes ("cx/gpt-6-astra"); the client
+        // percent-encodes them, so decode before matching the stored name.
+        const Model = RawModel ? decodeURIComponent(RawModel) : undefined;
         if (!Model) return Err(c, "model is required", 400);
         const ParsedWindow = ParseWindow(c);
         if (ParsedWindow.error) return Err(c, ParsedWindow.error, 400);

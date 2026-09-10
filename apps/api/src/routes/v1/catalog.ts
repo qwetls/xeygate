@@ -187,12 +187,15 @@ function ResolvePricing(
 /**
  * Model→providers mapping.
  *
- * `GET /v1/catalog/models?model=gpt-4o` — every enabled offering that lists
- * this model (exact or slash-suffix match), merged with pricing.
  * `GET /v1/catalog/models` (no param) — the flat marketplace model list: one
- * entry per bare model id across all cards, with every offering, the cheapest
- * one highlighted, and models.dev metadata (description/context/modalities)
- * when the dataset knows the model. This powers the model-centric storefront.
+ * entry per stored listing id across all cards, with every offering, the
+ * cheapest one highlighted, and models.dev metadata (description/context/
+ * modalities) when the dataset knows the model. This powers the model-centric
+ * storefront, so every advertised id is exactly what a buyer requests.
+ * `GET /v1/catalog/models?model=x` — every enabled offering that lists
+ * model x. Tolerant by design: the stored id ("cx/gpt-6-astra"), a
+ * provider-qualified lookup ("etc/cx/gpt-6-astra"), and legacy fully-stripped
+ * ids ("gpt-6-astra" for a "cx/gpt-6-astra" listing) all resolve.
  */
 CatalogRouter.get("/catalog/models", async (c) => {
     const raw = (c.req.query("model") ?? "").trim();
@@ -215,11 +218,15 @@ CatalogRouter.get("/catalog/models", async (c) => {
                 ? p.name
                 : await StorefrontName(p.ownerId, p.name);
             for (const mr of rows) {
-                const bare = BareModelId(mr.modelId);
-                const key = bare.toLowerCase();
+                // The stored listing id is the canonical marketplace id: it was
+                // normalized against the provider's own alias at add time and
+                // it is exactly what routing matches on. An id that legitimately
+                // contains a slash ("cx/gpt-6-astra") must survive untouched —
+                // the storefront may only advertise what a buyer can request.
+                const key = mr.modelId.toLowerCase();
                 let entry = byModel.get(key);
                 if (!entry) {
-                    entry = { id: bare, offers: [] };
+                    entry = { id: mr.modelId, offers: [] };
                     byModel.set(key, entry);
                 }
                 if (entry.offers.some((o) => o.providerId === p.providerId)) continue;
@@ -245,7 +252,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
                 const cheapest = [...e.offers].sort(
                     (a, b) => a.input - b.input || a.output - b.output
                 )[0];
-                const meta = getModelMetadata(e.id);
+                const meta = getModelMetadata(e.id) ?? getModelMetadata(BareModelId(e.id));
                 return {
                     id: e.id,
                     endpoints: e.offers.length,
@@ -270,8 +277,8 @@ CatalogRouter.get("/catalog/models", async (c) => {
         return Ok(c, { object: "catalog.models", total: models.length, models });
     }
 
-    const target = BareModelId(raw).toLowerCase();
-    const targetFull = raw.toLowerCase();
+    const requested = raw.toLowerCase();
+    const requestedBare = BareModelId(requested);
 
     const offerings: Array<{
         providerId: string;
@@ -287,8 +294,11 @@ CatalogRouter.get("/catalog/models", async (c) => {
         if (seen.has(p.providerId)) continue;
         const rows = await EnabledListings(p, official);
         const firstModel = rows.find((mr) => {
-            const bare = BareModelId(mr.modelId).toLowerCase();
-            return bare === target || mr.modelId.toLowerCase() === targetFull;
+            const stored = mr.modelId.toLowerCase();
+            if (stored === requested || stored === requestedBare) return true;
+            // Legacy deep links were built from the old display id, which had
+            // every leading segment stripped ("gpt-6-astra" → "cx/gpt-6-astra").
+            return BareModelId(stored) === requested || BareModelId(stored) === requestedBare;
         });
         if (!firstModel) continue;
         seen.add(p.providerId);

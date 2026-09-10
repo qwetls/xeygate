@@ -449,11 +449,22 @@ export async function GetModelStats(
     model: string,
     window: MarketplaceAnalyticsWindow
 ): Promise<MarketplaceModelStats | null> {
-    const target = BareKey(model).toLowerCase();
-    if (!target) return null;
+    // The requested name is a canonical marketplace id: a slash may be part
+    // of the listing itself ("cx/gpt-6-astra"), so the request is never
+    // re-stripped. Rows are matched by the id verbatim (served traffic logs
+    // "alias/cx/gpt-6-astra" → bare "cx/gpt-6-astra") or, for compatibility
+    // with the old flattened spelling, by one leading segment removed.
+    const Primary = model.trim().toLowerCase();
+    if (!Primary) return null;
+    const slash = Primary.indexOf("/");
+    const Stripped = slash >= 0 ? Primary.slice(slash + 1) : Primary;
+    const matches = (bare: string): boolean => {
+        const b = bare.trim().toLowerCase();
+        return b === Primary || b === Stripped;
+    };
 
     const [slices, directory] = await Promise.all([ScanUsage(window), BuildEndpointDirectory()]);
-    const matching = slices.filter((s) => s.bare.toLowerCase() === target);
+    const matching = slices.filter((s) => matches(s.bare));
     if (matching.length === 0) return null;
 
     const models = RawSpellings(matching);
@@ -469,7 +480,7 @@ export async function GetModelStats(
     }
     endpoints.sort((a, b) => b.totalRequests - a.totalRequests);
 
-    const series = await BuildSeries(window, (rawModel) => BareKey(rawModel).toLowerCase() === target);
+    const series = await BuildSeries(window, (rawModel) => matches(BareKey(rawModel)));
 
     return {
         object: "marketplace.model.stats",
