@@ -179,10 +179,10 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Registration Gate (optional):** Toggle admin approval for new sign-ups from the admin settings.
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
-- **Quality-Weighted Marketplace Routing:** Bare model requests (`"gpt-4o"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
+- **Quality-Weighted Marketplace Routing:** Marketplace model requests (`"gpt-4o"`, or any listing id whose first path segment is not a provider — including ids that legitimately contain a slash, like `"cx/gpt-6-astra"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
 - **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
 - **Public Marketplace Analytics:** OpenRouter-style aggregate endpoints — no authentication, no caller-identifying data (`api_key_id`, IP, user agent, spend are never returned), and the finest window is 24h so per-request activity cannot be correlated from the outside. The same data surfaces in `/dashboard/analytics` for both buyers and creators, with a 24h/7d/30d window picker, traffic and token charts, model leaderboard, and endpoint performance tables.
-- **Model-Centric Storefront:** The public marketplace (`/catalog`) is a flat list of every supplied model — not provider cards. Each row shows the cheapest per-1M-token price across providers, the number of supply endpoints, and models.dev metadata (description, context window, modalities, reasoning/tool capabilities). Clicking a model opens a detail page (`/catalog/{model}`) with the full provider pricing table (best price highlighted), live request stats behind a 24h/7d/30d window picker, traffic sparkline, and per-endpoint performance.
+- **Model-Centric Storefront:** The public marketplace (`/catalog`) is a flat list of every supplied model — not provider cards. Each row shows the cheapest per-1M-token price across providers, the number of supply endpoints, and models.dev metadata (description, context window, modalities, reasoning/tool capabilities). The advertised id is exactly the requestable id — stored listing ids (slashes included) are published verbatim, never re-stripped. Clicking a model opens a detail page (`/catalog/{model}`) with the full provider pricing table (best price highlighted), live request stats behind a 24h/7d/30d window picker, traffic sparkline, and per-endpoint performance.
 - **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Every model row also carries an explicit marketplace state — **Listed** (published in the public catalog) vs **Not listed** — with one-click List / Unlist per model and bulk List/Unlist in the selection toolbar. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
 - **Bulk API Key Import:** On any provider page, *Bulk Keys* accepts a pasted list (one key per line, or comma-separated; up to 500 per batch) and registers one connection per key under the same driver. Connection ids fold back to the driver base id, so the catalog card and round-robin pool treat them as one endpoint group. Duplicate keys are deduped in the batch and skipped when the same owner already has that key saved — re-pasting a list never doubles the pool. Available on both the admin surface (`POST /v1/providers/bulk`) and the creator surface (`POST /v1/providers/mine/bulk`).
 - **Server-Side Model Disable:** Disabling a model is a platform rule, not a browser preference. `disabled_models` is keyed like the listings (`custom_models`) — platform rules under the shared base provider id so every key of that driver inherits them, custom connections keeping their own UUID key space — and is enforced at one central chokepoint in the provider registry plus the marketplace routing chain. A disabled model disappears from `/v1/models`, the namespace lists, and the public storefront, and any request naming it fails closed with `400` instead of silently serving another account's key or being laundered through a fallback rule. Admins still see disabled entries on the provider page (with reason + who/when) and can re-enable individually or in bulk.
@@ -219,7 +219,7 @@ All gateway endpoints are served under `/v1`:
 | `GET` | `/v1/analytics/models/:model` | Public per-model page: endpoints serving it + series (404 when no traffic) |
 | `GET` | `/v1/analytics/endpoints` | Public supply-side stats per connection (creator storefronts + official) |
 | `GET` | `/v1/catalog` | Public storefront cards: every enabled provider with its listed models + merged pricing |
-| `GET` | `/v1/catalog/models` | Public flat model list: one entry per bare model — all offers, cheapest highlighted, models.dev metadata |
+| `GET` | `/v1/catalog/models` | Public flat model list: one entry per stored listing id (advertised id = requestable id) — all offers, cheapest highlighted, models.dev metadata |
 | `GET` | `/v1/catalog/models?model=` | Public per-model offerings: every provider listing that model with merged pricing |
 | `GET` / `POST` | `/v1/tunnel/*` | Manage Cloudflare Tunnel daemon state |
 | `GET` | `/v1/admin/status` | Setup probe — `{ setupRequired }` while no admin exists |
@@ -244,8 +244,8 @@ services:
     container_name: xeygate
     restart: unless-stopped
     ports:
-      - "3000:3000"
-      - "1455:1455"
+      - "127.0.0.1:3000:3000"   # loopback-only by default — front it with nginx/TLS
+      - "1455:1455"              # OAuth PKCE callback (must stay reachable)
     volumes:
       - ${HOME}/.xeygate:/root/.xeygate
     environment:
@@ -285,6 +285,7 @@ server {
 
 3. **TLS** — `certbot --nginx -d gate.xeycompany.com --redirect` issues the certificate, installs the 443 block, and adds the HTTP→HTTPS redirect; renewal is automatic.
 4. **Secure cookies** — set `SROUTER_SECURE_COOKIES=true` (and `SROUTER_CORS_ORIGINS=https://your-domain`) in `/opt/xeygate/.env`, then `docker compose up -d` so session cookies get the `Secure` flag.
+5. **Loopback-only app port** — the compose stack publishes `127.0.0.1:3000` by default, so the gateway is unreachable over plaintext HTTP on the host interface; nginx is the only public door. Escape hatch for machines without a front proxy: `GATE_BIND=0.0.0.0` in `.env`.
 
 ---
 
