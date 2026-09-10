@@ -23,7 +23,7 @@ export class ModelsLogic {
         const Scoped = Scope === "all" ? Models : await this.FilterModelsByScope(Models, Scope);
         const Merged = await this.MergeCustomModels(Scoped, Provider, Scope);
         return this.ExcludeDisabled(
-            Scope === "all" ? this.MergeComboModels(Merged) : Merged
+            Scope === "all" ? await this.MergeComboModels(Merged) : Merged
         );
     }
 

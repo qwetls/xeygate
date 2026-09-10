@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
 import { Hono } from "hono";
 import type { AIProvider } from "@srouter/types";
-import { createFallbackRuleDB } from "@srouter/db";
+import { createFallbackRuleDB, disableModelDB, enableModelDB } from "@srouter/db";
 import { ModelsRouter } from "../src/routes/v1/models.js";
 import { registry } from "../src/services/registry.js";
 import { ModelsLogic } from "../src/logic/models.logic.js";
@@ -145,4 +145,27 @@ test("GET /v1/models exposes combo source models", async () => {
     };
 
     assert.ok(body.data.some((model) => model.id === "srouter/smart-route"));
+});
+
+test("GET /v1/models survives combo merge combined with an active denylist", async () => {
+    // Regression: MergeComboModels used to hand ExcludeDisabled an un-awaited
+    // Promise, which only crashed once disabled_models had at least one row.
+    await createFallbackRuleDB({
+        sourceModel: "resilient-route",
+        targetModel: `${mockProviderId}/claude-sonnet-4`,
+        priority: 1,
+        enabled: true
+    });
+    await disableModelDB(mockProviderId, "gpt-5-turbo", "test");
+
+    try {
+        const response = await app.request("/v1/models", { method: "GET" });
+        assert.equal(response.status, 200);
+
+        const body = (await response.json()) as { data: Array<{ id: string }> };
+        assert.ok(body.data.some((model) => model.id === "srouter/resilient-route"));
+        assert.ok(body.data.every((model) => model.id !== `${mockProviderId}/gpt-5-turbo`));
+    } finally {
+        await enableModelDB(mockProviderId, "gpt-5-turbo");
+    }
 });
