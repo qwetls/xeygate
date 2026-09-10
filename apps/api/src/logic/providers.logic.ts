@@ -403,9 +403,12 @@ export class ProvidersLogic {
 
         const AllRows = await getAllProvidersDB();
         // Skip keys already saved under the same owner — pasting the same
-        // list twice must not double the connection pool.
+        // list twice must not double the connection pool. The DB layer maps a
+        // NULL owner_id to undefined on read, so normalize both sides.
         const TakenKeys = new Set(
-            AllRows.filter((Row) => (OwnerId ? Row.ownerId === OwnerId : Row.ownerId === null))
+            AllRows.filter(
+                (Row) => (Row.ownerId ?? null) === (OwnerId !== undefined ? OwnerId : null)
+            )
                 .map((Row) => Row.apiKey)
                 .filter(Boolean)
         );

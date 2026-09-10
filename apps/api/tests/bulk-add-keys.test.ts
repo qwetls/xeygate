@@ -55,7 +55,7 @@ test("BulkAddProvider creates one connection per key with driver-folding ids", a
         assert.ok(row, "row persisted");
         assert.equal(row!.apiKey, KEYS[i]);
         assert.equal(row!.enabled, true);
-        assert.equal(row!.ownerId, null, "admin bulk adds are official (owner NULL)");
+        assert.equal(row!.ownerId ?? null, null, "admin bulk adds are official (owner NULL)");
     }
     await cleanup();
 });
