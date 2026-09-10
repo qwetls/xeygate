@@ -21,6 +21,7 @@ import {
     Copy,
     RotateCcw,
     Star,
+    Store,
     Trash2,
     X
 } from "lucide-react";
@@ -41,9 +42,13 @@ interface ProviderModelTableProps {
     models: ModelObject[];
     copied: string | null;
     onCopy: (modelId: string) => void;
-    /** Hard-remove a custom listing. Live models are disabled, never deleted. */
+    /** Unlist: hard-remove the custom listing (row in `custom_models`). */
     onDelete?: (modelId: string) => void;
-    /** Server-side disable: hides the model from routing and every listing. */
+    /** List on the marketplace: register an upstream model as a custom listing. */
+    onList?: (modelId: string) => void;
+    onListMultiple?: (modelIds: string[]) => void;
+    onUnlistMultiple?: (modelIds: string[]) => void;
+    /** Server-side disable: platform veto over the listing (routing + storefront). */
     onDisable?: (modelId: string) => void;
     onEnable?: (modelId: string) => void;
     onDisableMultiple?: (modelIds: string[]) => void;
@@ -55,6 +60,9 @@ export function ProviderModelTable({
     copied,
     onCopy,
     onDelete,
+    onList,
+    onListMultiple,
+    onUnlistMultiple,
     onDisable,
     onEnable,
     onDisableMultiple,
@@ -164,6 +172,30 @@ export function ProviderModelTable({
         }
     };
 
+    const handleBulkList = () => {
+        const targets = [...selectedIds];
+        clearSelection();
+        onListMultiple?.(targets);
+    };
+
+    const handleBulkUnlist = () => {
+        const listed = new Set(models.filter((m) => m.custom).map((m) => m.id));
+        const targets = selectedIds.filter((id) => listed.has(id));
+        clearSelection();
+        if (targets.length === 0) return;
+        onUnlistMultiple?.(targets);
+    };
+
+    const selectedHasUnlisted = useMemo(() => {
+        const selected = new Set(selectedIds);
+        return models.some((m) => selected.has(m.id) && !m.custom);
+    }, [models, selectedIds]);
+
+    const selectedHasListed = useMemo(() => {
+        const selected = new Set(selectedIds);
+        return models.some((m) => selected.has(m.id) && m.custom);
+    }, [models, selectedIds]);
+
     const columns = useMemo<ColumnDef<ModelObject>[]>(
         () => [
             {
@@ -267,8 +299,9 @@ export function ProviderModelTable({
                                 {model.id}
                             </span>
                             {model.custom && (
-                                <span className="inline-flex items-center rounded-[4px] bg-sky-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-sky-600 dark:text-sky-400 border border-sky-500/20 shrink-0">
-                                    Custom
+                                <span className="inline-flex items-center gap-0.5 rounded-[4px] bg-emerald-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                    <Store className="size-2.5" />
+                                    Listed
                                 </span>
                             )}
 
@@ -312,6 +345,31 @@ export function ProviderModelTable({
                                     ★ Pinned
                                 </span>
                             )}
+                            {model.custom ? (
+                                <span
+                                    className={
+                                        model.disabled
+                                            ? "inline-flex items-center gap-1 rounded-[4px] bg-[var(--field)] px-1.5 py-0.2 text-[9.5px] font-bold text-[var(--ink-3)] border border-[var(--line)]"
+                                            : "inline-flex items-center gap-1 rounded-[4px] bg-emerald-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                                    }
+                                    title={
+                                        model.disabled
+                                            ? "Listed on the marketplace, but hidden while disabled"
+                                            : "Listed on the public marketplace"
+                                    }
+                                >
+                                    <Store className="size-2.5" />
+                                    <span>{model.disabled ? "Listed (hidden)" : "Listed"}</span>
+                                </span>
+                            ) : (
+                                <span
+                                    className="inline-flex items-center gap-1 rounded-[4px] bg-[var(--field)] px-1.5 py-0.2 text-[9.5px] font-bold text-[var(--ink-3)] border border-[var(--line)]"
+                                    title="Upstream model, not published to the marketplace catalog yet"
+                                >
+                                    <Store className="size-2.5 opacity-60" />
+                                    <span>Not listed</span>
+                                </span>
+                            )}
                         </div>
                     );
                 }
@@ -340,18 +398,30 @@ export function ProviderModelTable({
                                           type="button"
                                           onClick={() => onDisable(model.id)}
                                           className="inline-flex items-center gap-1 rounded-[4px] px-2 py-1 text-[10.5px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
-                                          title="Disable model — removes it from routing and listings"
+                                          title="Disable model — platform veto: hides it from the storefront and blocks traffic (listing kept)"
                                       >
                                           <Ban className="size-3" />
                                           <span>Disable</span>
                                       </button>
                                   )}
+                            {!model.custom &&
+                                onList && (
+                                    <button
+                                        type="button"
+                                        onClick={() => onList(model.id)}
+                                        className="inline-flex items-center gap-1 rounded-[4px] px-2 py-1 text-[10.5px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors cursor-pointer"
+                                        title="List on marketplace — publish this model in the public catalog"
+                                    >
+                                        <Store className="size-3" />
+                                        <span>List</span>
+                                    </button>
+                                )}
                             {onDelete && model.custom && (
                                 <button
                                     type="button"
                                     onClick={() => onDelete(model.id)}
                                     className="text-[var(--ink-3)] hover:text-rose-500 hover:bg-rose-500/10 p-1 rounded transition-colors cursor-pointer"
-                                    title="Delete custom model"
+                                    title="Unlist — remove the marketplace listing for this model"
                                 >
                                     <Trash2 className="size-3" />
                                 </button>
@@ -365,6 +435,7 @@ export function ProviderModelTable({
             copied,
             onCopy,
             onDelete,
+            onList,
             onDisable,
             onEnable,
             isFavorite,
@@ -423,12 +494,36 @@ export function ProviderModelTable({
                             <span>Favorite</span>
                         </button>
 
+                        {(onListMultiple || onList) && selectedHasUnlisted && (
+                            <button
+                                type="button"
+                                onClick={handleBulkList}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 transition-all cursor-pointer border border-emerald-500/30 shadow-2xs hover:scale-105 active:scale-95"
+                                title="List unlisted selections on the marketplace"
+                            >
+                                <Store className="size-3.5" />
+                                <span>List</span>
+                            </button>
+                        )}
+
+                        {(onUnlistMultiple || onDelete) && selectedHasListed && (
+                            <button
+                                type="button"
+                                onClick={handleBulkUnlist}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 hover:bg-rose-500/20 px-3 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 transition-all cursor-pointer border border-rose-500/30 shadow-2xs hover:scale-105 active:scale-95"
+                                title="Unlist selected marketplace listings"
+                            >
+                                <Trash2 className="size-3.5" />
+                                <span>Unlist</span>
+                            </button>
+                        )}
+
                         {(onDisableMultiple || onDisable) && (
                             <button
                                 type="button"
                                 onClick={handleBulkDisable}
                                 className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 transition-all cursor-pointer border border-amber-500/30 shadow-2xs hover:scale-105 active:scale-95"
-                                title="Disable selected models — removes them from routing and listings"
+                                title="Disable selected models — platform veto (hide from storefront + block traffic)"
                             >
                                 <Ban className="size-3.5" />
                                 <span>Disable</span>

@@ -136,7 +136,7 @@ export function useProvider(providerId: string) {
         onSuccess: () => {
             void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
             void queryClient.invalidateQueries({ queryKey: ["models"] });
-            toast.success("Custom model deleted");
+            toast.success("Model unlisted from the marketplace");
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to delete custom model");
@@ -151,7 +151,9 @@ export function useProvider(providerId: string) {
         onSuccess: (data) => {
             void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
             void queryClient.invalidateQueries({ queryKey: ["models"] });
-            toast.success(`Added ${data.added} model${data.added === 1 ? "" : "s"} to the catalog`);
+            toast.success(
+                `Listed ${data.added} model${data.added === 1 ? "" : "s"} on the marketplace`
+            );
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to add models");
@@ -166,7 +168,9 @@ export function useProvider(providerId: string) {
         onSuccess: (data) => {
             void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
             void queryClient.invalidateQueries({ queryKey: ["models"] });
-            toast.success(`Removed ${data.deleted} model${data.deleted === 1 ? "" : "s"} from the catalog`);
+            toast.success(
+                `Unlisted ${data.deleted} model${data.deleted === 1 ? "" : "s"} from the marketplace`
+            );
         },
         onError: (err: Error) => {
             toast.error(err.message || "Failed to delete models");

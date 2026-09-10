@@ -1,4 +1,4 @@
-import { Ban, Bot, Check, Copy, RotateCcw, Star, Trash2 } from "lucide-react";
+import { Ban, Bot, Check, Copy, RotateCcw, Star, Store, Trash2 } from "lucide-react";
 import type { ModelObject } from "@srouter/types";
 import { useFavorites } from "@/hooks/useFavorites";
 
@@ -6,9 +6,11 @@ interface ProviderModelCardProps {
     model: ModelObject;
     copied: boolean;
     onCopy: (modelId: string) => void;
-    /** Hard-remove a custom listing. Live models are disabled, never deleted. */
+    /** Unlist: hard-remove the custom listing (row in `custom_models`). */
     onDelete?: (modelId: string) => void;
-    /** Server-side disable: hides the model from routing and every listing. */
+    /** List on the marketplace: register an upstream model as a custom listing. */
+    onList?: (modelId: string) => void;
+    /** Server-side disable: platform veto over the listing (routing + storefront). */
     onDisable?: (modelId: string) => void;
     onEnable?: (modelId: string) => void;
 }
@@ -18,6 +20,7 @@ export function ProviderModelCard({
     copied,
     onCopy,
     onDelete,
+    onList,
     onDisable,
     onEnable
 }: ProviderModelCardProps) {
@@ -107,10 +110,21 @@ export function ProviderModelCard({
                             type="button"
                             onClick={() => onDisable(model.id)}
                             className="text-[var(--ink-3)] hover:text-amber-500 hover:bg-amber-500/10 p-1 rounded transition-colors cursor-pointer"
-                            title="Disable model — removes it from routing and listings"
+                            title="Disable model — platform veto: hides it from the storefront and blocks traffic (listing kept)"
                             aria-label="Disable model"
                         >
                             <Ban className="size-3" />
+                        </button>
+                    )}
+                    {!model.custom && onList && (
+                        <button
+                            type="button"
+                            onClick={() => onList(model.id)}
+                            className="text-[var(--ink-3)] hover:text-emerald-500 hover:bg-emerald-500/10 p-1 rounded transition-colors cursor-pointer"
+                            title="List on marketplace — publish this model in the public catalog"
+                            aria-label="List on marketplace"
+                        >
+                            <Store className="size-3" />
                         </button>
                     )}
                     {onDelete && model.custom && (
@@ -118,8 +132,8 @@ export function ProviderModelCard({
                             type="button"
                             onClick={() => onDelete(model.id)}
                             className="text-[var(--ink-3)] hover:text-rose-500 hover:bg-rose-500/10 p-1 rounded transition-colors cursor-pointer"
-                            title="Delete custom model"
-                            aria-label="Delete custom model"
+                            title="Unlist — remove the marketplace listing for this model"
+                            aria-label="Unlist from marketplace"
                         >
                             <Trash2 className="size-3" />
                         </button>
@@ -146,9 +160,25 @@ export function ProviderModelCard({
                             ★ Pinned
                         </span>
                     )}
-                    {model.custom && (
-                        <span className="inline-flex items-center gap-0.5 rounded-[4px] bg-sky-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                            Custom
+                    {model.custom ? (
+                        <span
+                            className="inline-flex items-center gap-1 rounded-[4px] bg-emerald-500/10 px-1.5 py-0.2 text-[9.5px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            title={
+                                isDisabled
+                                    ? "Listed on the marketplace, but hidden while disabled"
+                                    : "Listed on the public marketplace"
+                            }
+                        >
+                            <Store className="size-2.5" />
+                            <span>{isDisabled ? "Listed (hidden)" : "Listed"}</span>
+                        </span>
+                    ) : (
+                        <span
+                            className="inline-flex items-center gap-1 rounded-[4px] bg-[var(--field)] px-1.5 py-0.2 text-[9.5px] font-bold text-[var(--ink-3)] border border-[var(--line)]"
+                            title="Upstream model, not published to the marketplace catalog yet"
+                        >
+                            <Store className="size-2.5 opacity-60" />
+                            <span>Not listed</span>
                         </span>
                     )}
                 </div>

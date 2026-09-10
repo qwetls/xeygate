@@ -80,6 +80,20 @@ function ProviderDetailPage() {
         deleteModelMutation.mutate(modelId);
     };
 
+    // Marketplace listing actions: a `custom_models` row IS the listing —
+    // add = publish to the public catalog, delete = unlist from it.
+    const handleListModel = (modelId: string) => {
+        addModelsBulkMutation.mutate([modelId]);
+    };
+
+    const handleListMultipleModels = (modelIds: string[]) => {
+        addModelsBulkMutation.mutate(modelIds);
+    };
+
+    const handleUnlistMultipleModels = (modelIds: string[]) => {
+        deleteModelsBulkMutation.mutate(modelIds);
+    };
+
     const handleDisableModel = (modelId: string) => {
         disableModelMutation.mutate({ modelId });
     };
@@ -376,11 +390,11 @@ function ProviderDetailPage() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Models exposed by {provider.name} and routed through this gateway.
-                            {disabledCount > 0 && (
-                                <span className="text-[var(--ink-3)]">
-                                    {" "}Disabled models are hidden from public listings and no longer serve traffic.
-                                </span>
-                            )}
+                            <span className="text-[var(--ink-3)]">
+                                {" "}
+                                Listed models are published on the public marketplace; Disable is a
+                                veto that hides a listing and blocks its traffic.
+                            </span>
                         </p>
                     </div>
 
@@ -459,6 +473,9 @@ function ProviderDetailPage() {
                         copied={copied}
                         onCopy={(id) => void copy(id)}
                         onDelete={handleDeleteModel}
+                        onList={handleListModel}
+                        onListMultiple={handleListMultipleModels}
+                        onUnlistMultiple={handleUnlistMultipleModels}
                         onDisable={handleDisableModel}
                         onEnable={handleEnableModel}
                         onDisableMultiple={handleDisableMultipleModels}
@@ -473,6 +490,7 @@ function ProviderDetailPage() {
                                 copied={copied === m.id}
                                 onCopy={(id) => void copy(id)}
                                 onDelete={handleDeleteModel}
+                                onList={handleListModel}
                                 onDisable={handleDisableModel}
                                 onEnable={handleEnableModel}
                             />
