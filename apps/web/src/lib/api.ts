@@ -4,8 +4,63 @@ import type {
     MarketplaceAnalyticsOverview,
     MarketplaceAnalyticsWindow,
     MarketplaceLeaderboard,
+    MarketplaceModelStats,
     MarketplaceProviderStats
 } from "@srouter/types";
+
+export interface CatalogFlatOffer {
+    providerId: string;
+    name: string;
+    providerName: string;
+    official: boolean;
+    input: number;
+    output: number;
+    cached?: number;
+    cache_creation?: number;
+    reasoning?: number;
+    override: boolean;
+}
+
+export interface CatalogModelMetadata {
+    name: string;
+    description: string | null;
+    family: string | null;
+    context: number | null;
+    output: number | null;
+    modality: string[] | null;
+    reasoning: boolean;
+    toolCall: boolean;
+    released: string | null;
+}
+
+export interface CatalogFlatModel {
+    id: string;
+    endpoints: number;
+    offers: CatalogFlatOffer[];
+    bestOffer: CatalogFlatOffer | null;
+    metadata: CatalogModelMetadata | null;
+}
+
+export interface CatalogFlatModelsResponse {
+    object: "catalog.models";
+    total: number;
+    models: CatalogFlatModel[];
+}
+
+export interface CatalogModelOffering {
+    providerId: string;
+    name: string;
+    providerName: string;
+    official: boolean;
+    pricing: { input: number; output: number; cached?: number; cache_creation?: number; reasoning?: number };
+    override: boolean;
+}
+
+export interface CatalogModelDetailResponse {
+    model: string;
+    total: number;
+    offerings: CatalogModelOffering[];
+}
 
 export class ApiError extends Error {
     status: number;
@@ -115,5 +170,24 @@ export const Api = {
     getMarketplaceEndpoints: (
         window: MarketplaceAnalyticsWindow
     ): Promise<MarketplaceProviderStats> =>
-        api.get<MarketplaceProviderStats>(`/v1/analytics/endpoints?window=${window}`)
+        api.get<MarketplaceProviderStats>(`/v1/analytics/endpoints?window=${window}`),
+    getMarketplaceModelStats: (
+        model: string,
+        window: MarketplaceAnalyticsWindow
+    ): Promise<MarketplaceModelStats> =>
+        api.get<MarketplaceModelStats>(
+            `/v1/analytics/models/${encodeURIComponent(model)}?window=${window}`
+        ),
+
+    // Public model-centric catalog (no auth). Flat list aggregates every
+    // enabled offering per bare model id; the detail call lists all providers
+    // serving one model with merged pricing.
+    getCatalogModels: (): Promise<CatalogFlatModelsResponse> =>
+        api.get<CatalogFlatModelsResponse>("/v1/catalog/models"),
+    getCatalogModelOfferings: (
+        model: string
+    ): Promise<CatalogModelDetailResponse> =>
+        api.get<CatalogModelDetailResponse>(
+            `/v1/catalog/models?model=${encodeURIComponent(model)}`
+        )
 };

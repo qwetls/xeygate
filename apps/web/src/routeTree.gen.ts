@@ -38,6 +38,8 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AdminProvidersIndexRouteImport } from './routes/admin.providers/index'
 import { Route as AdminProvidersProviderIdRouteImport } from './routes/admin.providers/$providerId'
+import { Route as CatalogIndexRouteImport } from './routes/catalog/index'
+import { Route as CatalogSplatRouteImport } from './routes/catalog/$'
 
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
@@ -183,10 +185,20 @@ const AdminProvidersProviderIdRoute = AdminProvidersProviderIdRouteImport.update
   path: '/$providerId',
   getParentRoute: () => AdminProvidersRoute,
 } as any)
+const CatalogIndexRoute = CatalogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CatalogRoute,
+} as any)
+const CatalogSplatRoute = CatalogSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => CatalogRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRoute
+  '/catalog': typeof CatalogRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
@@ -213,10 +225,12 @@ export interface FileRoutesByFullPath {
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers/': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
+  '/catalog/': typeof CatalogIndexRoute
+  '/catalog/$': typeof CatalogSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRoute
+  '/catalog': typeof CatalogIndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/onboarding': typeof OnboardingRoute
@@ -240,11 +254,12 @@ export interface FileRoutesByTo {
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
+  '/catalog/$': typeof CatalogSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRoute
+  '/catalog': typeof CatalogRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/_client': typeof ClientRouteWithChildren
   '/login': typeof LoginRoute
@@ -272,6 +287,8 @@ export interface FileRoutesById {
   '/_client/dashboard/playground': typeof ClientDashboardPlaygroundRoute
   '/admin/providers/': typeof AdminProvidersIndexRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
+  '/catalog/': typeof CatalogIndexRoute
+  '/catalog/$': typeof CatalogSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -304,6 +321,8 @@ export interface FileRouteTypes {
     | '/dashboard/playground'
     | '/admin/providers/'
     | '/admin/providers/$providerId'
+    | '/catalog/'
+    | '/catalog/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -331,6 +350,7 @@ export interface FileRouteTypes {
     | '/dashboard/playground'
     | '/admin/providers'
     | '/admin/providers/$providerId'
+    | '/catalog/$'
   id:
     | '__root__'
     | '/'
@@ -362,11 +382,13 @@ export interface FileRouteTypes {
     | '/_client/dashboard/playground'
     | '/admin/providers/'
     | '/admin/providers/$providerId'
+    | '/catalog/'
+    | '/catalog/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CatalogRoute: typeof CatalogRoute
+  CatalogRoute: typeof CatalogRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -579,6 +601,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProvidersProviderIdRouteImport
       parentRoute: typeof AdminProvidersRoute
     }
+    '/catalog/': {
+      id: '/catalog/'
+      path: '/'
+      fullPath: '/catalog/'
+      preLoaderRoute: typeof CatalogIndexRouteImport
+      parentRoute: typeof CatalogRoute
+    }
+    '/catalog/$': {
+      id: '/catalog/$'
+      path: '/$'
+      fullPath: '/catalog/$'
+      preLoaderRoute: typeof CatalogSplatRouteImport
+      parentRoute: typeof CatalogRoute
+    }
   }
 }
 
@@ -594,6 +630,20 @@ const AdminProvidersRouteChildren: AdminProvidersRouteChildren = {
 
 const AdminProvidersRouteWithChildren = AdminProvidersRoute._addFileChildren(
   AdminProvidersRouteChildren,
+)
+
+interface CatalogRouteChildren {
+  CatalogIndexRoute: typeof CatalogIndexRoute
+  CatalogSplatRoute: typeof CatalogSplatRoute
+}
+
+const CatalogRouteChildren: CatalogRouteChildren = {
+  CatalogIndexRoute: CatalogIndexRoute,
+  CatalogSplatRoute: CatalogSplatRoute,
+}
+
+const CatalogRouteWithChildren = CatalogRoute._addFileChildren(
+  CatalogRouteChildren,
 )
 
 interface AdminRouteChildren {
@@ -664,7 +714,7 @@ const ClientRouteWithChildren = ClientRoute._addFileChildren(ClientRouteChildren
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CatalogRoute: CatalogRoute,
+  CatalogRoute: CatalogRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
   LoginRoute: LoginRoute,
