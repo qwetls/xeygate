@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-12
+
 ### Added
 - **Public legal pages** — `/terms`, `/privacy`, `/acceptable-use` and `/refund`, written for how XEYGATE actually operates (prepaid credit wallet, admin-confirmed top-ups, third-party model routing, creator marketplace). Shared `LegalShell` layout with cross-links and a **Legal** column in the landing footer; sign-up and sign-in are gated by a required "I agree to the Terms of Service and Privacy Policy" checkbox (submit stays disabled until checked).
 - **Client Billing page** (`/dashboard/billing`) — wallet balance hero, top-up orders (preset $10/$25/$50/$100 or custom $5–$10,000 with an optional payment reference), the buyer's order history, and the full transaction ledger (`GET /v1/users/transactions`, previously API-only) with load-more paging.
