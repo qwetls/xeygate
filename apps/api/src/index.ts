@@ -187,7 +187,8 @@ if (hasWebDist) {
     // deploys, after which the SPA lazy-loads old hashed chunks forever.
     app.use("/assets/*", async (c, next) => {
         await next();
-        if (c.res.status === 200 && c.res.headers.get("content-type")?.startsWith("text/")) {
+        const ct = c.res.headers.get("content-type") ?? "";
+        if (c.res.status === 200 && ct.startsWith("text/") && !ct.includes("text/html")) {
             c.header("Cache-Control", "public, max-age=31536000, immutable");
         }
     });
