@@ -282,6 +282,21 @@ const TABLES: TableDef[] = [
         ]
     },
     {
+        name: "topup_orders",
+        columns: [
+            { name: "id", definition: "TEXT PRIMARY KEY" },
+            { name: "user_id", definition: "TEXT NOT NULL" },
+            { name: "amount", definition: "REAL NOT NULL" },
+            { name: "currency", definition: "TEXT NOT NULL DEFAULT 'USD'" },
+            { name: "status", definition: "TEXT NOT NULL DEFAULT 'pending'" },
+            { name: "reference", definition: "TEXT" },
+            { name: "note", definition: "TEXT" },
+            { name: "requested_at", definition: "INTEGER NOT NULL" },
+            { name: "processed_at", definition: "INTEGER" },
+            { name: "processed_by", definition: "TEXT" }
+        ]
+    },
+    {
         name: "model_pricing",
         columns: [
             { name: "id", definition: "TEXT PRIMARY KEY" },
@@ -311,6 +326,8 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_user_created ON creator_earnings(user_id, created_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_creator_earnings_provider ON creator_earnings(provider_id, created_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_payouts_user_requested ON payouts(user_id, requested_at DESC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_topup_orders_user_requested ON topup_orders(user_id, requested_at DESC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_topup_orders_status ON topup_orders(status, requested_at ASC);" },
     { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" }
 ];
 

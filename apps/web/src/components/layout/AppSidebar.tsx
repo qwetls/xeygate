@@ -4,6 +4,7 @@ import {
     BarChart2,
     Boxes,
     Coins,
+    CreditCard,
     Cpu,
     Gauge,
     GitFork,
@@ -38,6 +39,7 @@ const mainNavItems = [
     { to: "/catalog", label: "Marketplace", icon: Globe },
     { to: "/admin/users", label: "Users", icon: Users },
     { to: "/admin/payouts", label: "Payouts", icon: Banknote },
+    { to: "/admin/topups", label: "Top-ups", icon: CreditCard },
     { to: "/admin/keys", label: "API Keys", icon: KeyRound },
     { to: "/admin/providers", label: "Providers", icon: Boxes },
     { to: "/admin/playground", label: "Playground", icon: Terminal }

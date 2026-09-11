@@ -6,7 +6,12 @@ import {
     listPayoutsDB,
     processPayoutDB,
     markEarningsPaidForPayoutDB,
-    type Payout
+    listAllTopupOrdersDB,
+    listTopupOrdersDB,
+    processTopupOrderDB,
+    createTransactionDB,
+    type Payout,
+    type TopupOrder
 } from "@srouter/db";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -248,5 +253,72 @@ export class AdminUsersController {
             await userAuthStore.updateCredits(payout.userId, payout.amount);
         }
         return Ok(c, { payout });
+    }
+
+    // ── Top-up orders ──
+
+    public static async ListTopups(c: Context): Promise<Response> {
+        const userId = c.req.query("userId");
+        const status = c.req.query("status") === "all" ? "all" : "pending";
+        const limit = Math.min(Number(c.req.query("limit") ?? 100), 500);
+
+        let topups: TopupOrder[];
+        if (userId) {
+            topups = await listTopupOrdersDB(userId, limit, 0);
+        } else {
+            topups = await listAllTopupOrdersDB(status, limit);
+        }
+
+        // Same readability enrichment as the payout queue.
+        const userCache = new Map<string, { email: string; name: string }>();
+        const enriched: Array<TopupOrder & { userEmail?: string; userName?: string }> = [];
+        for (const topup of topups) {
+            let user = userCache.get(topup.userId);
+            if (!user) {
+                const u = await userAuthStore.getUserById(topup.userId);
+                user = u ? { email: u.email, name: u.name } : { email: "", name: "" };
+                userCache.set(topup.userId, user);
+            }
+            enriched.push({ ...topup, userEmail: user.email, userName: user.name });
+        }
+        return Ok(c, { topups: enriched });
+    }
+
+    public static async ProcessTopup(c: Context): Promise<Response> {
+        const adminId = c.get("userId") as string;
+        const id = c.req.param("id");
+        const body = await c.req.json<{ status?: string; note?: string }>().catch(() => ({}));
+        if (body.status !== "approved" && body.status !== "rejected") {
+            return Err(c, "Status must be 'approved' or 'rejected'", 400, {
+                code: "invalid_topup_status"
+            });
+        }
+
+        // Conditional flip pins the row to 'pending': a second concurrent
+        // process (or a race against user cancel) changes 0 rows → 409.
+        const note = body.note?.trim() ? body.note.trim().slice(0, 200) : undefined;
+        const topup = await processTopupOrderDB(id, body.status, {
+            processedBy: adminId,
+            note
+        });
+        if (!topup) {
+            return Err(c, "Top-up order not found or already processed", 409, {
+                code: "topup_not_pending"
+            });
+        }
+
+        let credits: number | undefined;
+        if (topup.status === "approved") {
+            await userAuthStore.updateCredits(topup.userId, topup.amount);
+            await createTransactionDB({
+                userId: topup.userId,
+                type: "credit",
+                amount: topup.amount,
+                description: `Top-up order ${topup.id} approved`
+            });
+            const user = await userAuthStore.getUserById(topup.userId);
+            credits = user?.credits;
+        }
+        return Ok(c, { topup, credits });
     }
 }

@@ -180,6 +180,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
 - **Daily Login Rewards:** Signing in credits the wallet automatically — **+$8 on days 1–6 of a login streak, +$10 on day 7**, then the cycle restarts. At most one grant per UTC day (extra logins don't double-credit), every reward is itemized in the wallet ledger, and skipping a day resets the streak.
+- **Client Billing & Top-ups:** `/dashboard/billing` — wallet balance, top-up orders (preset or custom amount + payment reference, one pending at a time, cancel anytime before review), order history, and the full transaction ledger. Orders are verified by an admin (`/admin/topups`) — approval credits the wallet instantly.
 - **Client Profile & Settings:** `/dashboard/profile` — display name, wallet, account identity, and live streak progress; `/dashboard/settings` — change password (keeps your current session, signs out others) and sign out of every device at once.
 - **Quality-Weighted Marketplace Routing:** Marketplace model requests (`"gpt-4o"`, or any listing id whose first path segment is not a provider — including ids that legitimately contain a slash, like `"cx/gpt-6-astra"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
 - **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
@@ -218,6 +219,10 @@ All gateway endpoints are served under `/v1`:
 | `POST` | `/v1/users/login` | Sign in — issues the 30-day sliding session cookie and grants the daily login reward (max once per UTC day) |
 | `GET` / `PATCH` | `/v1/users/me` | Read own profile (incl. member-since + login streak) / update display name |
 | `POST` | `/v1/users/logout-all` | Revoke every session of the account, including the current device |
+| `GET` / `POST` | `/v1/users/topups` | List own top-up orders (incl. the pending one) / create a top-up order (`$5–$10,000`, optional payment reference; one pending at a time) |
+| `POST` | `/v1/users/topups/:id/cancel` | Cancel own pending top-up order |
+| `GET` | `/v1/admin/topups` | Top-up review queue — pending by default, `?status=all` for history (`userId=` to filter by buyer) |
+| `POST` | `/v1/admin/topups/:id/process` | Approve (credits the wallet + writes a ledger row) or reject a top-up order — exactly once |
 | `GET` | `/v1/logs` | Query request audit logs and token telemetry |
 | `GET` | `/v1/analytics/overview` | Public platform totals + time series (`?window=24h\|7d\|30d`) |
 | `GET` | `/v1/analytics/models` | Public model leaderboard by token volume (`&limit=1..100`) |

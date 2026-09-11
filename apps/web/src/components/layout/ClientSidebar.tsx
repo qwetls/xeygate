@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import {
     Activity,
     BarChart2,
+    CreditCard,
     KeyRound,
     LayoutDashboard,
     LogOut,
@@ -41,6 +42,7 @@ const baseNavItems = [
     { to: "/dashboard/playground", label: "Playground", icon: Terminal },
     { to: "/dashboard/usage", label: "Usage", icon: BarChart2 },
     { to: "/dashboard/analytics", label: "Analytics", icon: Activity },
+    { to: "/dashboard/billing", label: "Billing", icon: CreditCard },
     { to: "/dashboard/profile", label: "Profile", icon: UserRound },
     { to: "/dashboard/settings", label: "Settings", icon: Settings }
 ] as const;

@@ -5,6 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- **Client Billing page** (`/dashboard/billing`) — wallet balance hero, top-up orders (preset $10/$25/$50/$100 or custom $5–$10,000 with an optional payment reference), the buyer's order history, and the full transaction ledger (`GET /v1/users/transactions`, previously API-only) with load-more paging.
+- **Top-up order flow** — buyers create an order and pay out-of-band (`POST /v1/users/topups`, one pending order per user, `POST /v1/users/topups/:id/cancel`); an admin reviews them at `/admin/topups` and **Approves** (wallet credited + `credit` ledger row, processed exactly once via a conditional state flip) or **Rejects** with a note. New endpoints: `GET /v1/admin/topups`, `POST /v1/admin/topups/:id/process`.
+
+### Removed
+- The simulated `POST /v1/users/credits/topup` MVP endpoint (added credits directly with no ledger entry and no payment step) — superseded by the order-based flow.
+
 ## [1.2.0] - 2026-09-11
 
 ### Added

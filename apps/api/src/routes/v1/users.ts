@@ -5,7 +5,13 @@ import {
     getUserTransactionsDB,
     countUserTransactionsDB,
     getRequireRegistrationApprovalDB,
-    getPublicPlatformStatsDB
+    getPublicPlatformStatsDB,
+    createTopupOrderDB,
+    getTopupOrderDB,
+    listTopupOrdersDB,
+    countTopupOrdersDB,
+    getPendingTopupOrderDB,
+    processTopupOrderDB
 } from "@srouter/db";
 import {
     validateEmail,
@@ -323,17 +329,52 @@ UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
     });
 });
 
-// ── Top up credits (simulated for MVP) ──
-UserAuthRouter.post("/users/credits/topup", RequireUserAuth, async (c) => {
+// ── Wallet top-up orders (out-of-band payment, admin-verified) ──
+// The buyer creates an order and pays off-platform; an admin approves it,
+// which credits the wallet and writes the matching ledger row. Only one
+// order may be pending per user at a time.
+const TOPUP_MIN_AMOUNT = 5;
+const TOPUP_MAX_AMOUNT = 10000;
+
+UserAuthRouter.post("/users/topups", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
-    const body = await c.req.json<{ amount?: number }>().catch(() => ({}));
-    const amount = Number(body.amount);
-    if (!amount || amount <= 0 || amount > 10000) {
-        return Err(c, "Amount must be between 0.01 and 10000", 400);
+    const body = await c.req.json<{ amount?: number; reference?: string }>().catch(() => ({}));
+    const amount = Math.round(Number(body.amount) * 100) / 100;
+    if (!Number.isFinite(amount) || amount < TOPUP_MIN_AMOUNT || amount > TOPUP_MAX_AMOUNT) {
+        return Err(c, `Amount must be between $${TOPUP_MIN_AMOUNT} and $${TOPUP_MAX_AMOUNT}`, 400);
     }
-    const updated = await userAuthStore.updateCredits(userId, amount);
-    if (!updated) return Err(c, "User not found", 404);
-    return Ok(c, { credits: updated.credits });
+    const reference =
+        body.reference === undefined ? undefined : String(body.reference).trim().slice(0, 100);
+    if (await getPendingTopupOrderDB(userId)) {
+        return Err(c, "A top-up order is already pending. Cancel it or wait for review.", 409, {
+            code: "topup_pending_exists"
+        });
+    }
+    const order = await createTopupOrderDB({ userId, amount, reference });
+    return Ok(c, { topup: order });
+});
+
+UserAuthRouter.get("/users/topups", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const limit = Math.min(Number(c.req.query("limit") ?? 50), 200);
+    const offset = Math.max(Number(c.req.query("offset") ?? 0), 0);
+    const [topups, total, pending] = await Promise.all([
+        listTopupOrdersDB(userId, limit, offset),
+        countTopupOrdersDB(userId),
+        getPendingTopupOrderDB(userId)
+    ]);
+    return Ok(c, { topups, total, pending });
+});
+
+UserAuthRouter.post("/users/topups/:id/cancel", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const order = await getTopupOrderDB(c.req.param("id"));
+    if (!order || order.userId !== userId) return Err(c, "Top-up order not found", 404);
+    if (order.status !== "pending") {
+        return Err(c, "Only pending orders can be cancelled", 409, { code: "topup_not_pending" });
+    }
+    const cancelled = await processTopupOrderDB(order.id, "cancelled");
+    return Ok(c, { topup: cancelled });
 });
 
 // ── List user's API keys ──

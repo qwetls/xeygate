@@ -19,3 +19,6 @@ AdminUsersRouter.patch("/admin/users/:id/share", RequireAdmin, AdminUsersControl
 
 AdminUsersRouter.get("/admin/payouts", RequireAdmin, AdminUsersController.ListPayouts);
 AdminUsersRouter.post("/admin/payouts/:id/process", RequireAdmin, AdminUsersController.ProcessPayout);
+
+AdminUsersRouter.get("/admin/topups", RequireAdmin, AdminUsersController.ListTopups);
+AdminUsersRouter.post("/admin/topups/:id/process", RequireAdmin, AdminUsersController.ProcessTopup);

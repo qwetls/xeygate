@@ -28,11 +28,13 @@ import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
 import { Route as AdminQuotaRouteImport } from './routes/admin.quota'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
+import { Route as AdminTopupsRouteImport } from './routes/admin.topups'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as CatalogIndexRouteImport } from './routes/catalog/index'
 import { Route as CatalogSplatRouteImport } from './routes/catalog/$'
 import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashboard.index'
 import { Route as ClientDashboardAnalyticsRouteImport } from './routes/_client.dashboard.analytics'
+import { Route as ClientDashboardBillingRouteImport } from './routes/_client.dashboard.billing'
 import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
 import { Route as ClientDashboardMyApisRouteImport } from './routes/_client.dashboard.my-apis'
 import { Route as ClientDashboardPayoutsRouteImport } from './routes/_client.dashboard.payouts'
@@ -137,6 +139,11 @@ const AdminSettingsRoute = AdminSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminTopupsRoute = AdminTopupsRouteImport.update({
+  id: '/topups',
+  path: '/topups',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -163,6 +170,11 @@ const ClientDashboardAnalyticsRoute =
     path: '/analytics',
     getParentRoute: () => ClientDashboardRoute,
   } as any)
+const ClientDashboardBillingRoute = ClientDashboardBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
 const ClientDashboardKeysRoute = ClientDashboardKeysRouteImport.update({
   id: '/keys',
   path: '/keys',
@@ -229,11 +241,13 @@ export interface FileRoutesByFullPath {
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/topups': typeof AdminTopupsRoute
   '/admin/users': typeof AdminUsersRoute
   '/catalog/$': typeof CatalogSplatRoute
   '/admin/': typeof AdminIndexRoute
   '/catalog/': typeof CatalogIndexRoute
   '/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
+  '/dashboard/billing': typeof ClientDashboardBillingRoute
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
@@ -259,11 +273,13 @@ export interface FileRoutesByTo {
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/topups': typeof AdminTopupsRoute
   '/admin/users': typeof AdminUsersRoute
   '/catalog/$': typeof CatalogSplatRoute
   '/admin': typeof AdminIndexRoute
   '/catalog': typeof CatalogIndexRoute
   '/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
+  '/dashboard/billing': typeof ClientDashboardBillingRoute
   '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
@@ -295,11 +311,13 @@ export interface FileRoutesById {
   '/admin/providers': typeof AdminProvidersRouteWithChildren
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/topups': typeof AdminTopupsRoute
   '/admin/users': typeof AdminUsersRoute
   '/catalog/$': typeof CatalogSplatRoute
   '/admin/': typeof AdminIndexRoute
   '/catalog/': typeof CatalogIndexRoute
   '/_client/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
+  '/_client/dashboard/billing': typeof ClientDashboardBillingRoute
   '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
   '/_client/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/_client/dashboard/payouts': typeof ClientDashboardPayoutsRoute
@@ -331,11 +349,13 @@ export interface FileRouteTypes {
     | '/admin/providers'
     | '/admin/quota'
     | '/admin/settings'
+    | '/admin/topups'
     | '/admin/users'
     | '/catalog/$'
     | '/admin/'
     | '/catalog/'
     | '/dashboard/analytics'
+    | '/dashboard/billing'
     | '/dashboard/keys'
     | '/dashboard/my-apis'
     | '/dashboard/payouts'
@@ -361,11 +381,13 @@ export interface FileRouteTypes {
     | '/admin/pricing'
     | '/admin/quota'
     | '/admin/settings'
+    | '/admin/topups'
     | '/admin/users'
     | '/catalog/$'
     | '/admin'
     | '/catalog'
     | '/dashboard/analytics'
+    | '/dashboard/billing'
     | '/dashboard/keys'
     | '/dashboard/my-apis'
     | '/dashboard/payouts'
@@ -396,11 +418,13 @@ export interface FileRouteTypes {
     | '/admin/providers'
     | '/admin/quota'
     | '/admin/settings'
+    | '/admin/topups'
     | '/admin/users'
     | '/catalog/$'
     | '/admin/'
     | '/catalog/'
     | '/_client/dashboard/analytics'
+    | '/_client/dashboard/billing'
     | '/_client/dashboard/keys'
     | '/_client/dashboard/my-apis'
     | '/_client/dashboard/payouts'
@@ -558,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/topups': {
+      id: '/admin/topups'
+      path: '/topups'
+      fullPath: '/admin/topups'
+      preLoaderRoute: typeof AdminTopupsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/users': {
       id: '/admin/users'
       path: '/users'
@@ -591,6 +622,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/dashboard/analytics'
       preLoaderRoute: typeof ClientDashboardAnalyticsRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
+    '/_client/dashboard/billing': {
+      id: '/_client/dashboard/billing'
+      path: '/billing'
+      fullPath: '/dashboard/billing'
+      preLoaderRoute: typeof ClientDashboardBillingRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
     '/_client/dashboard/keys': {
@@ -661,6 +699,7 @@ declare module '@tanstack/react-router' {
 
 interface ClientDashboardRouteChildren {
   ClientDashboardAnalyticsRoute: typeof ClientDashboardAnalyticsRoute
+  ClientDashboardBillingRoute: typeof ClientDashboardBillingRoute
   ClientDashboardKeysRoute: typeof ClientDashboardKeysRoute
   ClientDashboardMyApisRoute: typeof ClientDashboardMyApisRoute
   ClientDashboardPayoutsRoute: typeof ClientDashboardPayoutsRoute
@@ -673,6 +712,7 @@ interface ClientDashboardRouteChildren {
 
 const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
   ClientDashboardAnalyticsRoute: ClientDashboardAnalyticsRoute,
+  ClientDashboardBillingRoute: ClientDashboardBillingRoute,
   ClientDashboardKeysRoute: ClientDashboardKeysRoute,
   ClientDashboardMyApisRoute: ClientDashboardMyApisRoute,
   ClientDashboardPayoutsRoute: ClientDashboardPayoutsRoute,
@@ -723,6 +763,7 @@ interface AdminRouteChildren {
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
   AdminQuotaRoute: typeof AdminQuotaRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminTopupsRoute: typeof AdminTopupsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -738,6 +779,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
   AdminQuotaRoute: AdminQuotaRoute,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminTopupsRoute: AdminTopupsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
