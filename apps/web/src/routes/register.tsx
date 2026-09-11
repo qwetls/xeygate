@@ -110,6 +110,12 @@ function RegisterPage() {
                         <Button type="submit" disabled={registerMutation.isPending} className="w-full">
                             {registerMutation.isPending ? "Creating account..." : "Create account"}
                         </Button>
+                        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+                            By creating an account you agree to our{" "}
+                            <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">Terms of Service</Link>{" "}
+                            and{" "}
+                            <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">Privacy Policy</Link>.
+                        </p>
                         <p className="text-center text-xs text-muted-foreground">
                             Already have an account?{" "}
                             <Link to="/login" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Sign in</Link>

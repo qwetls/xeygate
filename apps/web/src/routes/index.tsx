@@ -580,8 +580,8 @@ function LandingPage() {
 
             {/* Footer */}
             <footer className="border-t border-border/60 bg-secondary/20">
-                <div className="mx-auto max-w-5xl px-4 py-10">
-                    <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr_1fr]">
+                <div className="mx-auto max-w-6xl px-4 py-10">
+                    <div className="grid gap-8 sm:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <div className="flex size-6 items-center justify-center rounded-md border border-border/80 bg-secondary">
@@ -625,6 +625,23 @@ function LandingPage() {
                             >
                                 XeyCompany
                             </a>
+                        </div>
+                        <div className="space-y-2 text-xs">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                                Legal
+                            </p>
+                            <Link to="/terms" className="block text-muted-foreground transition-colors hover:text-foreground">
+                                Terms of Service
+                            </Link>
+                            <Link to="/privacy" className="block text-muted-foreground transition-colors hover:text-foreground">
+                                Privacy Policy
+                            </Link>
+                            <Link to="/acceptable-use" className="block text-muted-foreground transition-colors hover:text-foreground">
+                                Acceptable Use
+                            </Link>
+                            <Link to="/refund" className="block text-muted-foreground transition-colors hover:text-foreground">
+                                Refund Policy
+                            </Link>
                         </div>
                         <div className="space-y-2 text-xs">
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
