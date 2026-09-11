@@ -10,6 +10,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - **Client Settings page** (`/dashboard/settings`) — change password (other devices signed out, current session kept) and **Sign out everywhere** (`POST /v1/users/logout-all`, revokes every session including the caller's).
 - Profile and Settings entries in the client sidebar navigation.
 
+### Fixed
+- **Marketplace header CTA for signed-in users** — `/catalog` always rendered "Sign in / Get started"; it now detects the active session (`GET /v1/users/me`) and shows a single **Dashboard** button instead, so the storefront no longer asks logged-in buyers to sign in again.
+
 ## [1.1.0] - 2026-09-11
 
 ### Added
