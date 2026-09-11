@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Zap } from "lucide-react";
 
@@ -17,6 +18,7 @@ function LoginPage() {
     const navigate = useNavigate();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const loginMutation = useMutation({
@@ -71,7 +73,21 @@ function LoginPage() {
                         {error && (
                             <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{error}</p>
                         )}
-                        <Button type="submit" disabled={loginMutation.isPending} className="w-full">
+                        <div className="flex items-start gap-2.5">
+                            <Checkbox
+                                id="terms-consent"
+                                checked={agreed}
+                                onCheckedChange={(c) => setAgreed(Boolean(c))}
+                                className="mt-px"
+                            />
+                            <label htmlFor="terms-consent" className="cursor-pointer select-none text-[11px] leading-relaxed text-muted-foreground">
+                                I agree to the{" "}
+                                <Link to="/terms" target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Terms of Service</Link>{" "}
+                                and{" "}
+                                <Link to="/privacy" target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Privacy Policy</Link>.
+                            </label>
+                        </div>
+                        <Button type="submit" disabled={loginMutation.isPending || !agreed} className="w-full">
                             {loginMutation.isPending ? "Signing in..." : "Sign in"}
                         </Button>
                         <p className="text-center text-xs text-muted-foreground">

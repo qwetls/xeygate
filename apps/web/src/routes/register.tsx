@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Clock, Zap } from "lucide-react";
 
@@ -24,6 +25,7 @@ function RegisterPage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [agreed, setAgreed] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pendingApproval, setPendingApproval] = useState(false);
 
@@ -107,15 +109,23 @@ function RegisterPage() {
                         {error && (
                             <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">{error}</p>
                         )}
-                        <Button type="submit" disabled={registerMutation.isPending} className="w-full">
+                        <div className="flex items-start gap-2.5">
+                            <Checkbox
+                                id="terms-consent"
+                                checked={agreed}
+                                onCheckedChange={(c) => setAgreed(Boolean(c))}
+                                className="mt-px"
+                            />
+                            <label htmlFor="terms-consent" className="cursor-pointer select-none text-[11px] leading-relaxed text-muted-foreground">
+                                I have read and agree to the{" "}
+                                <Link to="/terms" target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Terms of Service</Link>{" "}
+                                and{" "}
+                                <Link to="/privacy" target="_blank" rel="noreferrer" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Privacy Policy</Link>.
+                            </label>
+                        </div>
+                        <Button type="submit" disabled={registerMutation.isPending || !agreed} className="w-full">
                             {registerMutation.isPending ? "Creating account..." : "Create account"}
                         </Button>
-                        <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-                            By creating an account you agree to our{" "}
-                            <Link to="/terms" className="underline underline-offset-2 hover:text-foreground">Terms of Service</Link>{" "}
-                            and{" "}
-                            <Link to="/privacy" className="underline underline-offset-2 hover:text-foreground">Privacy Policy</Link>.
-                        </p>
                         <p className="text-center text-xs text-muted-foreground">
                             Already have an account?{" "}
                             <Link to="/login" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Sign in</Link>
