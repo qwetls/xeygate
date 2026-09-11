@@ -10,6 +10,7 @@ import { CreateApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 import {
     hashUserPassword,
     createUserSession,
+    hashSessionToken,
     USER_SESSION_COOKIE
 } from "@/services/userAuth.js";
 import { createTestAdminSession, createTestAdmin } from "./helpers/adminSession.js";
@@ -283,4 +284,29 @@ test("POST /users/change-password rotates the password and invalidates old sessi
         body: JSON.stringify({ email, password: "new-password-456" })
     });
     assert.equal(reloginNew.status, 200);
+});
+
+test("active sessions slide back to the full window while idle ones still expire", async () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    seq += 1;
+    const email = `acct-test-slide-${seq}@xeygate.test`;
+    const user = await createAccount(email, "slide-pass-123");
+    const createdAt = Date.now();
+    const token = await createUserSession(userAuthStore, user.id, createdAt);
+    const tokenHash = hashSessionToken(token);
+
+    // Day 20: 10 days of the 30-day window remain — below half, so the next
+    // successful authentication refreshes the session back to a full window.
+    const slid = await userAuthStore.getSession(tokenHash, createdAt + 20 * DAY);
+    assert.ok(slid);
+    assert.equal(slid.expiresAt, createdAt + 50 * DAY);
+
+    // A session checked while most of its window remains is left untouched.
+    const fresh = await userAuthStore.getSession(tokenHash, createdAt + DAY);
+    assert.ok(fresh);
+    assert.equal(fresh.expiresAt, createdAt + 50 * DAY);
+
+    // Once the refreshed window elapses unused, the session is gone for good.
+    const gone = await userAuthStore.getSession(tokenHash, createdAt + 50 * DAY + 1000);
+    assert.equal(gone, null);
 });

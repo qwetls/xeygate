@@ -2,6 +2,8 @@ import { db } from "./db.js";
 import { getDbClient, type DbClient } from "./client.js";
 import { num, str } from "./row-utils.js";
 
+const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
 export type UserRole = "buyer" | "creator";
 export type UserStatus = "active" | "pending" | "banned";
 export type CreatorStatus = "none" | "pending" | "approved" | "rejected";
@@ -397,7 +399,7 @@ export class UserAuthStore {
 
     public async createSession(tokenHash: string, userId: string, now = Date.now()): Promise<void> {
         await this.ensureTables();
-        const expiresAt = now + 30 * 24 * 60 * 60 * 1000; // 30 days
+        const expiresAt = now + SESSION_TTL_MS;
         await this.client.run(
             `INSERT INTO user_sessions (token_hash, user_id, created_at, expires_at)
              VALUES (?, ?, ?, ?)`,
@@ -414,12 +416,23 @@ export class UserAuthStore {
             tokenHash, now
         )) as unknown as UserSessionRow | undefined;
         if (!Row) return null;
-        return {
+        const session = {
             tokenHash: str(Row.token_hash),
             userId: str(Row.user_id),
             createdAt: num(Row.created_at),
             expiresAt: num(Row.expires_at)
         };
+        // Sliding expiry: an account that keeps authenticating refreshes its
+        // session back to the full window, so active users never get bounced
+        // to the login page mid-work.
+        if (session.expiresAt - now < SESSION_TTL_MS / 2) {
+            session.expiresAt = now + SESSION_TTL_MS;
+            await this.client.run(
+                "UPDATE user_sessions SET expires_at = ? WHERE token_hash = ?",
+                session.expiresAt, tokenHash
+            );
+        }
+        return session;
     }
 
     public async deleteSession(tokenHash: string): Promise<boolean> {
