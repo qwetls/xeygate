@@ -5,9 +5,11 @@ import {
     KeyRound,
     LayoutDashboard,
     LogOut,
+    Settings,
     ShieldCheck,
     Store,
     Terminal,
+    UserRound,
     Wallet,
     Zap
 } from "lucide-react";
@@ -38,7 +40,9 @@ const baseNavItems = [
     { to: "/dashboard/keys", label: "API Keys", icon: KeyRound },
     { to: "/dashboard/playground", label: "Playground", icon: Terminal },
     { to: "/dashboard/usage", label: "Usage", icon: BarChart2 },
-    { to: "/dashboard/analytics", label: "Analytics", icon: Activity }
+    { to: "/dashboard/analytics", label: "Analytics", icon: Activity },
+    { to: "/dashboard/profile", label: "Profile", icon: UserRound },
+    { to: "/dashboard/settings", label: "Settings", icon: Settings }
 ] as const;
 
 const creatorNavItems = [

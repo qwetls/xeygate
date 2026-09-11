@@ -3,6 +3,13 @@
 All notable changes to **XEYGATE** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Client Profile page** (`/dashboard/profile`) — display-name editing (`PATCH /v1/users/me`), wallet balance, account identity (id, member-since, status, creator access), and a live daily-streak progress bar fed by the new `loginStreak` field on `GET /v1/users/me`.
+- **Client Settings page** (`/dashboard/settings`) — change password (other devices signed out, current session kept) and **Sign out everywhere** (`POST /v1/users/logout-all`, revokes every session including the caller's).
+- Profile and Settings entries in the client sidebar navigation.
+
 ## [1.1.0] - 2026-09-11
 
 ### Added

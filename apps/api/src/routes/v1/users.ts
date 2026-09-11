@@ -171,6 +171,16 @@ UserAuthRouter.post("/users/logout", async (c) => {
     return Ok(c, { message: "Logged out" });
 });
 
+// ── Sign out everywhere ──
+// Revokes every session for the account (this device included) so a leaked or
+// forgotten login elsewhere can be cleaned up without waiting for expiry.
+UserAuthRouter.post("/users/logout-all", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const revoked = await userAuthStore.deleteSessionsForUser(userId);
+    deleteCookie(c, USER_SESSION_COOKIE, { path: "/" });
+    return Ok(c, { revoked });
+});
+
 // ── Change password ──
 // Every account (admins included) authenticates through the user login, so the
 // password lives here too. Rotating it signs out all sessions, including the
@@ -211,7 +221,10 @@ UserAuthRouter.post("/users/change-password", RequireUserAuth, async (c) => {
 // ── Current user ──
 UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
-    const user = await userAuthStore.getUserById(userId);
+    const [user, reward] = await Promise.all([
+        userAuthStore.getUserById(userId),
+        userAuthStore.getLoginReward(userId)
+    ]);
     if (!user) return Err(c, "User not found", 404);
     return Ok(c, {
         id: user.id,
@@ -221,7 +234,33 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
         status: user.status,
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
-        credits: user.credits
+        credits: user.credits,
+        createdAt: user.createdAt,
+        loginStreak: reward?.streak ?? 0
+    });
+});
+
+// ── Update own profile ──
+// Email is intentionally not editable here: it is the login identity and
+// changing it would need an ownership proof (verification flow), not a PATCH.
+UserAuthRouter.patch("/users/me", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const body = await c.req.json<{ name?: string }>().catch(() => ({}));
+    const name = body.name?.trim();
+    if (!name || name.length < 1 || name.length > 64) {
+        return Err(c, "Name must be 1-64 characters", 400);
+    }
+    const updated = await userAuthStore.updateName(userId, name);
+    if (!updated) return Err(c, "User not found", 404);
+    return Ok(c, {
+        id: updated.id,
+        email: updated.email,
+        name: updated.name,
+        role: updated.role,
+        status: updated.status,
+        creatorStatus: updated.creatorStatus,
+        isAdmin: updated.isAdmin,
+        credits: updated.credits
     });
 });
 

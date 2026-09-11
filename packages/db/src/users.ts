@@ -227,6 +227,15 @@ export class UserAuthStore {
         return this.getUserById(userId);
     }
 
+    public async updateName(userId: string, name: string): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET name = ?, updated_at = ? WHERE id = ?`,
+            name, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
     // ── Admin user management ──
 
     public async listUsers(): Promise<User[]> {

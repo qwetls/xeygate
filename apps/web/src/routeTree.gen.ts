@@ -9,10 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as ClientRouteImport } from './routes/_client'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ClientRouteImport } from './routes/_client'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CatalogRouteImport } from './routes/catalog'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as RegisterRouteImport } from './routes/register'
+import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminComboRouteImport } from './routes/admin.combo'
@@ -25,40 +29,58 @@ import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
 import { Route as AdminQuotaRouteImport } from './routes/admin.quota'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
+import { Route as CatalogIndexRouteImport } from './routes/catalog/index'
+import { Route as CatalogSplatRouteImport } from './routes/catalog/$'
 import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashboard.index'
-import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
-import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
 import { Route as ClientDashboardAnalyticsRouteImport } from './routes/_client.dashboard.analytics'
+import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashboard.keys'
 import { Route as ClientDashboardMyApisRouteImport } from './routes/_client.dashboard.my-apis'
 import { Route as ClientDashboardPayoutsRouteImport } from './routes/_client.dashboard.payouts'
 import { Route as ClientDashboardPlaygroundRouteImport } from './routes/_client.dashboard.playground'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as RegisterRouteImport } from './routes/register'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as ClientDashboardProfileRouteImport } from './routes/_client.dashboard.profile'
+import { Route as ClientDashboardSettingsRouteImport } from './routes/_client.dashboard.settings'
+import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
 import { Route as AdminProvidersIndexRouteImport } from './routes/admin.providers/index'
 import { Route as AdminProvidersProviderIdRouteImport } from './routes/admin.providers/$providerId'
-import { Route as CatalogIndexRouteImport } from './routes/catalog/index'
-import { Route as CatalogSplatRouteImport } from './routes/catalog/$'
 
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClientRoute = ClientRouteImport.update({
   id: '/_client',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CatalogRoute = CatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientDashboardRoute = ClientDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => ClientRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -120,44 +142,30 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
+const CatalogIndexRoute = CatalogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CatalogRoute,
 } as any)
-const RegisterRoute = RegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ClientDashboardRoute = ClientDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => ClientRoute,
+const CatalogSplatRoute = CatalogSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => CatalogRoute,
 } as any)
 const ClientDashboardIndexRoute = ClientDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => ClientDashboardRoute,
 } as any)
+const ClientDashboardAnalyticsRoute =
+  ClientDashboardAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => ClientDashboardRoute,
+  } as any)
 const ClientDashboardKeysRoute = ClientDashboardKeysRouteImport.update({
   id: '/keys',
   path: '/keys',
-  getParentRoute: () => ClientDashboardRoute,
-} as any)
-const ClientDashboardUsageRoute = ClientDashboardUsageRouteImport.update({
-  id: '/usage',
-  path: '/usage',
-  getParentRoute: () => ClientDashboardRoute,
-} as any)
-const ClientDashboardAnalyticsRoute = ClientDashboardAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
   getParentRoute: () => ClientDashboardRoute,
 } as any)
 const ClientDashboardMyApisRoute = ClientDashboardMyApisRouteImport.update({
@@ -170,9 +178,25 @@ const ClientDashboardPayoutsRoute = ClientDashboardPayoutsRouteImport.update({
   path: '/payouts',
   getParentRoute: () => ClientDashboardRoute,
 } as any)
-const ClientDashboardPlaygroundRoute = ClientDashboardPlaygroundRouteImport.update({
-  id: '/playground',
-  path: '/playground',
+const ClientDashboardPlaygroundRoute =
+  ClientDashboardPlaygroundRouteImport.update({
+    id: '/playground',
+    path: '/playground',
+    getParentRoute: () => ClientDashboardRoute,
+  } as any)
+const ClientDashboardProfileRoute = ClientDashboardProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
+const ClientDashboardSettingsRoute = ClientDashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
+const ClientDashboardUsageRoute = ClientDashboardUsageRouteImport.update({
+  id: '/usage',
+  path: '/usage',
   getParentRoute: () => ClientDashboardRoute,
 } as any)
 const AdminProvidersIndexRoute = AdminProvidersIndexRouteImport.update({
@@ -180,29 +204,20 @@ const AdminProvidersIndexRoute = AdminProvidersIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminProvidersRoute,
 } as any)
-const AdminProvidersProviderIdRoute = AdminProvidersProviderIdRouteImport.update({
-  id: '/$providerId',
-  path: '/$providerId',
-  getParentRoute: () => AdminProvidersRoute,
-} as any)
-const CatalogIndexRoute = CatalogIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => CatalogRoute,
-} as any)
-const CatalogSplatRoute = CatalogSplatRouteImport.update({
-  id: '/$',
-  path: '/$',
-  getParentRoute: () => CatalogRoute,
-} as any)
+const AdminProvidersProviderIdRoute =
+  AdminProvidersProviderIdRouteImport.update({
+    id: '/$providerId',
+    path: '/$providerId',
+    getParentRoute: () => AdminProvidersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
+  '/catalog': typeof CatalogRouteWithChildren
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
   '/onboarding': typeof OnboardingRoute
+  '/register': typeof RegisterRoute
   '/dashboard': typeof ClientDashboardRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
@@ -215,27 +230,26 @@ export interface FileRoutesByFullPath {
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/catalog/$': typeof CatalogSplatRoute
   '/admin/': typeof AdminIndexRoute
-  '/dashboard/': typeof ClientDashboardIndexRoute
-  '/dashboard/keys': typeof ClientDashboardKeysRoute
-  '/dashboard/usage': typeof ClientDashboardUsageRoute
+  '/catalog/': typeof CatalogIndexRoute
   '/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
+  '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
-  '/admin/providers/': typeof AdminProvidersIndexRoute
+  '/dashboard/profile': typeof ClientDashboardProfileRoute
+  '/dashboard/settings': typeof ClientDashboardSettingsRoute
+  '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
-  '/catalog/': typeof CatalogIndexRoute
-  '/catalog/$': typeof CatalogSplatRoute
+  '/dashboard/': typeof ClientDashboardIndexRoute
+  '/admin/providers/': typeof AdminProvidersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogIndexRoute
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
   '/onboarding': typeof OnboardingRoute
-  '/admin': typeof AdminIndexRoute
-  '/dashboard': typeof ClientDashboardIndexRoute
+  '/register': typeof RegisterRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
@@ -246,26 +260,31 @@ export interface FileRoutesByTo {
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
-  '/dashboard/keys': typeof ClientDashboardKeysRoute
-  '/dashboard/usage': typeof ClientDashboardUsageRoute
+  '/catalog/$': typeof CatalogSplatRoute
+  '/admin': typeof AdminIndexRoute
+  '/catalog': typeof CatalogIndexRoute
   '/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
+  '/dashboard/keys': typeof ClientDashboardKeysRoute
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
-  '/admin/providers': typeof AdminProvidersIndexRoute
+  '/dashboard/profile': typeof ClientDashboardProfileRoute
+  '/dashboard/settings': typeof ClientDashboardSettingsRoute
+  '/dashboard/usage': typeof ClientDashboardUsageRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
-  '/catalog/$': typeof CatalogSplatRoute
+  '/dashboard': typeof ClientDashboardIndexRoute
+  '/admin/providers': typeof AdminProvidersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/catalog': typeof CatalogRouteWithChildren
-  '/admin': typeof AdminRouteWithChildren
   '/_client': typeof ClientRouteWithChildren
+  '/admin': typeof AdminRouteWithChildren
+  '/catalog': typeof CatalogRouteWithChildren
   '/login': typeof LoginRoute
-  '/register': typeof RegisterRoute
   '/onboarding': typeof OnboardingRoute
-  '/admin/': typeof AdminIndexRoute
+  '/register': typeof RegisterRoute
+  '/_client/dashboard': typeof ClientDashboardRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
@@ -277,28 +296,30 @@ export interface FileRoutesById {
   '/admin/quota': typeof AdminQuotaRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/users': typeof AdminUsersRoute
-  '/_client/dashboard': typeof ClientDashboardRouteWithChildren
-  '/_client/dashboard/': typeof ClientDashboardIndexRoute
-  '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
-  '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
+  '/catalog/$': typeof CatalogSplatRoute
+  '/admin/': typeof AdminIndexRoute
+  '/catalog/': typeof CatalogIndexRoute
   '/_client/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
+  '/_client/dashboard/keys': typeof ClientDashboardKeysRoute
   '/_client/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/_client/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/_client/dashboard/playground': typeof ClientDashboardPlaygroundRoute
-  '/admin/providers/': typeof AdminProvidersIndexRoute
+  '/_client/dashboard/profile': typeof ClientDashboardProfileRoute
+  '/_client/dashboard/settings': typeof ClientDashboardSettingsRoute
+  '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
   '/admin/providers/$providerId': typeof AdminProvidersProviderIdRoute
-  '/catalog/': typeof CatalogIndexRoute
-  '/catalog/$': typeof CatalogSplatRoute
+  '/_client/dashboard/': typeof ClientDashboardIndexRoute
+  '/admin/providers/': typeof AdminProvidersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/catalog'
     | '/admin'
+    | '/catalog'
     | '/login'
-    | '/register'
     | '/onboarding'
+    | '/register'
     | '/dashboard'
     | '/admin/analytics'
     | '/admin/combo'
@@ -311,27 +332,26 @@ export interface FileRouteTypes {
     | '/admin/quota'
     | '/admin/settings'
     | '/admin/users'
+    | '/catalog/$'
     | '/admin/'
-    | '/dashboard/'
-    | '/dashboard/keys'
-    | '/dashboard/usage'
+    | '/catalog/'
     | '/dashboard/analytics'
+    | '/dashboard/keys'
     | '/dashboard/my-apis'
     | '/dashboard/payouts'
     | '/dashboard/playground'
-    | '/admin/providers/'
+    | '/dashboard/profile'
+    | '/dashboard/settings'
+    | '/dashboard/usage'
     | '/admin/providers/$providerId'
-    | '/catalog/'
-    | '/catalog/$'
+    | '/dashboard/'
+    | '/admin/providers/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/catalog'
     | '/login'
-    | '/register'
     | '/onboarding'
-    | '/admin'
-    | '/dashboard'
+    | '/register'
     | '/admin/analytics'
     | '/admin/combo'
     | '/admin/keys'
@@ -342,25 +362,30 @@ export interface FileRouteTypes {
     | '/admin/quota'
     | '/admin/settings'
     | '/admin/users'
-    | '/dashboard/keys'
-    | '/dashboard/usage'
+    | '/catalog/$'
+    | '/admin'
+    | '/catalog'
     | '/dashboard/analytics'
+    | '/dashboard/keys'
     | '/dashboard/my-apis'
     | '/dashboard/payouts'
     | '/dashboard/playground'
-    | '/admin/providers'
+    | '/dashboard/profile'
+    | '/dashboard/settings'
+    | '/dashboard/usage'
     | '/admin/providers/$providerId'
-    | '/catalog/$'
+    | '/dashboard'
+    | '/admin/providers'
   id:
     | '__root__'
     | '/'
-    | '/catalog'
-    | '/admin'
     | '/_client'
+    | '/admin'
+    | '/catalog'
     | '/login'
-    | '/register'
     | '/onboarding'
-    | '/admin/'
+    | '/register'
+    | '/_client/dashboard'
     | '/admin/analytics'
     | '/admin/combo'
     | '/admin/keys'
@@ -372,37 +397,39 @@ export interface FileRouteTypes {
     | '/admin/quota'
     | '/admin/settings'
     | '/admin/users'
-    | '/_client/dashboard'
-    | '/_client/dashboard/'
-    | '/_client/dashboard/keys'
-    | '/_client/dashboard/usage'
+    | '/catalog/$'
+    | '/admin/'
+    | '/catalog/'
     | '/_client/dashboard/analytics'
+    | '/_client/dashboard/keys'
     | '/_client/dashboard/my-apis'
     | '/_client/dashboard/payouts'
     | '/_client/dashboard/playground'
-    | '/admin/providers/'
+    | '/_client/dashboard/profile'
+    | '/_client/dashboard/settings'
+    | '/_client/dashboard/usage'
     | '/admin/providers/$providerId'
-    | '/catalog/'
-    | '/catalog/$'
+    | '/_client/dashboard/'
+    | '/admin/providers/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CatalogRoute: typeof CatalogRouteWithChildren
-  AdminRoute: typeof AdminRouteWithChildren
   ClientRoute: typeof ClientRouteWithChildren
+  AdminRoute: typeof AdminRouteWithChildren
+  CatalogRoute: typeof CatalogRouteWithChildren
   LoginRoute: typeof LoginRoute
-  RegisterRoute: typeof RegisterRoute
   OnboardingRoute: typeof OnboardingRoute
+  RegisterRoute: typeof RegisterRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_client': {
@@ -412,11 +439,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/catalog': {
@@ -425,6 +452,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/catalog'
       preLoaderRoute: typeof CatalogRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_client/dashboard': {
+      id: '/_client/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof ClientDashboardRouteImport
+      parentRoute: typeof ClientRoute
     }
     '/admin/': {
       id: '/admin/'
@@ -510,12 +565,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/_client/dashboard': {
-      id: '/_client/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof ClientDashboardRouteImport
-      parentRoute: typeof ClientRoute
+    '/catalog/': {
+      id: '/catalog/'
+      path: '/'
+      fullPath: '/catalog/'
+      preLoaderRoute: typeof CatalogIndexRouteImport
+      parentRoute: typeof CatalogRoute
+    }
+    '/catalog/$': {
+      id: '/catalog/$'
+      path: '/$'
+      fullPath: '/catalog/$'
+      preLoaderRoute: typeof CatalogSplatRouteImport
+      parentRoute: typeof CatalogRoute
     }
     '/_client/dashboard/': {
       id: '/_client/dashboard/'
@@ -524,25 +586,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardIndexRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
-    '/_client/dashboard/keys': {
-      id: '/_client/dashboard/keys'
-      path: '/keys'
-      fullPath: '/dashboard/keys'
-      preLoaderRoute: typeof ClientDashboardKeysRouteImport
-      parentRoute: typeof ClientDashboardRoute
-    }
-    '/_client/dashboard/usage': {
-      id: '/_client/dashboard/usage'
-      path: '/usage'
-      fullPath: '/dashboard/usage'
-      preLoaderRoute: typeof ClientDashboardUsageRouteImport
-      parentRoute: typeof ClientDashboardRoute
-    }
     '/_client/dashboard/analytics': {
       id: '/_client/dashboard/analytics'
       path: '/analytics'
       fullPath: '/dashboard/analytics'
       preLoaderRoute: typeof ClientDashboardAnalyticsRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
+    '/_client/dashboard/keys': {
+      id: '/_client/dashboard/keys'
+      path: '/keys'
+      fullPath: '/dashboard/keys'
+      preLoaderRoute: typeof ClientDashboardKeysRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
     '/_client/dashboard/my-apis': {
@@ -566,26 +621,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardPlaygroundRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_client/dashboard/profile': {
+      id: '/_client/dashboard/profile'
+      path: '/profile'
+      fullPath: '/dashboard/profile'
+      preLoaderRoute: typeof ClientDashboardProfileRouteImport
+      parentRoute: typeof ClientDashboardRoute
     }
-    '/register': {
-      id: '/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof RegisterRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_client/dashboard/settings': {
+      id: '/_client/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof ClientDashboardSettingsRouteImport
+      parentRoute: typeof ClientDashboardRoute
     }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_client/dashboard/usage': {
+      id: '/_client/dashboard/usage'
+      path: '/usage'
+      fullPath: '/dashboard/usage'
+      preLoaderRoute: typeof ClientDashboardUsageRouteImport
+      parentRoute: typeof ClientDashboardRoute
     }
     '/admin/providers/': {
       id: '/admin/providers/'
@@ -601,101 +656,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProvidersProviderIdRouteImport
       parentRoute: typeof AdminProvidersRoute
     }
-    '/catalog/': {
-      id: '/catalog/'
-      path: '/'
-      fullPath: '/catalog/'
-      preLoaderRoute: typeof CatalogIndexRouteImport
-      parentRoute: typeof CatalogRoute
-    }
-    '/catalog/$': {
-      id: '/catalog/$'
-      path: '/$'
-      fullPath: '/catalog/$'
-      preLoaderRoute: typeof CatalogSplatRouteImport
-      parentRoute: typeof CatalogRoute
-    }
   }
 }
 
-interface AdminProvidersRouteChildren {
-  AdminProvidersIndexRoute: typeof AdminProvidersIndexRoute
-  AdminProvidersProviderIdRoute: typeof AdminProvidersProviderIdRoute
-}
-
-const AdminProvidersRouteChildren: AdminProvidersRouteChildren = {
-  AdminProvidersIndexRoute: AdminProvidersIndexRoute,
-  AdminProvidersProviderIdRoute: AdminProvidersProviderIdRoute,
-}
-
-const AdminProvidersRouteWithChildren = AdminProvidersRoute._addFileChildren(
-  AdminProvidersRouteChildren,
-)
-
-interface CatalogRouteChildren {
-  CatalogIndexRoute: typeof CatalogIndexRoute
-  CatalogSplatRoute: typeof CatalogSplatRoute
-}
-
-const CatalogRouteChildren: CatalogRouteChildren = {
-  CatalogIndexRoute: CatalogIndexRoute,
-  CatalogSplatRoute: CatalogSplatRoute,
-}
-
-const CatalogRouteWithChildren = CatalogRoute._addFileChildren(
-  CatalogRouteChildren,
-)
-
-interface AdminRouteChildren {
-  AdminIndexRoute: typeof AdminIndexRoute
-  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
-  AdminComboRoute: typeof AdminComboRoute
-  AdminKeysRoute: typeof AdminKeysRoute
-  AdminLogsRoute: typeof AdminLogsRoute
-  AdminPayoutsRoute: typeof AdminPayoutsRoute
-  AdminPlaygroundRoute: typeof AdminPlaygroundRoute
-  AdminPricingRoute: typeof AdminPricingRoute
-  AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
-  AdminQuotaRoute: typeof AdminQuotaRoute
-  AdminSettingsRoute: typeof AdminSettingsRoute
-  AdminUsersRoute: typeof AdminUsersRoute
-}
-
-const AdminRouteChildren: AdminRouteChildren = {
-  AdminIndexRoute: AdminIndexRoute,
-  AdminAnalyticsRoute: AdminAnalyticsRoute,
-  AdminComboRoute: AdminComboRoute,
-  AdminKeysRoute: AdminKeysRoute,
-  AdminLogsRoute: AdminLogsRoute,
-  AdminPayoutsRoute: AdminPayoutsRoute,
-  AdminPlaygroundRoute: AdminPlaygroundRoute,
-  AdminPricingRoute: AdminPricingRoute,
-  AdminProvidersRoute: AdminProvidersRouteWithChildren,
-  AdminQuotaRoute: AdminQuotaRoute,
-  AdminSettingsRoute: AdminSettingsRoute,
-  AdminUsersRoute: AdminUsersRoute,
-}
-
-const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
-
 interface ClientDashboardRouteChildren {
-  ClientDashboardIndexRoute: typeof ClientDashboardIndexRoute
-  ClientDashboardKeysRoute: typeof ClientDashboardKeysRoute
-  ClientDashboardUsageRoute: typeof ClientDashboardUsageRoute
   ClientDashboardAnalyticsRoute: typeof ClientDashboardAnalyticsRoute
+  ClientDashboardKeysRoute: typeof ClientDashboardKeysRoute
   ClientDashboardMyApisRoute: typeof ClientDashboardMyApisRoute
   ClientDashboardPayoutsRoute: typeof ClientDashboardPayoutsRoute
   ClientDashboardPlaygroundRoute: typeof ClientDashboardPlaygroundRoute
+  ClientDashboardProfileRoute: typeof ClientDashboardProfileRoute
+  ClientDashboardSettingsRoute: typeof ClientDashboardSettingsRoute
+  ClientDashboardUsageRoute: typeof ClientDashboardUsageRoute
+  ClientDashboardIndexRoute: typeof ClientDashboardIndexRoute
 }
 
 const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
-  ClientDashboardIndexRoute: ClientDashboardIndexRoute,
-  ClientDashboardKeysRoute: ClientDashboardKeysRoute,
-  ClientDashboardUsageRoute: ClientDashboardUsageRoute,
   ClientDashboardAnalyticsRoute: ClientDashboardAnalyticsRoute,
+  ClientDashboardKeysRoute: ClientDashboardKeysRoute,
   ClientDashboardMyApisRoute: ClientDashboardMyApisRoute,
   ClientDashboardPayoutsRoute: ClientDashboardPayoutsRoute,
   ClientDashboardPlaygroundRoute: ClientDashboardPlaygroundRoute,
+  ClientDashboardProfileRoute: ClientDashboardProfileRoute,
+  ClientDashboardSettingsRoute: ClientDashboardSettingsRoute,
+  ClientDashboardUsageRoute: ClientDashboardUsageRoute,
+  ClientDashboardIndexRoute: ClientDashboardIndexRoute,
 }
 
 const ClientDashboardRouteWithChildren = ClientDashboardRoute._addFileChildren(
@@ -710,16 +695,76 @@ const ClientRouteChildren: ClientRouteChildren = {
   ClientDashboardRoute: ClientDashboardRouteWithChildren,
 }
 
-const ClientRouteWithChildren = ClientRoute._addFileChildren(ClientRouteChildren)
+const ClientRouteWithChildren =
+  ClientRoute._addFileChildren(ClientRouteChildren)
+
+interface AdminProvidersRouteChildren {
+  AdminProvidersProviderIdRoute: typeof AdminProvidersProviderIdRoute
+  AdminProvidersIndexRoute: typeof AdminProvidersIndexRoute
+}
+
+const AdminProvidersRouteChildren: AdminProvidersRouteChildren = {
+  AdminProvidersProviderIdRoute: AdminProvidersProviderIdRoute,
+  AdminProvidersIndexRoute: AdminProvidersIndexRoute,
+}
+
+const AdminProvidersRouteWithChildren = AdminProvidersRoute._addFileChildren(
+  AdminProvidersRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminAnalyticsRoute: typeof AdminAnalyticsRoute
+  AdminComboRoute: typeof AdminComboRoute
+  AdminKeysRoute: typeof AdminKeysRoute
+  AdminLogsRoute: typeof AdminLogsRoute
+  AdminPayoutsRoute: typeof AdminPayoutsRoute
+  AdminPlaygroundRoute: typeof AdminPlaygroundRoute
+  AdminPricingRoute: typeof AdminPricingRoute
+  AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
+  AdminQuotaRoute: typeof AdminQuotaRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnalyticsRoute: AdminAnalyticsRoute,
+  AdminComboRoute: AdminComboRoute,
+  AdminKeysRoute: AdminKeysRoute,
+  AdminLogsRoute: AdminLogsRoute,
+  AdminPayoutsRoute: AdminPayoutsRoute,
+  AdminPlaygroundRoute: AdminPlaygroundRoute,
+  AdminPricingRoute: AdminPricingRoute,
+  AdminProvidersRoute: AdminProvidersRouteWithChildren,
+  AdminQuotaRoute: AdminQuotaRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+interface CatalogRouteChildren {
+  CatalogSplatRoute: typeof CatalogSplatRoute
+  CatalogIndexRoute: typeof CatalogIndexRoute
+}
+
+const CatalogRouteChildren: CatalogRouteChildren = {
+  CatalogSplatRoute: CatalogSplatRoute,
+  CatalogIndexRoute: CatalogIndexRoute,
+}
+
+const CatalogRouteWithChildren =
+  CatalogRoute._addFileChildren(CatalogRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CatalogRoute: CatalogRouteWithChildren,
-  AdminRoute: AdminRouteWithChildren,
   ClientRoute: ClientRouteWithChildren,
+  AdminRoute: AdminRouteWithChildren,
+  CatalogRoute: CatalogRouteWithChildren,
   LoginRoute: LoginRoute,
-  RegisterRoute: RegisterRoute,
   OnboardingRoute: OnboardingRoute,
+  RegisterRoute: RegisterRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
