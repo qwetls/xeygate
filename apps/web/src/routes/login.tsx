@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +20,18 @@ function LoginPage() {
     const [error, setError] = useState<string | null>(null);
 
     const loginMutation = useMutation({
-        mutationFn: () => api.post<{ id: string; isAdmin?: boolean }>("/v1/users/login", { email, password }),
+        mutationFn: () => api.post<{ id: string; isAdmin?: boolean; dailyReward?: { day: number; amount: number } | null }>("/v1/users/login", { email, password }),
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
+            if (data?.dailyReward) {
+                const { day, amount } = data.dailyReward;
+                toast.success(`Daily login reward: +$${amount}`, {
+                    description:
+                        day === 7
+                            ? "Seven-day streak complete — bonus credited."
+                            : `Day ${day} of 7 — reach day 7 for the $10 bonus.`
+                });
+            }
             // Admin accounts land straight in the control plane.
             navigate({ to: data?.isAdmin ? "/admin" : "/dashboard" });
         },

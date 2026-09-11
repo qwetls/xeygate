@@ -86,6 +86,12 @@ export class UserAuthStore {
                 created_at ${integer} NOT NULL,
                 expires_at ${integer} NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS login_rewards (
+                user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                last_day TEXT NOT NULL,
+                streak ${integer} NOT NULL
+            );
         `);
         // Ensure user_id column exists on api_keys (for linking keys to users)
         try {
@@ -441,6 +447,27 @@ export class UserAuthStore {
             "DELETE FROM user_sessions WHERE token_hash = ?", tokenHash
         );
         return num(Result.changes) > 0;
+    }
+
+    // ── Daily login reward state ──
+
+    public async getLoginReward(userId: string): Promise<{ lastDay: string; streak: number } | null> {
+        await this.ensureTables();
+        const Row = (await this.client.get(
+            "SELECT last_day, streak FROM login_rewards WHERE user_id = ?",
+            userId
+        )) as unknown as { last_day: string; streak: number } | undefined;
+        if (!Row) return null;
+        return { lastDay: str(Row.last_day), streak: num(Row.streak) };
+    }
+
+    public async setLoginReward(userId: string, lastDay: string, streak: number): Promise<void> {
+        await this.ensureTables();
+        await this.client.run(
+            `INSERT INTO login_rewards (user_id, last_day, streak) VALUES (?, ?, ?)
+             ON CONFLICT (user_id) DO UPDATE SET last_day = excluded.last_day, streak = excluded.streak`,
+            userId, lastDay, streak
+        );
     }
 
     // ── User's API Keys ──

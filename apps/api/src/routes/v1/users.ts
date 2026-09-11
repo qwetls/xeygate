@@ -19,6 +19,7 @@ import {
 } from "@/services/userAuth.js";
 import { RequireUserAuth } from "@/middleware/UserAuth.js";
 import { GetDirectClientAddress } from "@/middleware/ApiKeyAuth.js";
+import { GrantDailyLoginReward } from "@/services/dailyReward.js";
 import { Err, Ok } from "@/utils/response.js";
 
 export const UserAuthRouter = new Hono();
@@ -147,6 +148,8 @@ UserAuthRouter.post("/users/login", async (c) => {
     const token = await createUserSession(userAuthStore, user.id);
     setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
 
+    const reward = await GrantDailyLoginReward(user.id);
+
     return Ok(c, {
         id: user.id,
         email: user.email,
@@ -155,7 +158,8 @@ UserAuthRouter.post("/users/login", async (c) => {
         status: user.status,
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
-        credits: user.credits
+        credits: reward.awarded ? reward.credits : user.credits,
+        dailyReward: reward.awarded ? { day: reward.day, amount: reward.amount } : null
     });
 });
 

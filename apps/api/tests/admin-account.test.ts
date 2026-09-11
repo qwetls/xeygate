@@ -24,6 +24,8 @@ afterEach(async () => {
     }
     // Remove every account this file (and its helper) created, so admin-count
     // assertions stay deterministic for the next test.
+    await db.prepare("DELETE FROM transactions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@xeygate.test')").run();
+    await db.prepare("DELETE FROM login_rewards WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@xeygate.test')").run();
     await db.prepare("DELETE FROM user_sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@xeygate.test')").run();
     await db.prepare("DELETE FROM users WHERE email LIKE '%@xeygate.test'").run();
     await setRequireApiKeyDB(false);
