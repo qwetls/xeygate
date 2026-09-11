@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- **Server-side terms consent** — the sign-up/sign-in checkbox is now enforced by the API, not just the UI. `POST /v1/users/register` rejects bodies without `accepted_terms: true` (`400 terms_not_accepted`) and stamps the new-account row with `accepted_terms_at` + `terms_version`; accounts created before the consent record (or consented to a stale ToS version) must re-accept once at `POST /v1/users/login` (`403 terms_required`) before a session is issued. `GET /v1/users/me` exposes both fields. Operator accounts (env bootstrap, legacy `admin_account` migration, first-run `/admin/bootstrap`) are stamped at provisioning time so admins are never locked out.
+
 ## [1.3.0] - 2026-09-12
 
 ### Added

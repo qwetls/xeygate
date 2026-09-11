@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { setCookie, getCookie, deleteCookie } from "hono/cookie";
+import { TERMS_VERSION } from "@srouter/constants";
 import {
     userAuthStore,
     getUserTransactionsDB,
@@ -67,13 +68,22 @@ function ClearFailures(key: string): void {
 
 // ── Register ──
 UserAuthRouter.post("/users/register", async (c) => {
-    const body = await c.req.json<{ email?: string; password?: string; name?: string }>().catch(() => ({}));
+    const body = await c.req
+        .json<{ email?: string; password?: string; name?: string; accepted_terms?: boolean }>()
+        .catch(() => ({}));
 
     const emailErr = validateEmail(body.email);
     if (emailErr) return Err(c, emailErr, 400);
 
     const pwErr = validateUserPassword(body.password);
     if (pwErr) return Err(c, pwErr, 400);
+
+    // Server-side consent gate: the sign-up checkbox is UI, this is the record.
+    if (body.accepted_terms !== true) {
+        return Err(c, "You must accept the Terms of Service and Privacy Policy to create an account.", 400, {
+            code: "terms_not_accepted"
+        });
+    }
 
     const existing = await userAuthStore.getUserByEmail(body.email!);
     if (existing) return Err(c, "Email already registered", 409, { code: "email_exists" });
@@ -83,7 +93,9 @@ UserAuthRouter.post("/users/register", async (c) => {
         email: body.email!,
         passwordHash: hashUserPassword(body.password!),
         name: body.name,
-        status: requiresApproval ? "pending" : "active"
+        status: requiresApproval ? "pending" : "active",
+        acceptedTermsAt: Date.now(),
+        termsVersion: TERMS_VERSION
     });
     if (!user) return Err(c, "Registration failed", 500);
 
@@ -119,7 +131,9 @@ UserAuthRouter.post("/users/register", async (c) => {
 
 // ── Login ──
 UserAuthRouter.post("/users/login", async (c) => {
-    const body = await c.req.json<{ email?: string; password?: string }>().catch(() => ({}));
+    const body = await c.req
+        .json<{ email?: string; password?: string; accepted_terms?: boolean }>()
+        .catch(() => ({}));
 
     if (!body.email || !body.password) return Err(c, "Email and password are required", 400);
 
@@ -148,6 +162,17 @@ UserAuthRouter.post("/users/login", async (c) => {
         return Err(c, "Your account is pending admin approval. Please try again later.", 403, {
             code: "account_pending"
         });
+    }
+
+    // Accounts predating the consent record (or consented to a stale ToS
+    // version) must re-accept once before they get a session.
+    if (user.acceptedTermsAt === null || user.termsVersion !== TERMS_VERSION) {
+        if (body.accepted_terms !== true) {
+            return Err(c, "You must accept the current Terms of Service and Privacy Policy to continue.", 403, {
+                code: "terms_required"
+            });
+        }
+        await userAuthStore.acceptTerms(user.id, TERMS_VERSION);
     }
 
     ClearFailures(ClientAddress);
@@ -241,6 +266,8 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
         credits: user.credits,
+        acceptedTermsAt: user.acceptedTermsAt,
+        termsVersion: user.termsVersion,
         createdAt: user.createdAt,
         loginStreak: reward?.streak ?? 0
     });

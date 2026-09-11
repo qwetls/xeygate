@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { Hono } from "hono";
 import { db, userAuthStore, setRequireApiKeyDB } from "@srouter/db";
+import { TERMS_VERSION } from "@srouter/constants";
 import { UserAuthRouter } from "@/routes/v1/users.js";
 import { adminRoute } from "@/routes/v1/admin.js";
 import { AdminUsersRouter } from "@/routes/v1/adminUsers.js";
@@ -45,7 +46,9 @@ async function createAccount(email: string, password: string, opts: { isAdmin?: 
         passwordHash: hashUserPassword(password),
         name: "Account Test",
         status: "active",
-        isAdmin: opts.isAdmin ?? false
+        isAdmin: opts.isAdmin ?? false,
+        acceptedTermsAt: Date.now(),
+        termsVersion: TERMS_VERSION
     });
     if (!user) throw new Error(`failed to create ${email}`);
     createdUserIds.push(user.id);

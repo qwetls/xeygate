@@ -22,7 +22,7 @@ function LoginPage() {
     const [error, setError] = useState<string | null>(null);
 
     const loginMutation = useMutation({
-        mutationFn: () => api.post<{ id: string; isAdmin?: boolean; dailyReward?: { day: number; amount: number } | null }>("/v1/users/login", { email, password }),
+        mutationFn: () => api.post<{ id: string; isAdmin?: boolean; dailyReward?: { day: number; amount: number } | null }>("/v1/users/login", { email, password, accepted_terms: agreed }),
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
             if (data?.dailyReward) {

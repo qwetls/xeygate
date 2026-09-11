@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import { userAuthStore, type UserAuthStore } from "@srouter/db";
+import { TERMS_VERSION } from "@srouter/constants";
 import {
     validateEmail,
     validateUserPassword,
@@ -93,6 +94,7 @@ export function CreateAdminRoute(Options: AdminRouteOptions = {}): Hono {
             if (!admin) return Err(c, "Bootstrap failed", 500);
             await Store.setAdmin(admin.id, true);
             await Store.updatePasswordHash(admin.id, hashUserPassword(password));
+            await Store.acceptTerms(admin.id, TERMS_VERSION);
             if (admin.status !== "active") {
                 const activated = await Store.updateStatus(admin.id, "active");
                 if (activated) admin = activated;
@@ -106,7 +108,9 @@ export function CreateAdminRoute(Options: AdminRouteOptions = {}): Hono {
                 passwordHash: hashUserPassword(password),
                 name: body.name ?? "Administrator",
                 status: "active",
-                isAdmin: true
+                isAdmin: true,
+                acceptedTermsAt: Date.now(),
+                termsVersion: TERMS_VERSION
             });
             if (!admin) return Err(c, "Bootstrap failed", 500);
         }

@@ -31,7 +31,12 @@ function RegisterPage() {
 
     const registerMutation = useMutation({
         mutationFn: () =>
-            api.post<RegisterResponse>("/v1/users/register", { email, password, name }),
+            api.post<RegisterResponse>("/v1/users/register", {
+                email,
+                password,
+                name,
+                accepted_terms: agreed
+            }),
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
             if (data?.requiresApproval) {

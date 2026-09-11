@@ -19,6 +19,8 @@ export interface User {
     creatorStatus: CreatorStatus;
     creatorShare: number;
     isAdmin: boolean;
+    acceptedTermsAt: number | null;
+    termsVersion: string;
     createdAt: number;
     updatedAt: number;
 }
@@ -41,6 +43,8 @@ interface UserRow {
     creator_status: string;
     creator_share: number;
     is_admin: number | boolean;
+    accepted_terms_at: number | null;
+    terms_version: string;
     created_at: number;
     updated_at: number;
 }
@@ -76,6 +80,8 @@ export class UserAuthStore {
                 creator_status TEXT NOT NULL DEFAULT 'none',
                 creator_share REAL NOT NULL DEFAULT 0.80,
                 is_admin ${integer} NOT NULL DEFAULT 0,
+                accepted_terms_at ${integer},
+                terms_version TEXT NOT NULL DEFAULT '',
                 created_at ${integer} NOT NULL,
                 updated_at ${integer} NOT NULL
             );
@@ -141,6 +147,23 @@ export class UserAuthStore {
         } catch {
             // Column already exists
         }
+        // Migrate terms-consent columns. accepted_terms_at stays NULL for
+        // pre-consent accounts on purpose: their consent was never captured,
+        // so the login route re-asks instead of backfilling a fabricated stamp.
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN accepted_terms_at ${integer}`
+            );
+        } catch {
+            // Column already exists
+        }
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN terms_version TEXT NOT NULL DEFAULT ''`
+            );
+        } catch {
+            // Column already exists
+        }
         this.initialized = true;
     }
 
@@ -170,6 +193,8 @@ export class UserAuthStore {
         name?: string;
         status?: UserStatus;
         isAdmin?: boolean;
+        acceptedTermsAt?: number;
+        termsVersion?: string;
     }): Promise<User | null> {
         await this.ensureTables();
         const id = `user_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
@@ -179,9 +204,10 @@ export class UserAuthStore {
 
         try {
             await this.client.run(
-                `INSERT INTO users (id, email, password_hash, name, credits, role, status, is_admin, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?, ?)`,
-                id, email, data.passwordHash, data.name ?? "", status, data.isAdmin ? 1 : 0, now, now
+                `INSERT INTO users (id, email, password_hash, name, credits, role, status, is_admin, accepted_terms_at, terms_version, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?, ?, ?, ?)`,
+                id, email, data.passwordHash, data.name ?? "", status, data.isAdmin ? 1 : 0,
+                data.acceptedTermsAt ?? null, data.termsVersion ?? "", now, now
             );
         } catch {
             // Duplicate email
@@ -232,6 +258,16 @@ export class UserAuthStore {
         await this.client.run(
             `UPDATE users SET name = ?, updated_at = ? WHERE id = ?`,
             name, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    /** Records (or refreshes) the terms-consent stamp for an account. */
+    public async acceptTerms(userId: string, termsVersion: string): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET accepted_terms_at = ?, terms_version = ?, updated_at = ? WHERE id = ?`,
+            Date.now(), termsVersion, Date.now(), userId
         );
         return this.getUserById(userId);
     }
@@ -575,6 +611,11 @@ function mapUserRow(row: UserRow): User {
                 : "none",
         creatorShare: num(row.creator_share, 0.8),
         isAdmin: row.is_admin === 1 || (row.is_admin as unknown) === true,
+        acceptedTermsAt:
+            row.accepted_terms_at === null || row.accepted_terms_at === undefined
+                ? null
+                : num(row.accepted_terms_at),
+        termsVersion: str(row.terms_version),
         createdAt: num(row.created_at),
         updatedAt: num(row.updated_at)
     };

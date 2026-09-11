@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 import { Hono } from "hono";
 import { db, userAuthStore, getUserTransactionsDB } from "@srouter/db";
+import { TERMS_VERSION } from "@srouter/constants";
 import { UserAuthRouter } from "@/routes/v1/users.js";
 import { hashUserPassword } from "@/services/userAuth.js";
 import { GrantDailyLoginReward } from "@/services/dailyReward.js";
@@ -18,7 +19,9 @@ async function newAccount() {
         email,
         passwordHash: hashUserPassword("reward-pass-123"),
         name: "Reward Test",
-        status: "active"
+        status: "active",
+        acceptedTermsAt: Date.now(),
+        termsVersion: TERMS_VERSION
     });
     assert.ok(user);
     return { id: user.id, email };

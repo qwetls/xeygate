@@ -1,4 +1,5 @@
 import { userAuthStore, type User, type UserAuthStore } from "@srouter/db";
+import { TERMS_VERSION } from "@srouter/constants";
 import { hashUserPassword, verifyUserSession } from "@/services/userAuth.js";
 
 export const DEFAULT_ADMIN_EMAIL = "admin@xeygate.local";
@@ -56,7 +57,9 @@ export async function bootstrapAdminFromEnv(store: UserAuthStore = userAuthStore
             passwordHash: hash,
             name: "Administrator",
             status: "active",
-            isAdmin: true
+            isAdmin: true,
+            acceptedTermsAt: Date.now(),
+            termsVersion: TERMS_VERSION
         });
         return;
     }
@@ -71,12 +74,17 @@ export async function bootstrapAdminFromEnv(store: UserAuthStore = userAuthStore
         await store.setAdmin(clash.id, true);
         return;
     }
+    // Operator accounts consent at provisioning time (the deployer owns this
+    // box), so the migration stamps the current terms instead of locking the
+    // admin out of /users-login behind a re-accept gate meant for sign-ups.
     await store.createUser({
         email,
         passwordHash: legacyHash,
         name: "Administrator",
         status: "active",
-        isAdmin: true
+        isAdmin: true,
+        acceptedTermsAt: Date.now(),
+        termsVersion: TERMS_VERSION
     });
     console.log(
         `ℹ️ Migrated the legacy admin account to ${email} — sign in from the dashboard with the existing password.`
