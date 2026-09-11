@@ -182,6 +182,21 @@ const hasWebDist =
 
 if (hasWebDist) {
     const relWebDist = path.relative(process.cwd(), webDistPath) || ".";
+    // Without explicit Cache-Control the browser falls back to heuristic
+    // freshness (from Last-Modified) and pins a stale index.html across
+    // deploys, after which the SPA lazy-loads old hashed chunks forever.
+    app.use("/assets/*", async (c, next) => {
+        await next();
+        if (c.res.status === 200 && c.res.headers.get("content-type")?.startsWith("text/")) {
+            c.header("Cache-Control", "public, max-age=31536000, immutable");
+        }
+    });
+    app.use("/*", async (c, next) => {
+        await next();
+        if (c.res.headers.get("content-type")?.includes("text/html")) {
+            c.header("Cache-Control", "no-cache");
+        }
+    });
     app.use("/*", serveStatic({ root: relWebDist }));
     app.get("*", serveStatic({ path: path.join(relWebDist, "index.html") }));
 } else {
