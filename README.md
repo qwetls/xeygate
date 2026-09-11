@@ -7,7 +7,7 @@
 One stable API key. Every provider. Automatic routing, OAuth refresh, failover, and live telemetry.
 
 <p>
-  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.0.0-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.1.0-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4-e36002?style=flat-square" alt="Hono"></a>
@@ -15,7 +15,7 @@ One stable API key. Every provider. Automatic routing, OAuth refresh, failover, 
   <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-WAL-003b57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
 </p>
 
-[Quick Start](#-quick-start) • [Providers](#-supported-providers) • [Coding Tools](#-connect-coding-tools) • [Integrate](#-integrate) • [API](#-api-endpoints) • [Docker](#-docker)
+[Quick Start](#-quick-start) • [Providers](#-supported-providers) • [Coding Tools](#-connect-coding-tools) • [Integrate](#-integrate) • [API](#-api-endpoints) • [Docker](#-docker) • [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -179,6 +179,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Registration Gate (optional):** Toggle admin approval for new sign-ups from the admin settings.
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
+- **Daily Login Rewards:** Signing in credits the wallet automatically — **+$8 on days 1–6 of a login streak, +$10 on day 7**, then the cycle restarts. At most one grant per UTC day (extra logins don't double-credit), every reward is itemized in the wallet ledger, and skipping a day resets the streak.
 - **Quality-Weighted Marketplace Routing:** Marketplace model requests (`"gpt-4o"`, or any listing id whose first path segment is not a provider — including ids that legitimately contain a slash, like `"cx/gpt-6-astra"`) auto-route across every creator listing that model — success-rate + latency weighted primary pick, mandatory failover chain, circuit-breaker aware, with a floor share for weaker-but-working listings.
 - **Marketplace Namespaces:** `/user/v1` serves creator-owned listings only; `/official/v1` serves platform-official (admin-account-owned) listings only. The unscoped `/v1` continues to serve both for backward compatibility. Official listings live under the shared base provider id and are inherited by every admin key of that driver; creator listings stay connection-scoped so the two key spaces never mix.
 - **Public Marketplace Analytics:** OpenRouter-style aggregate endpoints — no authentication, no caller-identifying data (`api_key_id`, IP, user agent, spend are never returned), and the finest window is 24h so per-request activity cannot be correlated from the outside. The same data surfaces in `/dashboard/analytics` for both buyers and creators, with a 24h/7d/30d window picker, traffic and token charts, model leaderboard, and endpoint performance tables.
@@ -213,6 +214,7 @@ All gateway endpoints are served under `/v1`:
 | `POST` | `/v1/providers/bulk` | Add many upstream keys as one connection each (admin session) |
 | `POST` | `/v1/providers/mine/bulk` | Same for creator-owned connections (creator session) |
 | `GET` / `POST` | `/v1/keys` | Manage virtual API keys |
+| `POST` | `/v1/users/login` | Sign in — issues the 30-day sliding session cookie and grants the daily login reward (max once per UTC day) |
 | `GET` | `/v1/logs` | Query request audit logs and token telemetry |
 | `GET` | `/v1/analytics/overview` | Public platform totals + time series (`?window=24h\|7d\|30d`) |
 | `GET` | `/v1/analytics/models` | Public model leaderboard by token volume (`&limit=1..100`) |
