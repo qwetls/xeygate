@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- **GitHub sign-in** — visitors can create an account and sign in with their GitHub account via a "Continue with GitHub" button on `/login` and `/register`, gated by the same Terms & Privacy checkbox as the email flow. The OAuth round-trip (`/v1/users/oauth/github/start` → GitHub → `/v1/users/oauth/github/callback`) is CSRF-guarded by a state cookie, stores the GitHub id on the account, and **links to an existing account with the same email** instead of creating a duplicate. It honors every existing rule: the admin registration gate (new GitHub accounts land as `pending` when enabled), bans, and server-side terms consent (new accounts are stamped from the checkbox flag; pre-consent accounts re-accept through the same flow). Subsequent GitHub sign-ins count as sign-ins for the daily login streak; accounts created through GitHub are registrations and never grant it. Falls back to the `ID+login@users.noreply.github.com` address when the profile email is private. The button hides itself (`GET /v1/users/oauth/github/status`) until the instance is configured with `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` for a GitHub OAuth App whose callback URL is `https://<host>/v1/users/oauth/github/callback`.
+
 ## [1.4.0] - 2026-09-12
 
 ### Added

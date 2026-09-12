@@ -177,6 +177,7 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Account-Based Admins:** Admins are regular user accounts flagged `is_admin` — one login path, promote/demote from `/admin/users`, first-run claim at `/admin`, and env-password recovery (`SROUTER_ADMIN_PASSWORD`).
 - **Creator Approval Workflow:** Upgrades to creator require admin approval — the account keeps the buyer role until approved.
 - **Registration Gate (optional):** Toggle admin approval for new sign-ups from the admin settings.
+- **GitHub Sign-in (optional):** "Continue with GitHub" on `/login` and `/register` creates or signs into accounts via the GitHub OAuth flow — CSRF-guarded state round-trip, same-email accounts are **linked** rather than duplicated, and the registration gate, bans, and server-side terms consent all apply exactly as in the email path. Hidden profile emails fall back to the GitHub `ID+login@users.noreply.github.com` address. Enable by setting `GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` for a GitHub OAuth App whose callback URL is `https://<host>/v1/users/oauth/github/callback`; the button hides automatically while unconfigured.
 - **Platform Analytics:** Marketplace-wide metrics (users, creators, models, requests/tokens, top users) on the admin dashboard, plus a public overview for every portal user.
 - **Creator Wallets & Payouts:** Requests accrue creator earnings (default 80/20 share, admin-tunable per creator); creators withdraw via payout requests that admins mark paid/failed (`/dashboard/payouts`, `/admin/payouts`).
 - **Daily Login Rewards:** Signing in credits the wallet automatically — **+$8 on days 1–6 of a login streak, +$10 on day 7**, then the cycle restarts. At most one grant per UTC day (extra logins don't double-credit), every reward is itemized in the wallet ledger, and skipping a day resets the streak.
@@ -220,6 +221,9 @@ All gateway endpoints are served under `/v1`:
 | `POST` | `/v1/users/login` | Sign in — issues the 30-day sliding session cookie and grants the daily login reward (max once per UTC day) |
 | `GET` / `PATCH` | `/v1/users/me` | Read own profile (incl. member-since + login streak) / update display name |
 | `POST` | `/v1/users/logout-all` | Revoke every session of the account, including the current device |
+| `GET` | `/v1/users/oauth/github/status` | Whether GitHub sign-in is configured on this instance |
+| `GET` | `/v1/users/oauth/github/start` | Begin GitHub sign-in (`?consent=1` from the ToS checkbox) — redirects to GitHub |
+| `GET` | `/v1/users/oauth/github/callback` | GitHub redirect target — links/creates the account and issues the session |
 | `GET` / `POST` | `/v1/users/topups` | List own top-up orders (incl. the pending one) / create a top-up order (`$5–$10,000`, optional payment reference; one pending at a time) |
 | `POST` | `/v1/users/topups/:id/cancel` | Cancel own pending top-up order |
 | `GET` | `/v1/admin/topups` | Top-up review queue — pending by default, `?status=all` for history (`userId=` to filter by buyer) |
@@ -262,6 +266,10 @@ services:
     environment:
       - PORT=3000
       - NODE_ENV=production
+      # Optional GitHub sign-in — create a GitHub OAuth App whose callback URL
+      # is https://<your-host>/v1/users/oauth/github/callback:
+      # - GITHUB_CLIENT_ID=Iv1...
+      # - GITHUB_CLIENT_SECRET=...
 ```
 
 ---

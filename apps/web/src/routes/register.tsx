@@ -5,6 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { GitHubSignIn } from "@/components/auth/GitHubSignIn";
 import { Input } from "@/components/ui/input";
 import { Clock, Zap } from "lucide-react";
 
@@ -131,6 +132,7 @@ function RegisterPage() {
                         <Button type="submit" disabled={registerMutation.isPending || !agreed} className="w-full">
                             {registerMutation.isPending ? "Creating account..." : "Create account"}
                         </Button>
+                        <GitHubSignIn disabled={!agreed} />
                         <p className="text-center text-xs text-muted-foreground">
                             Already have an account?{" "}
                             <Link to="/login" className="text-foreground underline underline-offset-2 hover:text-foreground/80">Sign in</Link>

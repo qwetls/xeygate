@@ -21,6 +21,7 @@ export interface User {
     isAdmin: boolean;
     acceptedTermsAt: number | null;
     termsVersion: string;
+    githubId: string | null;
     createdAt: number;
     updatedAt: number;
 }
@@ -45,6 +46,7 @@ interface UserRow {
     is_admin: number | boolean;
     accepted_terms_at: number | null;
     terms_version: string;
+    github_id: string | null;
     created_at: number;
     updated_at: number;
 }
@@ -82,6 +84,7 @@ export class UserAuthStore {
                 is_admin ${integer} NOT NULL DEFAULT 0,
                 accepted_terms_at ${integer},
                 terms_version TEXT NOT NULL DEFAULT '',
+                github_id TEXT,
                 created_at ${integer} NOT NULL,
                 updated_at ${integer} NOT NULL
             );
@@ -164,6 +167,22 @@ export class UserAuthStore {
         } catch {
             // Column already exists
         }
+        // Migrate github_id column (GitHub OAuth identity). Nullable: most
+        // accounts sign up with email+password. The unique index lets one
+        // GitHub account map to exactly one user while allowing unlimited
+        // NULLs (both SQLite and Postgres treat NULLs as distinct).
+        try {
+            await this.client.exec(`ALTER TABLE users ADD COLUMN github_id TEXT`);
+        } catch {
+            // Column already exists
+        }
+        try {
+            await this.client.exec(
+                `CREATE UNIQUE INDEX IF NOT EXISTS idx_users_github_id ON users(github_id)`
+            );
+        } catch {
+            // Index already exists
+        }
         this.initialized = true;
     }
 
@@ -187,6 +206,34 @@ export class UserAuthStore {
         return mapUserRow(Row);
     }
 
+    public async getUserByGitHubId(githubId: string): Promise<User | null> {
+        await this.ensureTables();
+        const Row = (await this.client.get(
+            "SELECT * FROM users WHERE github_id = ?",
+            githubId
+        )) as unknown as UserRow | undefined;
+        if (!Row) return null;
+        return mapUserRow(Row);
+    }
+
+    /**
+     * Attaches a GitHub identity to an existing account (first GitHub sign-in
+     * on an account that already exists via email+password). Returns null when
+     * the GitHub account is already linked to a different user.
+     */
+    public async linkGitHubAccount(userId: string, githubId: string): Promise<User | null> {
+        await this.ensureTables();
+        try {
+            await this.client.run(
+                "UPDATE users SET github_id = ?, updated_at = ? WHERE id = ?",
+                githubId, Date.now(), userId
+            );
+        } catch {
+            return null;
+        }
+        return this.getUserById(userId);
+    }
+
     public async createUser(data: {
         email: string;
         passwordHash: string;
@@ -195,6 +242,7 @@ export class UserAuthStore {
         isAdmin?: boolean;
         acceptedTermsAt?: number;
         termsVersion?: string;
+        githubId?: string;
     }): Promise<User | null> {
         await this.ensureTables();
         const id = `user_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
@@ -204,10 +252,11 @@ export class UserAuthStore {
 
         try {
             await this.client.run(
-                `INSERT INTO users (id, email, password_hash, name, credits, role, status, is_admin, accepted_terms_at, terms_version, created_at, updated_at)
-                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?, ?, ?, ?)`,
+                `INSERT INTO users (id, email, password_hash, name, credits, role, status, is_admin, accepted_terms_at, terms_version, github_id, created_at, updated_at)
+                 VALUES (?, ?, ?, ?, 0, 'buyer', ?, ?, ?, ?, ?, ?, ?)`,
                 id, email, data.passwordHash, data.name ?? "", status, data.isAdmin ? 1 : 0,
-                data.acceptedTermsAt ?? null, data.termsVersion ?? "", now, now
+                data.acceptedTermsAt ?? null, data.termsVersion ?? "", data.githubId ?? null,
+                now, now
             );
         } catch {
             // Duplicate email
@@ -616,6 +665,10 @@ function mapUserRow(row: UserRow): User {
                 ? null
                 : num(row.accepted_terms_at),
         termsVersion: str(row.terms_version),
+        githubId:
+            row.github_id === null || row.github_id === undefined
+                ? null
+                : str(row.github_id),
         createdAt: num(row.created_at),
         updatedAt: num(row.updated_at)
     };
