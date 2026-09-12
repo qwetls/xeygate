@@ -2,18 +2,44 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { ClientShell, type ShellUserInfo } from "@/components/layout";
 
-export const Route = createFileRoute("/catalog")({ component: CatalogLayout });
+export const Route = createFileRoute("/catalog")({
+    component: CatalogLayout,
+    staticData: { title: "Marketplace" }
+});
 
 function CatalogLayout() {
     // Same query key as the client layout: navigating from the dashboard hits
-    // the cache, so signed-in users see the Dashboard CTA without a flash.
-    const { data: user } = useQuery({
+    // the cache, so the shell swap is instant.
+    const { data: user, isPending } = useQuery({
         queryKey: ["user-auth-status"],
-        queryFn: () => api.get<{ id: string }>("/v1/users/me"),
+        queryFn: () => api.get<ShellUserInfo>("/v1/users/me"),
         retry: false,
         staleTime: 60_000
     });
+
+    // Signed-in users keep the portal chrome (sidebar + topbar) around the
+    // marketplace — without this the navbar vanishes and /catalog reads as a
+    // page outside the app. Banned accounts render the public catalog instead
+    // (the portal would bounce them anyway). While the session check is in
+    // flight a neutral loader prevents a public-chrome flash before embed.
+    if (isPending) {
+        return (
+            <main className="flex min-h-svh items-center justify-center bg-background">
+                <p className="font-mono text-xs text-muted-foreground">Loading...</p>
+            </main>
+        );
+    }
+    if (user && user.status !== "banned") {
+        return (
+            <ClientShell user={user}>
+                <div className="mx-auto w-full max-w-5xl flex-1 py-2">
+                    <Outlet />
+                </div>
+            </ClientShell>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background text-foreground font-mono">

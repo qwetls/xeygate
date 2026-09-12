@@ -8,6 +8,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Added
 - **Server-side terms consent** — the sign-up/sign-in checkbox is now enforced by the API, not just the UI. `POST /v1/users/register` rejects bodies without `accepted_terms: true` (`400 terms_not_accepted`) and stamps the new-account row with `accepted_terms_at` + `terms_version`; accounts created before the consent record (or consented to a stale ToS version) must re-accept once at `POST /v1/users/login` (`403 terms_required`) before a session is issued. `GET /v1/users/me` exposes both fields. Operator accounts (env bootstrap, legacy `admin_account` migration, first-run `/admin/bootstrap`) are stamped at provisioning time so admins are never locked out.
 
+### Fixed
+- **Marketplace no longer leaves the portal shell** — clicking **Marketplace** in the client/admin sidebar navigated to `/catalog`, a public standalone page with its own header; the sidebar and topbar vanished, making it feel like exiting to an external page. Signed-in users (any status except banned) now get `/catalog` rendered **inside** the client shell — the navbar stays put with Marketplace active in the breadcrumb — while anonymous visitors keep the original standalone storefront. The portal shell was extracted into a reusable `ClientShell` component shared with the `_client` layout.
+
 ## [1.3.0] - 2026-09-12
 
 ### Added

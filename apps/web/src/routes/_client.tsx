@@ -2,29 +2,16 @@ import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Zap } from "lucide-react";
-import { ClientSidebar, Topbar } from "@/components/layout";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { ClientShell, type ShellUserInfo } from "@/components/layout";
 
 export const Route = createFileRoute("/_client")({
     component: ClientLayout
 });
 
-interface UserInfo {
-    id: string;
-    email: string;
-    name: string;
-    credits: number;
-    role: "buyer" | "creator";
-    status: "active" | "pending" | "banned";
-    creatorStatus: "none" | "pending" | "approved" | "rejected";
-    isAdmin: boolean;
-}
-
 function ClientLayout() {
     const statusQuery = useQuery({
         queryKey: ["user-auth-status"],
-        queryFn: () => api.get<UserInfo>("/v1/users/me"),
+        queryFn: () => api.get<ShellUserInfo>("/v1/users/me"),
         retry: false,
         staleTime: 0
     });
@@ -48,22 +35,9 @@ function ClientLayout() {
     }
 
     return (
-        <TooltipProvider>
-            <SidebarProvider>
-                <ClientSidebar
-                    role={user.role}
-                    email={user.email}
-                    credits={user.credits}
-                    isAdmin={user.isAdmin}
-                />
-                <SidebarInset className="h-svh overflow-hidden">
-                    <Topbar />
-                    <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-6 bg-grid-pattern">
-                        <Outlet />
-                    </main>
-                </SidebarInset>
-            </SidebarProvider>
-        </TooltipProvider>
+        <ClientShell user={user}>
+            <Outlet />
+        </ClientShell>
     );
 }
 
