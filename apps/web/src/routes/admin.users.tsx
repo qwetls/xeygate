@@ -50,6 +50,13 @@ interface AdminUser {
     isAdmin: boolean;
     createdAt: number;
     updatedAt: number;
+    creatorApplication?: {
+        displayName: string;
+        reason: string;
+        link: string;
+        createdAt: number;
+        updatedAt: number;
+    } | null;
 }
 
 function statusStyles(status: UserStatus) {
@@ -255,15 +262,83 @@ function AdminUsersPage() {
                 <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
                     Failed to load users: {error instanceof Error ? error.message : "Unknown error"}
                 </div>
-            ) : users.length === 0 ? (
-                <Empty className="p-12">
-                    <EmptyTitle>No users yet.</EmptyTitle>
-                    <EmptyDescription>
-                        Registered accounts will appear here once users sign up.
-                    </EmptyDescription>
-                </Empty>
             ) : (
-                <div className="rounded-xl border border-border/80 bg-card/40 overflow-hidden shadow-2xs">
+                <>
+                    {pendingCreators.length > 0 && (
+                        <section className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 sm:p-5 shadow-2xs">
+                            <h2 className="text-sm font-bold text-foreground">
+                                Creator applications ({pendingCreators.length})
+                            </h2>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                                Review each applicant&apos;s form before approving or rejecting.
+                            </p>
+                            <div className="mt-3 grid gap-3">
+                                {pendingCreators.map((user) => {
+                                    const app = user.creatorApplication;
+                                    const busy = actingId !== null;
+                                    return (
+                                        <div
+                                            key={user.id}
+                                            className="rounded-lg border border-border/70 bg-card/60 p-3.5"
+                                        >
+                                            <div className="flex flex-wrap items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <div className="text-xs font-semibold text-foreground">
+                                                        {app?.displayName || user.name || "Unnamed"}
+                                                        <span className="ml-1.5 font-normal text-muted-foreground">
+                                                            {user.email}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-1.5 whitespace-pre-line text-xs text-foreground/90 leading-relaxed">
+                                                        {app?.reason || (
+                                                            <span className="italic text-muted-foreground">
+                                                                No application form on file (legacy request).
+                                                            </span>
+                                                        )}
+                                                    </p>
+                                                    {app?.link && (
+                                                        <a
+                                                            href={app.link}
+                                                            target="_blank"
+                                                            rel="noreferrer noopener"
+                                                            className="mt-1.5 inline-block max-w-full truncate text-[11px] text-sky-500 underline underline-offset-2"
+                                                        >
+                                                            {app.link}
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-1.5 shrink-0">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={busy}
+                                                        onClick={() => void runAction(user.id, "approve-creator")}
+                                                        className="h-7 gap-1 px-2 text-[11px] cursor-pointer border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
+                                                    >
+                                                        <ShieldCheck className="size-3" />
+                                                        Approve
+                                                    </Button>
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        size="sm"
+                                                        disabled={busy}
+                                                        onClick={() => void runAction(user.id, "reject-creator")}
+                                                        className="h-7 gap-1 px-2 text-[11px] cursor-pointer border-rose-500/30 text-rose-500 hover:bg-rose-500/10"
+                                                    >
+                                                        <XCircle className="size-3" />
+                                                        Reject
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+                    <div className="rounded-xl border border-border/80 bg-card/40 overflow-hidden shadow-2xs">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -499,6 +574,16 @@ function AdminUsersPage() {
                         </TableBody>
                     </Table>
                 </div>
+                </>
+            )}
+
+            {data && !isPending && users.length === 0 && (
+                <Empty className="p-12">
+                    <EmptyTitle>No users yet.</EmptyTitle>
+                    <EmptyDescription>
+                        Registered accounts will appear here once users sign up.
+                    </EmptyDescription>
+                </Empty>
             )}
 
             <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">

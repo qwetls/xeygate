@@ -6,6 +6,7 @@ import {
     getUserTransactionsDB,
     countUserTransactionsDB,
     getRequireRegistrationApprovalDB,
+    getCreatorApplicationsOpenDB,
     getPublicPlatformStatsDB,
     createTopupOrderDB,
     getTopupOrderDB,
@@ -307,7 +308,12 @@ UserAuthRouter.get("/users/role", RequireUserAuth, async (c) => {
 
 UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
-    const body = await c.req.json<{ role?: string }>().catch(() => ({}));
+    const body = await c.req.json<{
+        role?: string;
+        displayName?: string;
+        reason?: string;
+        link?: string;
+    }>().catch(() => ({}));
     if (body.role !== "buyer" && body.role !== "creator") {
         return Err(c, "Role must be 'buyer' or 'creator'", 400);
     }
@@ -344,7 +350,29 @@ UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
             creatorStatus: user.creatorStatus
         });
     }
-    // First request (none/rejected) → pending; role stays 'buyer' until approved.
+
+    // New applications require the admin applications toggle to be open, and
+    // come with a short form the admin reviews before approving.
+    const displayName = typeof body.displayName === "string" ? body.displayName.trim() : "";
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    const link = typeof body.link === "string" ? body.link.trim() : "";
+    if (!displayName || !reason) {
+        return Err(c, "displayName and reason are required to apply as a creator.", 400, {
+            code: "creator_form_incomplete"
+        });
+    }
+    if (displayName.length > 80 || reason.length > 2000 || link.length > 300) {
+        return Err(c, "Application fields exceed length limits.", 400, {
+            code: "creator_form_too_long"
+        });
+    }
+    const applicationsOpen = await getCreatorApplicationsOpenDB();
+    if (!applicationsOpen) {
+        return Err(c, "Creator applications are closed right now. Check back later.", 403, {
+            code: "creator_applications_closed"
+        });
+    }
+    await userAuthStore.upsertCreatorApplication(userId, displayName, reason, link);
     const updated = await userAuthStore.setCreatorApproval(userId, "pending");
     if (!updated) return Err(c, "User not found", 404);
     return Ok(c, {
@@ -354,6 +382,13 @@ UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
         creatorStatus: updated.creatorStatus,
         requiresApproval: true
     });
+});
+
+// The applicant's own application form (mirrors what the admin sees).
+UserAuthRouter.get("/users/creator-application", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const application = await userAuthStore.getUserCreatorApplication(userId);
+    return Ok(c, { application });
 });
 
 // ── Wallet top-up orders (out-of-band payment, admin-verified) ──

@@ -47,6 +47,14 @@ export async function setRequireRegistrationApprovalDB(required: boolean): Promi
     await setSettingDB("require_registration_approval", required ? "true" : "false");
 }
 
+export async function getCreatorApplicationsOpenDB(): Promise<boolean> {
+    return (await getSettingDB("creator_applications_open", "false")) === "true";
+}
+
+export async function setCreatorApplicationsOpenDB(open: boolean): Promise<void> {
+    await setSettingDB("creator_applications_open", open ? "true" : "false");
+}
+
 export async function getRoundRobinDB(providerId: string): Promise<boolean> {
     return (await getSettingDB(`round_robin_${providerId}`, "false")) === "true";
 }

@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- **Creator application form + admin applications toggle** — becoming a creator is no longer a one-click upgrade. Admins now control a **"Open Creator Applications"** toggle in admin settings (default **closed**); while closed, `PUT /v1/users/role` rejects new applications with `403 creator_applications_closed` (existing creators and pending requests are untouched). When open, applicants fill a short form — brand/display name, what they plan to offer, optional link — persisted in a new `creator_applications` table, validated for length (80/2000/300 chars) and shown to admins in a dedicated "Creator applications" panel on `/admin/users` next to Approve/Reject. Applicants can read their own submission back via `GET /v1/users/creator-application`.
+
 ## [1.5.0] - 2026-09-12
 
 ### Added

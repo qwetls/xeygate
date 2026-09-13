@@ -1,8 +1,10 @@
 import type { Context } from "hono";
 import {
     getAllSettingsDB,
+    getCreatorApplicationsOpenDB,
     getRequireApiKeyDB,
     getRequireRegistrationApprovalDB,
+    setCreatorApplicationsOpenDB,
     setRequireApiKeyDB,
     setRequireRegistrationApprovalDB,
     setSettingDB
@@ -16,6 +18,7 @@ export class SettingsController {
             require_api_key: await getRequireApiKeyDB(),
             requireApiKey: await getRequireApiKeyDB(),
             require_registration_approval: await getRequireRegistrationApprovalDB(),
+            creator_applications_open: await getCreatorApplicationsOpenDB(),
             settings: await getAllSettingsDB()
         });
     }
@@ -34,6 +37,9 @@ export class SettingsController {
             if (typeof Parsed.data.require_registration_approval === "boolean") {
                 await setRequireRegistrationApprovalDB(Parsed.data.require_registration_approval);
             }
+            if (typeof Parsed.data.creator_applications_open === "boolean") {
+                await setCreatorApplicationsOpenDB(Parsed.data.creator_applications_open);
+            }
             if (Parsed.data.settings) {
                 for (const [key, value] of Object.entries(Parsed.data.settings)) {
                     if (typeof value === "string") {
@@ -47,6 +53,7 @@ export class SettingsController {
                 require_api_key: await getRequireApiKeyDB(),
                 requireApiKey: await getRequireApiKeyDB(),
                 require_registration_approval: await getRequireRegistrationApprovalDB(),
+                creator_applications_open: await getCreatorApplicationsOpenDB(),
                 settings: await getAllSettingsDB()
             });
         } catch (error) {

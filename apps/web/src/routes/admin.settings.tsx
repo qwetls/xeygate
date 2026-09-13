@@ -35,6 +35,7 @@ interface ServerSettingsResponse {
     require_api_key?: boolean;
     requireApiKey?: boolean;
     require_registration_approval?: boolean;
+    creator_applications_open?: boolean;
     settings?: Record<string, string>;
 }
 
@@ -73,6 +74,7 @@ function SettingsPage() {
     const [requireApiKey, setRequireApiKey] = useState<boolean>(false);
     const [requireRegistrationApproval, setRequireRegistrationApproval] =
         useState<boolean>(false);
+    const [creatorApplicationsOpen, setCreatorApplicationsOpen] = useState<boolean>(false);
 
     useEffect(() => {
         if (serverSettings) {
@@ -82,6 +84,9 @@ function SettingsPage() {
             }
             if (typeof serverSettings.require_registration_approval === "boolean") {
                 setRequireRegistrationApproval(serverSettings.require_registration_approval);
+            }
+            if (typeof serverSettings.creator_applications_open === "boolean") {
+                setCreatorApplicationsOpen(serverSettings.creator_applications_open);
             }
         }
     }, [serverSettings]);
@@ -95,6 +100,12 @@ function SettingsPage() {
                     payload.require_registration_approval
                         ? "New registrations now require admin approval"
                         : "Open registration enabled"
+                );
+            } else if ("creator_applications_open" in payload) {
+                toast.success(
+                    payload.creator_applications_open
+                        ? "Creator applications are now open"
+                        : "Creator applications are now closed"
                 );
             } else {
                 toast.success(
@@ -119,6 +130,11 @@ function SettingsPage() {
     const handleToggleRequireRegistrationApproval = (value: boolean) => {
         setRequireRegistrationApproval(value);
         updateServerMutation.mutate({ require_registration_approval: value });
+    };
+
+    const handleToggleCreatorApplications = (value: boolean) => {
+        setCreatorApplicationsOpen(value);
+        updateServerMutation.mutate({ creator_applications_open: value });
     };
 
     const scrollToSection = (id: string) => {
@@ -210,6 +226,8 @@ function SettingsPage() {
                     onToggleRequireApiKey={handleToggleRequireApiKey}
                     requireRegistrationApproval={requireRegistrationApproval}
                     onToggleRequireRegistrationApproval={handleToggleRequireRegistrationApproval}
+                    creatorApplicationsOpen={creatorApplicationsOpen}
+                    onToggleCreatorApplications={handleToggleCreatorApplications}
                     isUpdating={updateServerMutation.isPending}
                     apiBase={apiBase}
                 />

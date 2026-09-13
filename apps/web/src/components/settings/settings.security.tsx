@@ -11,6 +11,8 @@ interface SecuritySettingsProps {
     onToggleRequireApiKey: (required: boolean) => void;
     requireRegistrationApproval: boolean;
     onToggleRequireRegistrationApproval: (required: boolean) => void;
+    creatorApplicationsOpen: boolean;
+    onToggleCreatorApplications: (open: boolean) => void;
     isUpdating: boolean;
     apiBase?: string;
 }
@@ -20,6 +22,8 @@ export function SecuritySettings({
     onToggleRequireApiKey,
     requireRegistrationApproval,
     onToggleRequireRegistrationApproval,
+    creatorApplicationsOpen,
+    onToggleCreatorApplications,
     isUpdating
 }: SecuritySettingsProps) {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -130,6 +134,38 @@ export function SecuritySettings({
                             ]}
                             value={requireRegistrationApproval}
                             onChange={onToggleRequireRegistrationApproval}
+                            disabled={isUpdating}
+                        />
+                    </div>
+                }
+            />
+
+            <SettingsRow
+                title="Open Creator Applications"
+                description={
+                    creatorApplicationsOpen
+                        ? "Buyers can submit a creator application (form + admin review)."
+                        : "New creator applications are closed; existing creators keep working."
+                }
+                control={
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className={[
+                                "hidden sm:inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-mono font-medium border",
+                                creatorApplicationsOpen
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-muted/50 text-muted-foreground border-border/60"
+                            ].join(" ")}
+                        >
+                            {creatorApplicationsOpen ? "Open" : "Closed"}
+                        </span>
+                        <SegmentedControl
+                            options={[
+                                { value: false, label: "OFF" },
+                                { value: true, label: "ON" }
+                            ]}
+                            value={creatorApplicationsOpen}
+                            onChange={onToggleCreatorApplications}
                             disabled={isUpdating}
                         />
                     </div>

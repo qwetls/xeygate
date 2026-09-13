@@ -46,7 +46,15 @@ function toUserPayload(user: {
 export class AdminUsersController {
     public static async ListUsers(c: Context): Promise<Response> {
         const users = await userAuthStore.listUsers();
-        return Ok(c, { users: users.map(toUserPayload) });
+        // Attach each user's creator-application form answers (null when the
+        // user never filled the apply form, e.g. legacy pending requests).
+        const usersWithApplications = await Promise.all(
+            users.map(async (user) => {
+                const application = await userAuthStore.getUserCreatorApplication(user.id);
+                return { ...toUserPayload(user), creatorApplication: application };
+            })
+        );
+        return Ok(c, { users: usersWithApplications });
     }
 
     public static async PlatformAnalytics(c: Context): Promise<Response> {

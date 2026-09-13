@@ -101,6 +101,15 @@ export class UserAuthStore {
                 last_day TEXT NOT NULL,
                 streak ${integer} NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS creator_applications (
+                user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                display_name TEXT NOT NULL DEFAULT '',
+                reason TEXT NOT NULL DEFAULT '',
+                link TEXT NOT NULL DEFAULT '',
+                created_at ${integer} NOT NULL,
+                updated_at ${integer} NOT NULL
+            );
         `);
         // Ensure user_id column exists on api_keys (for linking keys to users)
         try {
@@ -362,6 +371,55 @@ export class UserAuthStore {
             );
         }
         return this.getUserById(userId);
+    }
+
+    /**
+     * Upserts the creator-application form answers for a user. Called when a
+     * buyer (re)applies for creator access; admin reviews these answers via
+     * getUserCreatorApplication.
+     */
+    public async upsertCreatorApplication(
+        userId: string,
+        displayName: string,
+        reason: string,
+        link: string
+    ): Promise<void> {
+        await this.ensureTables();
+        await this.client.run(
+            `INSERT INTO creator_applications (user_id, display_name, reason, link, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(user_id) DO UPDATE SET
+                display_name = excluded.display_name,
+                reason = excluded.reason,
+                link = excluded.link,
+                updated_at = excluded.updated_at`,
+            userId, displayName, reason, link, Date.now(), Date.now()
+        );
+    }
+
+    public async getUserCreatorApplication(
+        userId: string
+    ): Promise<{ displayName: string; reason: string; link: string; createdAt: number; updatedAt: number } | null> {
+        await this.ensureTables();
+        const Row = (await this.client.get(
+            "SELECT * FROM creator_applications WHERE user_id = ?",
+            userId
+        )) as unknown as {
+            user_id: string;
+            display_name: string;
+            reason: string;
+            link: string;
+            created_at: number;
+            updated_at: number;
+        } | undefined;
+        if (!Row) return null;
+        return {
+            displayName: Row.display_name,
+            reason: Row.reason,
+            link: Row.link,
+            createdAt: Row.created_at,
+            updatedAt: Row.updated_at
+        };
     }
 
     // ── Creator revenue share ──

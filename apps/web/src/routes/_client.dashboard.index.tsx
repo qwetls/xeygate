@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
     Activity,
     ArrowRight,
@@ -49,6 +50,20 @@ interface PublicPlatformStats {
     totalTokens: number;
 }
 
+function extractApiErrorMessage(error: unknown): string {
+    const message = error instanceof Error ? error.message : "";
+    if (message.includes("creator_applications_closed") || message.toLowerCase().includes("applications are closed")) {
+        return "Creator applications are closed right now. Check back later.";
+    }
+    if (message.includes("creator_form_incomplete") || message.toLowerCase().includes("displayname and reason")) {
+        return "Please fill in your brand name and describe how you plan to use the marketplace.";
+    }
+    if (message.includes("creator_form_too_long") || message.toLowerCase().includes("length limits")) {
+        return "One of the fields is too long. Keep the description under 2000 characters.";
+    }
+    return message || "Failed to submit application. Please try again.";
+}
+
 function ClientDashboard() {
     const queryClient = useQueryClient();
     const { data: user } = useQuery({
@@ -56,12 +71,34 @@ function ClientDashboard() {
         queryFn: () => api.get<UserInfo>("/v1/users/me")
     });
 
+    const [showApplyForm, setShowApplyForm] = useState(false);
+    const [applyDisplayName, setApplyDisplayName] = useState("");
+    const [applyReason, setApplyReason] = useState("");
+    const [applyLink, setApplyLink] = useState("");
+    const [applyError, setApplyError] = useState<string | null>(null);
+
     const upgradeMutation = useMutation({
-        mutationFn: () => api.put<RoleResponse>("/v1/users/role", { role: "creator" }),
+        mutationFn: () =>
+            api.put<RoleResponse>("/v1/users/role", {
+                role: "creator",
+                displayName: applyDisplayName,
+                reason: applyReason,
+                link: applyLink
+            }),
         onSuccess: () => {
+            setApplyError(null);
+            setShowApplyForm(false);
             queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
+        },
+        onError: (error) => {
+            setApplyError(extractApiErrorMessage(error));
         }
     });
+
+    function submitApplication() {
+        setApplyError(null);
+        upgradeMutation.mutate();
+    }
 
     const { data: usage } = useQuery({
         queryKey: ["user-usage"],
@@ -112,7 +149,7 @@ function ClientDashboard() {
                 </section>
             )}
 
-            {!isCreator && !creatorPending && (
+            {!isCreator && !creatorPending && !showApplyForm && (
                 <section className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border/80 bg-secondary/20 p-5">
                     <div className="flex items-start gap-3">
                         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border/60 bg-secondary/50">
@@ -122,24 +159,99 @@ function ClientDashboard() {
                             <h2 className="text-sm font-bold text-foreground">Become a Creator</h2>
                             <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed max-w-xl">
                                 {creatorRejected
-                                    ? "Your previous creator request was rejected. You can submit a new request below."
-                                    : "Connect your own LLM provider accounts and sell API access on the marketplace. A request is sent to admins for approval."}
+                                    ? "Your previous creator request was rejected. You can submit a new application below."
+                                    : "Connect your own LLM provider accounts and sell API access on the marketplace. Applications are reviewed by admins."}
                             </p>
                         </div>
                     </div>
                     <Button
                         size="sm"
                         className="h-8 text-xs cursor-pointer gap-1.5 shrink-0 self-start sm:self-auto"
-                        disabled={upgradeMutation.isPending}
-                        onClick={() => upgradeMutation.mutate()}
+                        onClick={() => {
+                            setApplyError(null);
+                            setShowApplyForm(true);
+                        }}
                     >
-                        {upgradeMutation.isPending
-                            ? "Submitting..."
-                            : creatorRejected
-                              ? "Request again"
-                              : "Upgrade now"}
+                        {creatorRejected ? "Apply again" : "Apply now"}
                         <ArrowRight className="size-3.5" />
                     </Button>
+                </section>
+            )}
+
+            {!isCreator && !creatorPending && showApplyForm && (
+                <section className="flex flex-col gap-3 rounded-xl border border-border/80 bg-secondary/20 p-5">
+                    <div>
+                        <h2 className="text-sm font-bold text-foreground">Creator application</h2>
+                        <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">
+                            Tell the admins who you are and what you plan to sell. They review every
+                            application before creator access is granted.
+                        </p>
+                    </div>
+                    <div className="grid gap-2.5">
+                        <label className="grid gap-1">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Brand / display name *
+                            </span>
+                            <Input
+                                value={applyDisplayName}
+                                maxLength={80}
+                                placeholder="e.g. Acme AI"
+                                onChange={(e) => setApplyDisplayName(e.target.value)}
+                            />
+                        </label>
+                        <label className="grid gap-1">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                What will you offer? *
+                            </span>
+                            <textarea
+                                value={applyReason}
+                                maxLength={2000}
+                                rows={4}
+                                placeholder="Describe the providers or models you plan to connect and who you expect to serve..."
+                                className="flex min-h-16 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                onChange={(e) => setApplyReason(e.target.value)}
+                            />
+                        </label>
+                        <label className="grid gap-1">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                Link (site, portfolio, or repo) — optional
+                            </span>
+                            <Input
+                                value={applyLink}
+                                maxLength={300}
+                                type="url"
+                                placeholder="https://..."
+                                onChange={(e) => setApplyLink(e.target.value)}
+                            />
+                        </label>
+                    </div>
+                    {applyError && (
+                        <p className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            {applyError}
+                        </p>
+                    )}
+                    <div className="flex items-center gap-2 self-end">
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs cursor-pointer"
+                            onClick={() => {
+                                setShowApplyForm(false);
+                                setApplyError(null);
+                            }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            className="h-8 text-xs cursor-pointer gap-1.5"
+                            disabled={upgradeMutation.isPending || !applyDisplayName.trim() || !applyReason.trim()}
+                            onClick={submitApplication}
+                        >
+                            {upgradeMutation.isPending ? "Submitting..." : "Submit application"}
+                            <ArrowRight className="size-3.5" />
+                        </Button>
+                    </div>
                 </section>
             )}
 

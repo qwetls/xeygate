@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test, beforeEach, afterEach } from "node:test";
-import { userAuthStore, userAuthStore as store } from "@srouter/db";
+import { userAuthStore, userAuthStore as store, setCreatorApplicationsOpenDB } from "@srouter/db";
 import type { User } from "@srouter/db";
 import { Hono } from "hono";
 import { UserAuthRouter } from "@/routes/v1/users.js";
@@ -11,6 +11,12 @@ import {
     USER_SESSION_COOKIE
 } from "@/services/userAuth.js";
 import { deleteProviderDB } from "@srouter/db";
+
+const APPLY_BODY = {
+    displayName: "Test Brand",
+    reason: "Selling my spare LLM capacity to buyers.",
+    link: "https://example.com"
+};
 
 function createTestApp() {
     const app = new Hono();
@@ -77,10 +83,11 @@ test("GET /v1/users/role returns the correct role", async () => {
 
 test("PUT /v1/users/role requests creator upgrade (pending until admin approves)", async () => {
     const app = createTestApp();
+    await setCreatorApplicationsOpenDB(true);
     const res = await app.request("/v1/users/role", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Cookie: buyerCookie },
-        body: JSON.stringify({ role: "creator" })
+        body: JSON.stringify({ role: "creator", ...APPLY_BODY })
     });
     assert.equal(res.status, 200);
     const body = await res.json() as { id: string; role: string; creatorStatus: string; requiresApproval: boolean };
@@ -90,13 +97,65 @@ test("PUT /v1/users/role requests creator upgrade (pending until admin approves)
     assert.equal(body.requiresApproval, true);
 });
 
+test("PUT /v1/users/role rejects creator application while applications are closed", async () => {
+    const app = createTestApp();
+    await setCreatorApplicationsOpenDB(false);
+    const res = await app.request("/v1/users/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: buyerCookie },
+        body: JSON.stringify({ role: "creator", ...APPLY_BODY })
+    });
+    assert.equal(res.status, 403);
+    const body = await res.json() as { error?: { code?: string } };
+    assert.equal(body.error?.code, "creator_applications_closed");
+});
+
+test("PUT /v1/users/role requires the application form fields", async () => {
+    const app = createTestApp();
+    await setCreatorApplicationsOpenDB(true);
+    const res = await app.request("/v1/users/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: buyerCookie },
+        body: JSON.stringify({ role: "creator" })
+    });
+    assert.equal(res.status, 400);
+    const body = await res.json() as { error?: { code?: string } };
+    assert.equal(body.error?.code, "creator_form_incomplete");
+});
+
+test("creator application form is stored and visible to the admin", async () => {
+    const app = createTestApp();
+    await setCreatorApplicationsOpenDB(true);
+    const res = await app.request("/v1/users/role", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Cookie: buyerCookie },
+        body: JSON.stringify({ role: "creator", ...APPLY_BODY })
+    });
+    assert.equal(res.status, 200);
+
+    const stored = await store.getUserCreatorApplication(buyerUser.id);
+    assert.ok(stored);
+    assert.equal(stored.displayName, "Test Brand");
+    assert.equal(stored.reason, APPLY_BODY.reason);
+    assert.equal(stored.link, "https://example.com");
+
+    // Applicant can read their own application back.
+    const mine = await app.request("/v1/users/creator-application", {
+        headers: { Cookie: buyerCookie }
+    });
+    assert.equal(mine.status, 200);
+    const mineBody = await mine.json() as { application: { displayName: string } | null };
+    assert.equal(mineBody.application?.displayName, "Test Brand");
+});
+
 test("creator upgrade is approved via admin setCreatorApproval", async () => {
     const app = createTestApp();
+    await setCreatorApplicationsOpenDB(true);
     // buyer requests creator access
     const reqRes = await app.request("/v1/users/role", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Cookie: buyerCookie },
-        body: JSON.stringify({ role: "creator" })
+        body: JSON.stringify({ role: "creator", ...APPLY_BODY })
     });
     assert.equal(reqRes.status, 200);
 
