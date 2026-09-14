@@ -5,6 +5,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-15
+
 ### Added
 - **Per-request connection audit (`served_provider_id`)** — bulk pools (one driver, hundreds of keys) had no way to show which key actually handled a call: `request_logs.provider_id` only ever stores the routing identity (`bai`), and the `resolved_model` column was plumbed end to end but never populated. Every completion now records the concrete connection that served it (`bai-1789023519492-37`) in a new `served_provider_id` column — the registry reports the winning candidate back through an optional callback on `chatCompletion`/`chatCompletionStream`, streaming and non-streaming alike — and the log detail modal shows a **Served By** panel. Makes round-robin spread across a pool auditable with one query (`GROUP BY served_provider_id`) instead of guesswork.
 - **Creator application form + admin applications toggle** — becoming a creator is no longer a one-click upgrade. Admins now control a **"Open Creator Applications"** toggle in admin settings (default **closed**); while closed, `PUT /v1/users/role` rejects new applications with `403 creator_applications_closed` (existing creators and pending requests are untouched). When open, applicants fill a short form — brand/display name, what they plan to offer, optional link — persisted in a new `creator_applications` table, validated for length (80/2000/300 chars) and shown to admins in a dedicated "Creator applications" panel on `/admin/users` next to Approve/Reject. Applicants can read their own submission back via `GET /v1/users/creator-application`.
@@ -12,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 ### Fixed
 - **My APIs no longer shows "0 models listed" for official connections** — `GET /v1/users/my-providers` counted only connection-scoped `custom_models` rows, so bulk-imported connections (one key per row, models stored under the shared base id) always reported zero. The count now inherits base-id catalog rows the same way the marketplace does — own rows plus base-id rows, deduplicated.
 - **Same model across endpoints is now one marketplace entry** — the flat model list (`GET /v1/catalog/models`) grouped by each provider's stored listing id, so one model listed on two endpoints appeared as two storefront entries (`hy3` vs `neko/hy3`) purely because of a prefix. Entries now group by bare model id: the prefix-free id stays canonical and requestable, prefixed variants survive as `aliases` that still resolve through the `?model=` detail lookup, and offers from every endpoint merge into one entry with the cheapest highlighted. Routing is untouched — it still matches each connection's stored id.
+- **Slash-id entries no longer list themselves as their own alias** — when an entry's canonical id contains a slash (e.g. `cx/gpt-6-astra`), the bare-id extraction would push the entry's own id into its `aliases` array. Entries now filter themselves out of their alias list.
 
 ## [1.5.0] - 2026-09-12
 
