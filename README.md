@@ -7,7 +7,7 @@
 One stable API key. Every provider. Automatic routing, OAuth refresh, failover, and live telemetry.
 
 <p>
-  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.5.0-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.6.0-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4-e36002?style=flat-square" alt="Hono"></a>
@@ -15,7 +15,7 @@ One stable API key. Every provider. Automatic routing, OAuth refresh, failover, 
   <a href="https://www.sqlite.org/"><img src="https://img.shields.io/badge/SQLite-WAL-003b57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite"></a>
 </p>
 
-[Quick Start](#-quick-start) • [Providers](#-supported-providers) • [Coding Tools](#-connect-coding-tools) • [Integrate](#-integrate) • [API](#-api-endpoints) • [Docker](#-docker) • [Changelog](CHANGELOG.md)
+[Quick Start](#-quick-start) • [Providers](#-supported-providers) • [Coding Tools](#-connect-coding-tools) • [Integrate](#-integrate) • [Features](#-core-features) • [Architecture](#-architecture) • [API](#-api-endpoints) • [Docker](#-docker) • [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -191,6 +191,253 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Admin Model Management:** On any provider page, admins open *Manage Models* to fetch the upstream model list, tick-select multiple models (search + select-all), register them in bulk, or remove selected custom listings. Every model row also carries an explicit marketplace state — **Listed** (published in the public catalog) vs **Not listed** — with one-click List / Unlist per model and bulk List/Unlist in the selection toolbar. Model IDs are normalized server-side (a leading provider-alias segment is stripped) so the catalog stays consistent with the routing keys.
 - **Bulk API Key Import:** On any provider page, *Bulk Keys* accepts a pasted list (one key per line, or comma-separated; up to 500 per batch) and registers one connection per key under the same driver. Connection ids fold back to the driver base id, so the catalog card and round-robin pool treat them as one endpoint group. Duplicate keys are deduped in the batch and skipped when the same owner already has that key saved — re-pasting a list never doubles the pool. Traffic spread is auditable: every request records the concrete connection that served it (`served_provider_id`), so the pool's round-robin distribution can be verified per key from the logs. The **My APIs** page correctly shows the model count for bulk connections by inheriting base-id catalog listings, so every key in the pool reflects the same models the admin registered once. Available on both the admin surface (`POST /v1/providers/bulk`) and the creator surface (`POST /v1/providers/mine/bulk`).
 - **Server-Side Model Disable:** Disabling a model is a platform rule, not a browser preference. `disabled_models` is keyed like the listings (`custom_models`) — platform rules under the shared base provider id so every key of that driver inherits them, custom connections keeping their own UUID key space — and is enforced at one central chokepoint in the provider registry plus the marketplace routing chain. A disabled model disappears from `/v1/models`, the namespace lists, and the public storefront, and any request naming it fails closed with `400` instead of silently serving another account's key or being laundered through a fallback rule. Admins still see disabled entries on the provider page (with reason + who/when) and can re-enable individually or in bulk.
+
+---
+
+## 🏗️ Architecture
+
+### High-Level System Overview
+
+```mermaid
+graph TB
+    subgraph Clients
+        SDK[OpenAI / Anthropic SDK]
+        CLI["@xeygate/cli"]
+        WEB[Browser — Dashboard]
+        CURL[curl / HTTP clients]
+    end
+
+    subgraph XEYGATE["⚡ XEYGATE Gateway"]
+        AUTH[Auth Layer<br/>API Key + Session + CSRF]
+        ROUTER[Quality-Weighted Router<br/>Failover + Round-Robin]
+        REG[Provider Registry<br/>OAuth Refresh + Model Cache]
+        LOGS[Request Logs<br/>served_provider_id Audit]
+        CATALOG[Marketplace Catalog<br/>Namespaces + Storefront]
+    end
+
+    subgraph Providers
+        AG[Antigravity<br/>OAuth PKCE]
+        BAI[B.AI<br/>API Key Pool ×100]
+        OAI[OpenAI Codex<br/>OAuth PKCE]
+        ANT[Anthropic<br/>API Key]
+        MORE[GoRouter, Kiro,<br/>Qoder, Custom …]
+    end
+
+    subgraph Data
+        DB[(SQLite WAL<br/>~/.srouter/srouter.db)]
+        MODELS[(custom_models +<br/>disabled_models)]
+    end
+
+    SDK & CLI & CURL --> AUTH
+    WEB --> AUTH
+    AUTH --> ROUTER
+    AUTH --> CATALOG
+    ROUTER --> REG
+    REG --> AG & BAI & OAI & ANT & MORE
+    ROUTER --> LOGS
+    LOGS --> DB
+    REG --> DB
+    CATALOG --> MODELS
+```
+
+### Entity-Relationship Diagram
+
+```mermaid
+erDiagram
+    users {
+        TEXT id PK
+        TEXT email UK
+        TEXT name
+        TEXT password_hash
+        TEXT status "active | pending | banned"
+        TEXT creator_status "none | pending | approved | rejected"
+        BOOLEAN is_admin
+        REAL credits
+        INTEGER accepted_terms_at
+        TEXT terms_version
+        INTEGER created_at
+    }
+
+    providers {
+        TEXT id PK
+        TEXT provider_id "base id or connection id"
+        TEXT name
+        TEXT category "oauth | api_key | free_tier | custom"
+        TEXT protocol "openai | anthropic | gemini | custom"
+        TEXT base_url
+        TEXT api_key
+        TEXT owner_id FK
+        BOOLEAN enabled
+        TEXT provider_specific_data
+    }
+
+    custom_models {
+        TEXT provider_id PK "FK → providers.id or base id"
+        TEXT model_id PK
+        INTEGER created_at
+    }
+
+    disabled_models {
+        TEXT provider_id PK
+        TEXT model_id PK
+        TEXT disabled_by
+        TEXT reason
+        INTEGER created_at
+    }
+
+    api_keys {
+        TEXT id PK
+        TEXT key UK
+        TEXT user_id FK
+        TEXT name
+        INTEGER rate_limit
+        INTEGER quota_limit
+        REAL credit_limit
+        TEXT allowed_models
+        BOOLEAN enabled
+    }
+
+    request_logs {
+        TEXT id PK
+        TEXT provider_id "routing alias"
+        TEXT model
+        TEXT served_provider_id "concrete connection"
+        INTEGER status_code
+        INTEGER latency_ms
+        INTEGER prompt_tokens
+        INTEGER completion_tokens
+        INTEGER total_tokens
+        INTEGER created_at
+    }
+
+    user_sessions {
+        TEXT id PK
+        TEXT user_id FK
+        TEXT token UK
+        INTEGER expires_at
+        INTEGER created_at
+    }
+
+    topup_orders {
+        TEXT id PK
+        TEXT user_id FK
+        REAL amount
+        TEXT currency
+        TEXT status "pending | approved | rejected | cancelled"
+        TEXT reference
+        TEXT note
+        INTEGER processed_at
+        TEXT processed_by
+    }
+
+    transactions {
+        TEXT id PK
+        TEXT user_id FK
+        REAL amount
+        TEXT type "credit | debit"
+        TEXT description
+        INTEGER created_at
+    }
+
+    payouts {
+        TEXT id PK
+        TEXT creator_id FK
+        REAL amount
+        TEXT status "pending | paid | failed | cancelled"
+        INTEGER processed_at
+    }
+
+    creator_applications {
+        TEXT id PK
+        TEXT user_id FK
+        TEXT brand_name
+        TEXT offering
+        TEXT link
+        TEXT status "pending | approved | rejected"
+        INTEGER created_at
+    }
+
+    users ||--o{ providers : "owner"
+    users ||--o{ api_keys : "owns"
+    users ||--o{ user_sessions : "has"
+    users ||--o{ topup_orders : "creates"
+    users ||--o{ transactions : "ledger"
+    users ||--o{ payouts : "creator"
+    users ||--o| creator_applications : "applies"
+    providers ||--o{ custom_models : "lists"
+    providers ||--o{ disabled_models : "blocks"
+    providers ||--o{ request_logs : "serves"
+```
+
+### Chat Completion Request Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant G as XEYGATE
+    participant A as Auth + Quota
+    participant R as Router
+    participant P as Provider Registry
+
+    C->>G: POST /v1/chat/completions
+    G->>A: Validate API Key / Session
+    A-->>G: ✓ Auth OK + quota check
+
+    G->>R: ResolveMarketplaceRoute(model)
+    R->>R: BareModelId → look up custom_models
+    R->>R: Build quality chain (successRate × 0.7 + latency × 0.3)
+    R-->>G: Chain: [primary, failover₁, failover₂, …]
+
+    loop For each candidate (failover on error)
+        G->>P: chatCompletion(req, onServed callback)
+        P->>P: Forward to upstream provider
+        alt 2xx Success
+            P-->>G: Response + servedProviderId
+            G->>G: onServed(candidate.id)
+        else 429 / 5xx / Timeout
+            P-->>G: Error
+            G->>G: Mark candidate unhealthy, try next
+        end
+    end
+
+    G->>G: logRequestDB({ served_provider_id, model, tokens, latency })
+    G-->>C: Streaming / non-streaming response
+```
+
+### Marketplace Namespaces & Routing
+
+```mermaid
+graph LR
+    subgraph Request["Incoming Model Request"]
+        REQ["model: 'gpt-4o'"]
+    end
+
+    REQ --> DETECT{First segment<br/>matches provider?}
+
+    DETECT -->|Yes — direct route| CONN[Match connection by<br/>stored model id]
+    DETECT -->|No — marketplace| NS{Namespace?}
+
+    NS -->|"/official/v1/"| OFF[Official Listings<br/>admin-owned, base-id shared]
+    NS -->|"/user/v1/"| CRE[Creator Listings<br/>user-owned, connection-scoped]
+    NS -->|"/v1/"| BOTH[Both — merge + dedupe]
+
+    OFF --> CHAIN[Build quality chain]
+    CRE --> CHAIN
+    BOTH --> CHAIN
+
+    CHAIN --> RR{Round-robin<br/>enabled?}
+    RR -->|Yes| ROTATE[Rotate across pool<br/>of N connections]
+    RR -->|No| PICK[Weighted random<br/>primary pick]
+
+    ROTATE --> UP[Upstream Provider]
+    PICK --> UP
+    CONN --> UP
+
+    UP -->|2xx| AUDIT[served_provider_id<br/>logged to request_logs]
+    UP -->|429/5xx| FAILOVER[Next in failover chain]
+    FAILOVER --> UP
+```
 
 ---
 
