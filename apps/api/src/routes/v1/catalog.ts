@@ -261,6 +261,12 @@ CatalogRouter.get("/catalog/models", async (c) => {
         }
 
         const models = [...byBare.values()]
+            .map((e) => ({
+                ...e,
+                // A slash id with no plain variant ("cx/gpt-6-astra") is its
+                // own canonical id — it must not also appear as an alias.
+                aliases: e.aliases.filter((a) => a.toLowerCase() !== e.id.toLowerCase())
+            }))
             .sort((a, b) => a.id.localeCompare(b.id))
             .map((e) => {
                 const cheapest = [...e.offers].sort(

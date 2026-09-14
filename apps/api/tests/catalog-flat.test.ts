@@ -212,3 +212,11 @@ test("same model stored under different ids on different endpoints merges into o
     assert.equal(alpha.endpoints, 2, "offers dedupe per provider");
     assert.ok(alpha.offers.length === 2);
 });
+
+test("a slash id with no plain variant is its own canonical id, not an alias of itself", async () => {
+    await seed();
+    const { body } = await getJson("/v1/catalog/models");
+    const delta = body.models.find((m: { id: string }) => m.id === "sub/delta-model")!;
+    assert.ok(delta, "slash id stays the canonical entry");
+    assert.deepEqual(delta.aliases, [], "must not list itself as an alias");
+});
