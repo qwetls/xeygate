@@ -249,10 +249,10 @@ erDiagram
         TEXT email UK
         TEXT password_hash
         TEXT name
-        TEXT role "buyer | creator"
-        TEXT status "active | pending | banned"
-        TEXT creator_status "none | pending | approved | rejected"
-        REAL creator_share "default 0.80"
+        TEXT role
+        TEXT status
+        TEXT creator_status
+        REAL creator_share
         INTEGER is_admin
         REAL credits
         TEXT github_id UK
@@ -271,7 +271,7 @@ erDiagram
 
     login_rewards {
         TEXT user_id PK_FK
-        TEXT last_day "UTC date string"
+        TEXT last_day
         INTEGER streak
     }
 
@@ -286,19 +286,19 @@ erDiagram
 
     providers {
         TEXT id PK
-        TEXT provider_id "base id or connection id"
+        TEXT provider_id
         TEXT name
         TEXT alias
-        TEXT category "oauth | api_key | free_tier | custom"
-        TEXT protocol "openai | anthropic | gemini | custom"
+        TEXT category
+        TEXT protocol
         TEXT base_url
-        TEXT api_key "encrypted at rest"
-        TEXT access_token "encrypted"
-        TEXT refresh_token "encrypted"
+        TEXT api_key
+        TEXT access_token
+        TEXT refresh_token
         TEXT account_id
         TEXT organization_id
-        TEXT provider_specific_data "JSON"
-        TEXT custom_headers "JSON"
+        TEXT provider_specific_data
+        TEXT custom_headers
         INTEGER token_expires_at
         INTEGER last_refreshed_at
         TEXT owner_id FK
@@ -308,7 +308,7 @@ erDiagram
 
     api_keys {
         TEXT id PK
-        TEXT key UK "sr-live- or xg_ prefix"
+        TEXT key UK
         TEXT user_id FK
         TEXT name
         INTEGER enabled
@@ -317,18 +317,18 @@ erDiagram
         INTEGER usage_tokens
         REAL credit_limit
         REAL usage_cost
-        TEXT allowed_models "JSON"
+        TEXT allowed_models
         INTEGER created_at
     }
 
     custom_models {
-        TEXT provider_id PK "FK logical"
+        TEXT provider_id PK
         TEXT model_id PK
         INTEGER created_at
     }
 
     disabled_models {
-        TEXT provider_id PK "FK logical"
+        TEXT provider_id PK
         TEXT model_id PK
         TEXT disabled_by
         TEXT reason
@@ -337,10 +337,10 @@ erDiagram
 
     model_pricing {
         TEXT id PK
-        TEXT provider_id "FK logical"
+        TEXT provider_id
         TEXT model
-        REAL input "per token"
-        REAL output "per token"
+        REAL input
+        REAL output
         REAL cached
         REAL cache_creation
         REAL reasoning
@@ -350,10 +350,10 @@ erDiagram
 
     request_logs {
         TEXT id PK
-        TEXT api_key_id "FK logical"
-        TEXT provider_id "routing alias"
+        TEXT api_key_id
+        TEXT provider_id
         TEXT model
-        TEXT served_provider_id "concrete connection"
+        TEXT served_provider_id
         INTEGER status_code
         INTEGER latency_ms
         INTEGER prompt_tokens
@@ -372,26 +372,26 @@ erDiagram
 
     transactions {
         TEXT id PK
-        TEXT user_id "FK logical"
-        TEXT type "credit | debit | refund"
+        TEXT user_id
+        TEXT type
         REAL amount
         TEXT description
-        TEXT provider_id "FK logical"
+        TEXT provider_id
         TEXT model
-        TEXT api_key_id "FK logical"
+        TEXT api_key_id
         INTEGER created_at
     }
 
     creator_earnings {
         TEXT id PK
-        TEXT user_id "FK logical"
-        TEXT provider_id "FK logical"
+        TEXT user_id
+        TEXT provider_id
         REAL gross_amount
         REAL platform_fee
         REAL net_amount
         TEXT currency
-        TEXT status "pending | paid | cancelled"
-        TEXT transaction_id "FK logical"
+        TEXT status
+        TEXT transaction_id
         INTEGER created_at
     }
 
@@ -400,12 +400,12 @@ erDiagram
         TEXT user_id FK
         REAL amount
         TEXT currency
-        TEXT status "pending | approved | rejected | cancelled"
+        TEXT status
         TEXT reference
         TEXT note
         INTEGER requested_at
         INTEGER processed_at
-        TEXT processed_by "FK logical"
+        TEXT processed_by
     }
 
     payouts {
@@ -413,26 +413,26 @@ erDiagram
         TEXT user_id FK
         REAL amount
         TEXT currency
-        TEXT status "pending | paid | failed | cancelled"
+        TEXT status
         INTEGER requested_at
         INTEGER processed_at
         TEXT note
     }
 
-    users ||--o{ user_sessions : "sessions"
-    users ||--o| login_rewards : "streak"
-    users ||--o| creator_applications : "applies"
-    users ||--o{ providers : "owns"
-    users ||--o{ api_keys : "keys"
-    users ||--o{ transactions : "ledger"
-    users ||--o{ creator_earnings : "earns"
-    users ||--o{ topup_orders : "tops up"
-    users ||--o{ payouts : "withdraws"
-    providers ||--o{ custom_models : "lists"
-    providers ||--o{ disabled_models : "blocks"
-    providers ||--o{ model_pricing : "prices"
-    providers ||--o{ request_logs : "serves"
-    providers ||--o{ creator_earnings : "generates"
+    users ||--o{ user_sessions : sessions
+    users ||--o| login_rewards : streak
+    users ||--o| creator_applications : applies
+    users ||--o{ providers : owns
+    users ||--o{ api_keys : keys
+    users ||--o{ transactions : ledger
+    users ||--o{ creator_earnings : earns
+    users ||--o{ topup_orders : tops-up
+    users ||--o{ payouts : withdraws
+    providers ||--o{ custom_models : lists
+    providers ||--o{ disabled_models : blocks
+    providers ||--o{ model_pricing : prices
+    providers ||--o{ request_logs : serves
+    providers ||--o{ creator_earnings : generates
 ```
 
 ### Chat Completion Request Flow
