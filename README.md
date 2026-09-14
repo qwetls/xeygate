@@ -202,12 +202,12 @@ curl -N http://localhost:3000/v1/chat/completions \
 graph TB
     subgraph Clients
         SDK[OpenAI / Anthropic SDK]
-        CLI["@xeygate/cli"]
-        WEB[Browser — Dashboard]
+        CLI[xeygate/cli]
+        WEB[Browser - Dashboard]
         CURL[curl / HTTP clients]
     end
 
-    subgraph XEYGATE["⚡ XEYGATE Gateway"]
+    subgraph XEYGATE[Gateway]
         AUTH[Auth Layer<br/>API Key + Session + CSRF]
         ROUTER[Quality-Weighted Router<br/>Failover + Round-Robin]
         REG[Provider Registry<br/>OAuth Refresh + Model Cache]
@@ -217,14 +217,14 @@ graph TB
 
     subgraph Providers
         AG[Antigravity<br/>OAuth PKCE]
-        BAI[B.AI<br/>API Key Pool ×100]
+        BAI[B.AI<br/>API Key Pool x100]
         OAI[OpenAI Codex<br/>OAuth PKCE]
         ANT[Anthropic<br/>API Key]
-        MORE[GoRouter, Kiro,<br/>Qoder, Custom …]
+        MORE[GoRouter Kiro<br/>Qoder Custom]
     end
 
     subgraph Data
-        DB[(SQLite WAL<br/>~/.srouter/srouter.db)]
+        DB[(SQLite WAL<br/>srouter.db)]
         MODELS[(custom_models +<br/>disabled_models)]
     end
 
@@ -448,15 +448,15 @@ sequenceDiagram
 
     C->>G: POST /v1/chat/completions
     G->>A: Validate API Key / Session
-    A-->>G: ✓ Auth OK + quota check
+    A-->>G: Auth OK + quota check
 
     G->>R: ResolveMarketplaceRoute(model)
-    R->>R: BareModelId → look up custom_models
-    R->>R: Build quality chain (successRate × 0.7 + latency × 0.3)
-    R-->>G: Chain: [primary, failover₁, failover₂, …]
+    R->>R: BareModelId to look up custom_models
+    R->>R: Build quality chain successRate x 0.7 + latency x 0.3
+    R-->>G: Chain: primary, failover1, failover2
 
-    loop For each candidate (failover on error)
-        G->>P: chatCompletion(req, onServed callback)
+    loop For each candidate - failover on error
+        G->>P: chatCompletion with onServed callback
         P->>P: Forward to upstream provider
         alt 2xx Success
             P-->>G: Response + servedProviderId
@@ -467,7 +467,7 @@ sequenceDiagram
         end
     end
 
-    G->>G: logRequestDB({ served_provider_id, model, tokens, latency })
+    G->>G: logRequestDB served_provider_id, model, tokens, latency
     G-->>C: Streaming / non-streaming response
 ```
 
@@ -475,18 +475,18 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-    subgraph Request["Incoming Model Request"]
-        REQ["model: 'gpt-4o'"]
+    subgraph Request[Incoming Model Request]
+        REQ[model: gpt-4o]
     end
 
     REQ --> DETECT{First segment<br/>matches provider?}
 
-    DETECT -->|Yes — direct route| CONN[Match connection by<br/>stored model id]
-    DETECT -->|No — marketplace| NS{Namespace?}
+    DETECT -->|Yes| CONN[Match connection by<br/>stored model id]
+    DETECT -->|No| NS{Namespace?}
 
-    NS -->|"/official/v1/"| OFF[Official Listings<br/>admin-owned, base-id shared]
-    NS -->|"/user/v1/"| CRE[Creator Listings<br/>user-owned, connection-scoped]
-    NS -->|"/v1/"| BOTH[Both — merge + dedupe]
+    NS -->|official| OFF[Official Listings<br/>admin-owned base-id shared]
+    NS -->|user| CRE[Creator Listings<br/>user-owned connection-scoped]
+    NS -->|v1| BOTH[Both - merge + dedupe]
 
     OFF --> CHAIN[Build quality chain]
     CRE --> CHAIN
