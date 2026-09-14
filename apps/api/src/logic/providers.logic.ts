@@ -453,9 +453,9 @@ export class ProvidersLogic {
         const Providers = await getProvidersByOwnerDB(OwnerId);
         return Promise.all(
             Providers.map(async (P) => {
-                const Models = await getCustomModelsByProviderDB(
-                    (P.providerId || P.id).toLowerCase()
-                );
+                const Key = (P.providerId || P.id).toLowerCase();
+                const Base = BaseIdOf(Key);
+                const Models = await getCustomModelsForProviderDB(Key, Base);
                 return {
                     ...P,
                     models: Models.map((Row) => Row.modelId),
