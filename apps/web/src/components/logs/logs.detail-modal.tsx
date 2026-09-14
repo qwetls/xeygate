@@ -9,6 +9,7 @@ import {
     Coins,
     KeyRound,
     Network,
+    Boxes,
     ScrollText,
     Zap,
     X,
@@ -197,6 +198,20 @@ export function LogDetailModal({ log, requireApiKey = false, onClose }: LogDetai
                                             {log.fallbackReason}
                                         </p>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Which connection in the pool actually served this call —
+                                the only way to audit round-robin spread across bulk keys. */}
+                            {log.servedProviderId && (
+                                <div className="rounded-xl border border-border/70 bg-secondary/15 p-3 space-y-1">
+                                    <div className="flex items-center gap-1.5 font-semibold text-foreground text-[11px]">
+                                        <Boxes className="size-3 text-muted-foreground" />
+                                        Served By
+                                    </div>
+                                    <p className="text-[11px] text-muted-foreground break-all">
+                                        Connection <span className="font-semibold text-foreground">{log.servedProviderId}</span> handled this request
+                                    </p>
                                 </div>
                             )}
 

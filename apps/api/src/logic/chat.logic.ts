@@ -116,6 +116,7 @@ async function LogCompletion(
         apiKeyId?: string;
         ipAddress?: string;
         userAgent?: string;
+        servedProviderId?: string;
     }
 ): Promise<void> {
     // Normalize alias/bare provider id to the registered base id so quota
@@ -171,7 +172,8 @@ async function LogCompletion(
         fallbackPath: options.fallbackOccurred ? options.fallbackPath?.join(" -> ") : undefined,
         fallbackReason: options.fallbackReason,
         statusCode: options.statusCode,
-        latencyMs: Date.now() - startTime
+        latencyMs: Date.now() - startTime,
+        servedProviderId: options.servedProviderId
     });
 }
 
@@ -222,10 +224,13 @@ export class ChatLogic {
             const currentModel = candidate.model;
             const currentReq: ChatCompletionRequest = { ...effectiveBody, model: currentModel };
             const providerId = currentModel.split("/")[0] || "default";
+            let servedProviderId: string | undefined;
 
             try {
                 await ensureFreshToken(providerId);
-                const response = await registry.chatCompletion(currentReq);
+                const response = await registry.chatCompletion(currentReq, (id) => {
+                    servedProviderId = id;
+                });
 
                 if (isFallbackAttempt) {
                     fallbackOccurred = true;
@@ -282,7 +287,8 @@ export class ChatLogic {
                     fallbackReason,
                     apiKeyId,
                     ipAddress,
-                    userAgent
+                    userAgent,
+                    servedProviderId
                 });
 
                 return response;
@@ -364,10 +370,13 @@ export class ChatLogic {
 
             let yieldedAny = false;
             let usage: UsageInfo | undefined = undefined;
+            let servedProviderId: string | undefined;
 
             try {
                 await ensureFreshToken(providerId);
-                const generator = registry.chatCompletionStream(currentReq);
+                const generator = registry.chatCompletionStream(currentReq, (id) => {
+                    servedProviderId = id;
+                });
 
                 const bufferedChunks: ChatCompletionChunk[] = [];
                 const toolCallsMap = new Map<number, AssembledStreamingToolCall>();
@@ -487,7 +496,8 @@ export class ChatLogic {
                     fallbackReason,
                     apiKeyId,
                     ipAddress,
-                    userAgent
+                    userAgent,
+                    servedProviderId
                 });
 
                 return;

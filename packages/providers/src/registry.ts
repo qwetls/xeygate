@@ -592,7 +592,10 @@ export class ProviderRegistry {
         // again. The loop above observes that second refresh before returning.
     }
 
-    async chatCompletion(req: ChatCompletionRequest): Promise<ChatCompletionResponse> {
+    async chatCompletion(
+        req: ChatCompletionRequest,
+        onServed?: (providerId: string) => void
+    ): Promise<ChatCompletionResponse> {
         const candidates = await this.getCandidateProvidersForModel(req.model);
         let lastError: unknown = null;
 
@@ -601,6 +604,7 @@ export class ProviderRegistry {
             try {
                 const response = await candidate.chatCompletion(req);
                 this.circuitBreaker.recordSuccess(candidate.id);
+                onServed?.(candidate.id);
                 return response;
             } catch (err) {
                 lastError = err;
@@ -615,7 +619,8 @@ export class ProviderRegistry {
     }
 
     async *chatCompletionStream(
-        req: ChatCompletionRequest
+        req: ChatCompletionRequest,
+        onServed?: (providerId: string) => void
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const candidates = await this.getCandidateProvidersForModel(req.model);
         let lastError: unknown = null;
@@ -629,6 +634,7 @@ export class ProviderRegistry {
                     if (!yieldedAny) {
                         yieldedAny = true;
                         this.circuitBreaker.recordSuccess(candidate.id);
+                        onServed?.(candidate.id);
                     }
                     yield chunk;
                 }

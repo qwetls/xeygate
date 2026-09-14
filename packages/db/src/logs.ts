@@ -28,6 +28,7 @@ interface RequestLogRow {
     fallback_path: string | null;
     fallback_reason: string | null;
     resolved_model: string | null;
+    served_provider_id: string | null;
     created_at: number;
 }
 
@@ -67,8 +68,8 @@ export async function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdA
     const CreatedAt = Date.now();
 
     await db.prepare(`
-        INSERT INTO request_logs (id, api_key_id, ip_address, user_agent, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO request_logs (id, api_key_id, ip_address, user_agent, provider_id, model, prompt_tokens, completion_tokens, total_tokens, status_code, latency_ms, cached_tokens, cache_creation_tokens, reasoning_tokens, estimated_cost, fallback_occurred, fallback_path, fallback_reason, resolved_model, served_provider_id, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
         Id,
         entry.apiKeyId ?? null,
@@ -89,6 +90,7 @@ export async function logRequestDB(entry: Omit<RequestLogEntry, "id" | "createdA
         entry.fallbackPath ?? null,
         entry.fallbackReason ?? null,
         entry.resolvedModel ?? null,
+        entry.servedProviderId ?? null,
         CreatedAt
     );
 
@@ -245,6 +247,7 @@ function mapLogRow(row: RequestLogRow): RequestLogEntry {
         fallbackPath: optStr(row.fallback_path),
         fallbackReason: optStr(row.fallback_reason),
         resolvedModel: optStr(row.resolved_model),
+        servedProviderId: optStr(row.served_provider_id),
         createdAt: num(row.created_at)
     };
 }

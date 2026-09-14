@@ -30,6 +30,14 @@ export interface RequestLogEntry {
     fallbackPath?: string;
     fallbackReason?: string;
     resolvedModel?: string;
+    /**
+     * The concrete provider connection that served the request (e.g.
+     * "bai-1789023519492-37"). Marketplace routing fans one model out across
+     * every connection of a driver, so this is the only field that tells which
+     * key in a bulk pool actually handled the call — `providerId` stays the
+     * routing identity ("bai").
+     */
+    servedProviderId?: string;
     createdAt: number;
 }
 

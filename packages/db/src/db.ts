@@ -186,6 +186,7 @@ const TABLES: TableDef[] = [
             { name: "fallback_path", definition: "TEXT" },
             { name: "fallback_reason", definition: "TEXT" },
             { name: "resolved_model", definition: "TEXT" },
+            { name: "served_provider_id", definition: "TEXT" },
             { name: "created_at", definition: "INTEGER NOT NULL" }
         ]
     },
@@ -419,7 +420,8 @@ function initSqliteSchemaSync(): void {
         { name: "fallback_occurred", definition: "fallback_occurred INTEGER NOT NULL DEFAULT 0" },
         { name: "fallback_path", definition: "fallback_path TEXT" },
         { name: "fallback_reason", definition: "fallback_reason TEXT" },
-        { name: "resolved_model", definition: "resolved_model TEXT" }
+        { name: "resolved_model", definition: "resolved_model TEXT" },
+        { name: "served_provider_id", definition: "served_provider_id TEXT" }
     ]);
 }
 
@@ -457,7 +459,8 @@ async function initPostgresSchema(): Promise<void> {
         { name: "fallback_occurred", definition: "fallback_occurred INTEGER NOT NULL DEFAULT 0" },
         { name: "fallback_path", definition: "fallback_path TEXT" },
         { name: "fallback_reason", definition: "fallback_reason TEXT" },
-        { name: "resolved_model", definition: "resolved_model TEXT" }
+        { name: "resolved_model", definition: "resolved_model TEXT" },
+        { name: "served_provider_id", definition: "served_provider_id TEXT" }
     ]);
 }
 
