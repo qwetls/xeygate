@@ -136,6 +136,7 @@ export class AntigravityQuotaFetcher implements IProviderQuotaFetcher {
 
         return {
             id: ctx.id,
+            providerId: "antigravity",
             provider: "Antigravity",
             account: ctx.name || "Antigravity Account",
             enabled: ctx.enabled,

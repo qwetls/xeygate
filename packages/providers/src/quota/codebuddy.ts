@@ -154,6 +154,7 @@ export class CodeBuddyCNQuotaFetcher implements IProviderQuotaFetcher {
 
         return {
             id: ctx.id,
+            providerId: "codebuddy-cn",
             provider: Plan ? `CodeBuddy CN (${Plan})` : "CodeBuddy CN",
             account: ctx.name || "CodeBuddy CN Account",
             enabled: ctx.enabled,

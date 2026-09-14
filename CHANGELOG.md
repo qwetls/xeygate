@@ -5,6 +5,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Fixed
+- **Manage button in Quotas & Limits navigates to wrong URL** — the Manage link used the provider display name (e.g. "B.AI") instead of the base id ("bai"), so clicking it landed on a non-existent provider page. `ProviderQuotaAccount` now carries a `providerId` field (the canonical base id) set by both live OAuth fetchers and usage-logged accounts, and the frontend uses it for the `/admin/providers/$providerId` route.
+
 ## [1.6.0] - 2026-09-15
 
 ### Added

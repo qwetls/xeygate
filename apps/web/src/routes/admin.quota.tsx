@@ -123,16 +123,17 @@ function QuotaPage() {
 
     const groupedProviders = Object.entries(
         activeProviders.reduce((acc, account) => {
-            const groupKey = account.provider.toLowerCase();
+            const groupKey = account.providerId || account.provider.toLowerCase();
             if (!acc[groupKey]) {
                 acc[groupKey] = {
+                    providerId: account.providerId || groupKey,
                     providerName: account.provider,
                     accounts: [] as QuotaAccountItem[]
                 };
             }
             acc[groupKey].accounts.push(account);
             return acc;
-        }, {} as Record<string, { providerName: string; accounts: QuotaAccountItem[] }>)
+        }, {} as Record<string, { providerId: string; providerName: string; accounts: QuotaAccountItem[] }>)
     );
 
     return (
@@ -253,6 +254,7 @@ function QuotaPage() {
                         <QuotaProviderCard
                             key={groupKey}
                             groupKey={groupKey}
+                            providerId={group.providerId}
                             providerName={group.providerName}
                             accounts={group.accounts}
                             isCollapsed={collapsedMap[groupKey] === true}

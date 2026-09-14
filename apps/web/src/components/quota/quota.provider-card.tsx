@@ -7,6 +7,7 @@ import { UsageMetricsTable } from "./quota.metrics-table";
 
 export interface QuotaAccountItem {
     id: string;
+    providerId: string;
     account: string;
     provider: string;
     enabled: boolean;
@@ -16,6 +17,7 @@ export interface QuotaAccountItem {
 
 export interface QuotaProviderCardProps {
     groupKey: string;
+    providerId: string;
     providerName: string;
     accounts: QuotaAccountItem[];
     isCollapsed: boolean;
@@ -26,6 +28,7 @@ export interface QuotaProviderCardProps {
 
 export function QuotaProviderCard({
     groupKey,
+    providerId,
     providerName,
     accounts,
     isCollapsed,
@@ -98,7 +101,7 @@ export function QuotaProviderCard({
 
                     <Link
                         to="/admin/providers/$providerId"
-                        params={{ providerId: providerName }}
+                        params={{ providerId }}
                         className="inline-flex items-center gap-1 text-xs text-amber-500 hover:text-amber-400 transition-colors"
                     >
                         <span>Manage</span>

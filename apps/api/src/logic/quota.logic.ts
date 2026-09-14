@@ -1,4 +1,5 @@
 import { getAllProvidersDB, getMarketplaceModelProviderStatsDB } from "@srouter/db";
+import { providerBaseId } from "@srouter/constants";
 import { fetchLiveOAuthQuota, isOAuthQuotaSupported } from "@srouter/providers";
 import type {
     ProviderConfig,
@@ -129,6 +130,7 @@ export class QuotaLogic {
             metrics.sort((a, b) => b.totalRequests - a.totalRequests);
             accounts.push({
                 id: p.id,
+                providerId: providerBaseId(p.providerId || p.id).toLowerCase(),
                 provider: p.name || p.providerId,
                 account: p.alias ? `${p.name} (${p.alias})` : p.name || p.providerId,
                 enabled: p.enabled,

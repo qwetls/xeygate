@@ -20,6 +20,7 @@ export interface ProviderUsageMetric {
 
 export interface ProviderQuotaAccount {
     id: string;
+    providerId: string;
     provider: string;
     account: string;
     enabled: boolean;
