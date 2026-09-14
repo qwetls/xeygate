@@ -35,6 +35,7 @@ export interface CatalogModelMetadata {
 
 export interface CatalogFlatModel {
     id: string;
+    aliases?: string[];
     endpoints: number;
     offers: CatalogFlatOffer[];
     bestOffer: CatalogFlatOffer | null;

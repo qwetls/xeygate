@@ -193,3 +193,22 @@ test("?model= resolves a slash listing by exact id, provider-qualified id, and l
         assert.equal(body.offerings[0].providerId, creatorPid, q);
     }
 });
+
+// ── Cross-endpoint unification ────────────────────────────────────────
+
+test("same model stored under different ids on different endpoints merges into one entry", async () => {
+    const { creatorPid } = await seed();
+    await addCustomModelDB(creatorPid, "pre/alpha-model");
+
+    const { body } = await getJson("/v1/catalog/models");
+    const matches = body.models.filter((m: { id: string }) =>
+        m.id.toLowerCase().endsWith("alpha-model")
+    );
+    assert.equal(matches.length, 1, "hy3/neko-hy3 style duplicates must unify");
+
+    const alpha = matches[0];
+    assert.equal(alpha.id, "alpha-model", "the plain id wins as canonical");
+    assert.deepEqual(alpha.aliases, ["pre/alpha-model"]);
+    assert.equal(alpha.endpoints, 2, "offers dedupe per provider");
+    assert.ok(alpha.offers.length === 2);
+});

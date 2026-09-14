@@ -209,7 +209,10 @@ CatalogRouter.get("/catalog/models", async (c) => {
             official: boolean;
             override: boolean;
         }
-        const byModel = new Map<string, { id: string; offers: FlatOffer[] }>();
+        const byBare = new Map<
+            string,
+            { id: string; aliases: string[]; offers: FlatOffer[] }
+        >();
 
         for (const { row: p, official } of await MarketplaceCards()) {
             const rows = await EnabledListings(p, official);
@@ -218,16 +221,27 @@ CatalogRouter.get("/catalog/models", async (c) => {
                 ? p.name
                 : await StorefrontName(p.ownerId, p.name);
             for (const mr of rows) {
-                // The stored listing id is the canonical marketplace id: it was
-                // normalized against the provider's own alias at add time and
-                // it is exactly what routing matches on. An id that legitimately
-                // contains a slash ("cx/gpt-6-astra") must survive untouched —
-                // the storefront may only advertise what a buyer can request.
-                const key = mr.modelId.toLowerCase();
-                let entry = byModel.get(key);
+                // The same underlying model can be stored under different
+                // listing ids on different endpoints ("hy3" vs "neko/hy3" —
+                // the latter was normalized against a creator's alias at add
+                // time). Buyers see one model either way, so the flat list
+                // groups by bare model id; the plain (prefix-free) variant
+                // wins as the canonical id because it is what every buyer
+                // can request, and prefixed variants survive as aliases that
+                // still resolve through the ?model= detail lookup.
+                const bare = BareModelId(mr.modelId).toLowerCase();
+                let entry = byBare.get(bare);
                 if (!entry) {
-                    entry = { id: mr.modelId, offers: [] };
-                    byModel.set(key, entry);
+                    entry = { id: mr.modelId, aliases: [], offers: [] };
+                    byBare.set(bare, entry);
+                }
+                if (entry.aliases.every((a) => a !== mr.modelId)) {
+                    if (mr.modelId.toLowerCase() === bare) {
+                        // The plain id is the canonical marketplace id.
+                        entry.id = mr.modelId;
+                    } else {
+                        entry.aliases.push(mr.modelId);
+                    }
                 }
                 if (entry.offers.some((o) => o.providerId === p.providerId)) continue;
                 const { pricing, override } = ResolvePricing(
@@ -246,7 +260,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
             }
         }
 
-        const models = [...byModel.values()]
+        const models = [...byBare.values()]
             .sort((a, b) => a.id.localeCompare(b.id))
             .map((e) => {
                 const cheapest = [...e.offers].sort(
@@ -255,6 +269,7 @@ CatalogRouter.get("/catalog/models", async (c) => {
                 const meta = getModelMetadata(e.id) ?? getModelMetadata(BareModelId(e.id));
                 return {
                     id: e.id,
+                    aliases: e.aliases,
                     endpoints: e.offers.length,
                     offers: e.offers,
                     bestOffer: cheapest ?? null,
