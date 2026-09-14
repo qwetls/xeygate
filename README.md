@@ -270,13 +270,13 @@ erDiagram
     }
 
     login_rewards {
-        TEXT user_id PK FK
+        TEXT user_id PK
         TEXT last_day
         INTEGER streak
     }
 
     creator_applications {
-        TEXT user_id PK FK
+        TEXT user_id PK
         TEXT display_name
         TEXT reason
         TEXT link
