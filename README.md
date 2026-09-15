@@ -247,63 +247,22 @@ erDiagram
     users {
         TEXT id PK
         TEXT email UK
-        TEXT password_hash
         TEXT name
         TEXT role
         TEXT status
-        TEXT creator_status
-        REAL creator_share
-        INTEGER is_admin
         REAL credits
         TEXT github_id UK
-        INTEGER accepted_terms_at
-        TEXT terms_version
         INTEGER created_at
-        INTEGER updated_at
-    }
-
-    user_sessions {
-        TEXT token_hash PK
-        TEXT user_id FK
-        INTEGER created_at
-        INTEGER expires_at
-    }
-
-    login_rewards {
-        TEXT user_id PK
-        TEXT last_day
-        INTEGER streak
-    }
-
-    creator_applications {
-        TEXT user_id PK
-        TEXT display_name
-        TEXT reason
-        TEXT link
-        INTEGER created_at
-        INTEGER updated_at
     }
 
     providers {
         TEXT id PK
         TEXT provider_id
         TEXT name
-        TEXT alias
         TEXT category
         TEXT protocol
-        TEXT base_url
-        TEXT api_key
-        TEXT access_token
-        TEXT refresh_token
-        TEXT account_id
-        TEXT organization_id
-        TEXT provider_specific_data
-        TEXT custom_headers
-        INTEGER token_expires_at
-        INTEGER last_refreshed_at
         TEXT owner_id FK
         INTEGER enabled
-        INTEGER created_at
     }
 
     api_keys {
@@ -312,61 +271,18 @@ erDiagram
         TEXT user_id FK
         TEXT name
         INTEGER enabled
-        INTEGER rate_limit
         INTEGER quota_limit
-        INTEGER usage_tokens
         REAL credit_limit
-        REAL usage_cost
-        TEXT allowed_models
-        INTEGER created_at
-    }
-
-    custom_models {
-        TEXT provider_id PK
-        TEXT model_id PK
-        INTEGER created_at
-    }
-
-    disabled_models {
-        TEXT provider_id PK
-        TEXT model_id PK
-        TEXT disabled_by
-        TEXT reason
-        INTEGER created_at
-    }
-
-    model_pricing {
-        TEXT id PK
-        TEXT provider_id
-        TEXT model
-        REAL input
-        REAL output
-        REAL cached
-        REAL cache_creation
-        REAL reasoning
-        INTEGER updated_at
-        INTEGER created_at
     }
 
     request_logs {
         TEXT id PK
-        TEXT api_key_id
         TEXT provider_id
         TEXT model
         TEXT served_provider_id
         INTEGER status_code
-        INTEGER latency_ms
-        INTEGER prompt_tokens
-        INTEGER completion_tokens
         INTEGER total_tokens
-        INTEGER cached_tokens
-        INTEGER reasoning_tokens
         REAL estimated_cost
-        INTEGER fallback_occurred
-        TEXT fallback_path
-        TEXT resolved_model
-        TEXT ip_address
-        TEXT user_agent
         INTEGER created_at
     }
 
@@ -376,22 +292,6 @@ erDiagram
         TEXT type
         REAL amount
         TEXT description
-        TEXT provider_id
-        TEXT model
-        TEXT api_key_id
-        INTEGER created_at
-    }
-
-    creator_earnings {
-        TEXT id PK
-        TEXT user_id
-        TEXT provider_id
-        REAL gross_amount
-        REAL platform_fee
-        REAL net_amount
-        TEXT currency
-        TEXT status
-        TEXT transaction_id
         INTEGER created_at
     }
 
@@ -399,38 +299,32 @@ erDiagram
         TEXT id PK
         TEXT user_id FK
         REAL amount
-        TEXT currency
         TEXT status
-        TEXT reference
-        TEXT note
         INTEGER requested_at
-        INTEGER processed_at
-        TEXT processed_by
     }
 
     payouts {
         TEXT id PK
         TEXT user_id FK
         REAL amount
-        TEXT currency
         TEXT status
         INTEGER requested_at
-        INTEGER processed_at
-        TEXT note
     }
 
-    users ||--o{ user_sessions : sessions
-    users ||--o| login_rewards : streak
-    users ||--o| creator_applications : applies
+    creator_earnings {
+        TEXT id PK
+        TEXT user_id
+        TEXT provider_id
+        REAL net_amount
+        TEXT status
+    }
+
     users ||--o{ providers : owns
     users ||--o{ api_keys : keys
     users ||--o{ transactions : ledger
-    users ||--o{ creator_earnings : earns
     users ||--o{ topup_orders : topsup
     users ||--o{ payouts : withdraws
-    providers ||--o{ custom_models : lists
-    providers ||--o{ disabled_models : blocks
-    providers ||--o{ model_pricing : prices
+    users ||--o{ creator_earnings : earns
     providers ||--o{ request_logs : serves
     providers ||--o{ creator_earnings : generates
 ```
@@ -475,33 +369,23 @@ sequenceDiagram
 
 ```mermaid
 graph LR
-    subgraph Request[Incoming Model Request]
-        REQ[model gpt-4o]
-    end
-
-    REQ --> DETECT{First segment<br/>matches provider}
-
-    DETECT -->|Yes| CONN[Match connection by<br/>stored model id]
+    REQ[model gpt-4o] --> DETECT{Matches provider}
+    DETECT -->|Yes| CONN[Direct route]
     DETECT -->|No| NS{Namespace}
-
-    NS -->|official| OFF[Official Listings<br/>admin-owned base-id shared]
-    NS -->|user| CRE[Creator Listings<br/>user-owned connection-scoped]
-    NS -->|v1| BOTH[Both merge and dedupe]
-
-    OFF --> CHAIN[Build quality chain]
+    NS -->|official| OFF[Official Listings]
+    NS -->|user| CRE[Creator Listings]
+    NS -->|v1| BOTH[Merge and dedupe]
+    OFF --> CHAIN[Quality chain]
     CRE --> CHAIN
     BOTH --> CHAIN
-
-    CHAIN --> RR{Round-robin<br/>enabled}
-    RR -->|Yes| ROTATE[Rotate across pool<br/>of N connections]
-    RR -->|No| PICK[Weighted random<br/>primary pick]
-
+    CHAIN --> RR{Round-robin}
+    RR -->|Yes| ROTATE[Rotate pool]
+    RR -->|No| PICK[Weighted pick]
     ROTATE --> UP[Upstream Provider]
     PICK --> UP
     CONN --> UP
-
-    UP -->|2xx| AUDIT[served_provider_id<br/>logged to request_logs]
-    UP -->|429 or 5xx| FAILOVER[Next in failover chain]
+    UP -->|2xx| AUDIT[Log served_provider_id]
+    UP -->|fail| FAILOVER[Next in chain]
     FAILOVER --> UP
 ```
 
