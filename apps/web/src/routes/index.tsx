@@ -973,6 +973,9 @@ function LandingPage() {
                             <Link to="/refund" className="block text-muted-foreground transition-colors hover:text-foreground">
                                 Refund Policy
                             </Link>
+                            <Link to="/cookies" className="block text-muted-foreground transition-colors hover:text-foreground">
+                                Cookie Policy
+                            </Link>
                         </div>
                         <div className="space-y-2 text-xs">
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">

@@ -45,7 +45,7 @@ test("tunnel status is readable with a valid admin session", async () => {
     const app = createTestApp();
     const Token = await createTestAdminSession();
     const res = await app.request("/v1/tunnel/status", {
-        headers: { Cookie: `xeygate_user_session=${Token}` }
+        headers: { Cookie: `__Host-xeygate_user_session=${Token}` }
     });
     assert.equal(res.status, 200);
     const body = (await res.json()) as { ok: boolean; running: boolean };

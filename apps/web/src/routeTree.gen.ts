@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientRouteImport } from './routes/_client'
 import { Route as AcceptableUseRouteImport } from './routes/acceptable-use'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as CatalogRouteImport } from './routes/catalog'
 import { Route as LoginRouteImport } from './routes/login'
@@ -63,6 +64,11 @@ const ClientRoute = ClientRouteImport.update({
 const AcceptableUseRoute = AcceptableUseRouteImport.update({
   id: '/acceptable-use',
   path: '/acceptable-use',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -264,6 +270,7 @@ export interface FileRoutesByFullPath {
   '/acceptable-use': typeof AcceptableUseRoute
   '/admin': typeof AdminRouteWithChildren
   '/catalog': typeof CatalogRouteWithChildren
+  '/cookies': typeof CookiesRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acceptable-use': typeof AcceptableUseRoute
+  '/cookies': typeof CookiesRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_client': typeof ClientRouteWithChildren
   '/acceptable-use': typeof AcceptableUseRoute
+  '/cookies': typeof CookiesRoute
   '/admin': typeof AdminRouteWithChildren
   '/catalog': typeof CatalogRouteWithChildren
   '/login': typeof LoginRoute
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/acceptable-use'
     | '/admin'
     | '/catalog'
+    | '/cookies'
     | '/login'
     | '/onboarding'
     | '/privacy'
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/acceptable-use'
+    | '/cookies'
     | '/login'
     | '/onboarding'
     | '/privacy'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_client'
     | '/acceptable-use'
+    | '/cookies'
     | '/admin'
     | '/catalog'
     | '/login'
@@ -513,6 +525,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientRoute: typeof ClientRouteWithChildren
   AcceptableUseRoute: typeof AcceptableUseRoute
+  CookiesRoute: typeof CookiesRoute
   AdminRoute: typeof AdminRouteWithChildren
   CatalogRoute: typeof CatalogRouteWithChildren
   LoginRoute: typeof LoginRoute
@@ -545,6 +558,13 @@ declare module '@tanstack/react-router' {
       path: '/acceptable-use'
       fullPath: '/acceptable-use'
       preLoaderRoute: typeof AcceptableUseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -932,6 +952,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientRoute: ClientRouteWithChildren,
   AcceptableUseRoute: AcceptableUseRoute,
+  CookiesRoute: CookiesRoute,
   AdminRoute: AdminRouteWithChildren,
   CatalogRoute: CatalogRouteWithChildren,
   LoginRoute: LoginRoute,

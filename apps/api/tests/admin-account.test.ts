@@ -258,7 +258,7 @@ test("POST /users/change-password rotates the password and invalidates old sessi
     });
     assert.equal(login.status, 200);
     const setCookie = login.headers.get("set-cookie") ?? "";
-    const oldToken = /xeygate_user_session=([^;]+)/.exec(setCookie)?.[1];
+    const oldToken = /__Host-xeygate_user_session=([^;]+)/.exec(setCookie)?.[1];
     assert.ok(oldToken);
 
     const change = await app.request("/v1/users/change-password", {

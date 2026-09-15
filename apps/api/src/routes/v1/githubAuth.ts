@@ -25,13 +25,13 @@ import {
 // OAuth (connecting upstream accounts), not identity login.
 export const GitHubUserAuthRouter = new Hono();
 
-const OAUTH_STATE_COOKIE = "xeygate_github_oauth";
+const OAUTH_STATE_COOKIE = "__Host-xeygate_github_oauth";
 const STATE_MAX_AGE_S = 10 * 60;
 
 const COOKIE_BASE = {
     path: "/",
     httpOnly: true,
-    secure: process.env.SROUTER_SECURE_COOKIES === "true",
+    secure: true,
     sameSite: "lax" as const
 };
 

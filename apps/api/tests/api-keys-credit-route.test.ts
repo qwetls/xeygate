@@ -27,7 +27,7 @@ test("POST /v1/keys creates key with creditLimit", async () => {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Cookie: `xeygate_user_session=${token}`
+            Cookie: `__Host-xeygate_user_session=${token}`
         },
         body: JSON.stringify({
             name: "Credit API Key",
@@ -55,7 +55,7 @@ test("POST /v1/keys/:id/credit adds credit to existing key", async () => {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Cookie: `xeygate_user_session=${token}`
+            Cookie: `__Host-xeygate_user_session=${token}`
         },
         body: JSON.stringify({ amount: 15 })
     });
@@ -78,7 +78,7 @@ test("POST /v1/keys/:id/credit rejects non-positive amount", async () => {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            Cookie: `xeygate_user_session=${token}`
+            Cookie: `__Host-xeygate_user_session=${token}`
         },
         body: JSON.stringify({ amount: -5 })
     });

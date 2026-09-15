@@ -35,7 +35,7 @@ export const UserAuthRouter = new Hono();
 const COOKIE_OPTS = {
     path: "/",
     httpOnly: true,
-    secure: process.env.SROUTER_SECURE_COOKIES === "true",
+    secure: true,
     sameSite: "lax" as const,
     maxAge: Math.floor(USER_SESSION_TTL_MS / 1000)
 };

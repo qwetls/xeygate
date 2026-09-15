@@ -10,7 +10,8 @@ const CROSS_LINKS: Array<{ to: string; label: string }> = [
     { to: "/terms", label: "Terms of Service" },
     { to: "/privacy", label: "Privacy Policy" },
     { to: "/acceptable-use", label: "Acceptable Use" },
-    { to: "/refund", label: "Refund Policy" }
+    { to: "/refund", label: "Refund Policy" },
+    { to: "/cookies", label: "Cookie Policy" }
 ];
 
 export function LegalShell(props: {

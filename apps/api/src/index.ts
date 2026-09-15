@@ -46,8 +46,27 @@ app.use("/*", async (c, next) => {
     c.header("X-Version", API_VERSION);
     c.header("X-Content-Type-Options", "nosniff");
     c.header("X-Frame-Options", "DENY");
-    c.header("X-XSS-Protection", "1; mode=block");
+    c.header("X-XSS-Protection", "0");
     c.header("Referrer-Policy", "strict-origin-when-cross-origin");
+    c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=(), interest-cohort=()");
+    c.header("Cross-Origin-Opener-Policy", "same-origin");
+    c.header("Cross-Origin-Resource-Policy", "same-origin");
+    c.header("Cross-Origin-Embedder-Policy", "require-corp");
+    c.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    c.header(
+        "Content-Security-Policy",
+        [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' data: blob:",
+            "font-src 'self' data:",
+            "connect-src 'self' https://api.models.dev",
+            "frame-ancestors 'none'",
+            "base-uri 'self'",
+            "form-action 'self'"
+        ].join("; ")
+    );
 });
 
 // CORS: loopback origins always pass; public origins require SROUTER_CORS_ORIGINS.

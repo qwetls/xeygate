@@ -15,7 +15,7 @@ import { Err, Ok } from "@/utils/response.js";
 const COOKIE_OPTS = {
     path: "/",
     httpOnly: true,
-    secure: false, // set true behind HTTPS proxy
+    secure: true,
     sameSite: "lax" as const,
     maxAge: Math.floor(USER_SESSION_TTL_MS / 1000)
 };
@@ -44,7 +44,6 @@ function toAdminPayload(user: {
 
 export interface AdminRouteOptions {
     store?: UserAuthStore;
-    secureCookies?: boolean;
 }
 
 /**
@@ -56,8 +55,6 @@ export interface AdminRouteOptions {
  */
 export function CreateAdminRoute(Options: AdminRouteOptions = {}): Hono {
     const Store = Options.store ?? userAuthStore;
-    const SecureCookies =
-        Options.secureCookies ?? process.env.SROUTER_SECURE_COOKIES === "true";
     const Route = new Hono();
 
     // Public: does an admin account exist yet? Drives the first-run form.
@@ -116,7 +113,7 @@ export function CreateAdminRoute(Options: AdminRouteOptions = {}): Hono {
         }
 
         const token = await createUserSession(Store, admin.id);
-        setCookie(c, USER_SESSION_COOKIE, token, { ...COOKIE_OPTS, secure: SecureCookies });
+        setCookie(c, USER_SESSION_COOKIE, token, COOKIE_OPTS);
         return Ok(c, { admin: toAdminPayload(admin) });
     });
 
