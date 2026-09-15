@@ -442,33 +442,33 @@ sequenceDiagram
     autonumber
     participant C as Client
     participant G as XEYGATE
-    participant A as Auth + Quota
+    participant A as Auth and Quota
     participant R as Router
     participant P as Provider Registry
 
     C->>G: POST /v1/chat/completions
-    G->>A: Validate API Key / Session
-    A-->>G: Auth OK + quota check
+    G->>A: Validate API Key or Session
+    A-->>G: Auth OK and quota check
 
-    G->>R: ResolveMarketplaceRoute(model)
-    R->>R: BareModelId to look up custom_models
-    R->>R: Build quality chain successRate x 0.7 + latency x 0.3
-    R-->>G: Chain: primary, failover1, failover2
+    G->>R: ResolveMarketplaceRoute model
+    R->>R: BareModelId look up custom_models
+    R->>R: Build quality chain
+    R-->>G: Chain primary failover1 failover2
 
-    loop For each candidate - failover on error
-        G->>P: chatCompletion with onServed callback
+    loop Failover on error
+        G->>P: chatCompletion with onServed
         P->>P: Forward to upstream provider
         alt 2xx Success
-            P-->>G: Response + servedProviderId
-            G->>G: onServed(candidate.id)
-        else 429 / 5xx / Timeout
+            P-->>G: Response and servedProviderId
+            G->>G: onServed candidate.id
+        else 429 or 5xx or Timeout
             P-->>G: Error
-            G->>G: Mark candidate unhealthy, try next
+            G->>G: Mark unhealthy try next
         end
     end
 
-    G->>G: logRequestDB served_provider_id, model, tokens, latency
-    G-->>C: Streaming / non-streaming response
+    G->>G: logRequestDB
+    G-->>C: Streaming or non-streaming response
 ```
 
 ### Marketplace Namespaces & Routing
@@ -476,23 +476,23 @@ sequenceDiagram
 ```mermaid
 graph LR
     subgraph Request[Incoming Model Request]
-        REQ[model: gpt-4o]
+        REQ[model gpt-4o]
     end
 
-    REQ --> DETECT{First segment<br/>matches provider?}
+    REQ --> DETECT{First segment<br/>matches provider}
 
     DETECT -->|Yes| CONN[Match connection by<br/>stored model id]
-    DETECT -->|No| NS{Namespace?}
+    DETECT -->|No| NS{Namespace}
 
     NS -->|official| OFF[Official Listings<br/>admin-owned base-id shared]
     NS -->|user| CRE[Creator Listings<br/>user-owned connection-scoped]
-    NS -->|v1| BOTH[Both - merge + dedupe]
+    NS -->|v1| BOTH[Both merge and dedupe]
 
     OFF --> CHAIN[Build quality chain]
     CRE --> CHAIN
     BOTH --> CHAIN
 
-    CHAIN --> RR{Round-robin<br/>enabled?}
+    CHAIN --> RR{Round-robin<br/>enabled}
     RR -->|Yes| ROTATE[Rotate across pool<br/>of N connections]
     RR -->|No| PICK[Weighted random<br/>primary pick]
 
@@ -501,7 +501,7 @@ graph LR
     CONN --> UP
 
     UP -->|2xx| AUDIT[served_provider_id<br/>logged to request_logs]
-    UP -->|429/5xx| FAILOVER[Next in failover chain]
+    UP -->|429 or 5xx| FAILOVER[Next in failover chain]
     FAILOVER --> UP
 ```
 
