@@ -5,8 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Added
+- **Full marketing landing page** — the landing page now features live marketplace analytics charts (traffic, latency, token volume) powered by recharts and the public `/v1/analytics/*` endpoints, a model leaderboard showing top models by request volume with success rates, a supply endpoints panel with official/creator badges, and all stats bands pulling real data from the catalog and analytics APIs.
+- **Embedded documentation site** — `/docs` with sidebar navigation (Getting Started, Core Concepts, Marketplace, Reference) and `/docs/api-reference` with a complete endpoint reference covering all 40+ API routes across Chat Completions, Models, Catalog, Analytics, Auth, Profile & Billing, Creator, API Keys, Logs, Quota, and Admin sections. Each endpoint shows method, path, description, and auth requirement.
+
 ### Fixed
 - **Manage button in Quotas & Limits navigates to wrong URL** — the Manage link used the provider display name (e.g. "B.AI") instead of the base id ("bai"), so clicking it landed on a non-existent provider page. `ProviderQuotaAccount` now carries a `providerId` field (the canonical base id) set by both live OAuth fetchers and usage-logged accounts, and the frontend uses it for the `/admin/providers/$providerId` route.
+- **Version constants stuck at v1.5.0** — `GLOBAL_VERSION`, `APP_VERSION`, and `API_VERSION` in `packages/constants/src/version.ts` were not bumped with the v1.6.0 release; the settings page displayed v1.5.0 on the live instance.
 
 ## [1.6.0] - 2026-09-15
 
