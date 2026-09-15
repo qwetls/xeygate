@@ -374,6 +374,12 @@ export class ChatLogic {
 
             try {
                 await ensureFreshToken(providerId);
+                // Inject stream_options so upstream providers include usage
+                // data in the final SSE chunk. Without this, token counts
+                // stay zero for all streaming requests.
+                if (!currentReq.stream_options) {
+                    currentReq.stream_options = { include_usage: true };
+                }
                 const generator = registry.chatCompletionStream(currentReq, (id) => {
                     servedProviderId = id;
                 });

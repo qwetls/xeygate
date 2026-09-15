@@ -86,6 +86,7 @@ export interface ChatCompletionRequest {
     };
     reasoning_effort?: "none" | "low" | "medium" | "high" | (string & {});
     reasoning?: { effort?: string; summary?: string };
+    stream_options?: { include_usage?: boolean };
 }
 
 export interface UsageInfo {
