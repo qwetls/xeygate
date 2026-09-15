@@ -219,20 +219,20 @@ console.log(response.choices[0].message.content);`}</code>
                 </div>
             </div>
 
-            {/* GitHub link */}
+            {/* XeyCompany */}
             <div className="rounded-xl border border-border/60 bg-secondary/10 p-5 flex items-center justify-between">
                 <div>
-                    <p className="text-sm font-semibold">Open Source</p>
-                    <p className="text-xs text-muted-foreground">XEYGATE is MIT licensed. Source code on GitHub.</p>
+                    <p className="text-sm font-semibold">XEYGATE by XeyCompany</p>
+                    <p className="text-xs text-muted-foreground">Proprietary AI gateway platform. All rights reserved.</p>
                 </div>
                 <a
-                    href="https://github.com/qwetls/xeygate"
+                    href="https://xeycompany.com"
                     target="_blank"
                     rel="noreferrer"
                     className="inline-flex items-center gap-1.5 rounded-md bg-[var(--ink)] text-[var(--canvas)] px-3 py-1.5 text-xs font-semibold hover:opacity-90 transition-opacity"
                 >
                     <ExternalLink className="size-3" />
-                    GitHub
+                    xeycompany.com
                 </a>
             </div>
         </div>
