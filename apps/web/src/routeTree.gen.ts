@@ -20,6 +20,8 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as DocsRouteImport } from './routes/docs'
+import { Route as DocsApiReferenceRouteImport } from './routes/docs.api-reference'
 import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
@@ -102,6 +104,16 @@ const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsApiReferenceRoute = DocsApiReferenceRouteImport.update({
+  id: '/api-reference',
+  path: '/api-reference',
+  getParentRoute: () => DocsRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
@@ -258,6 +270,8 @@ export interface FileRoutesByFullPath {
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
+  '/docs': typeof DocsRouteWithChildren
+  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/dashboard': typeof ClientDashboardRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
@@ -296,6 +310,8 @@ export interface FileRoutesByTo {
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
+  '/docs': typeof DocsRouteWithChildren
+  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
@@ -336,6 +352,8 @@ export interface FileRoutesById {
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
+  '/docs': typeof DocsRouteWithChildren
+  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/_client/dashboard': typeof ClientDashboardRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
@@ -378,6 +396,8 @@ export interface FileRouteTypes {
     | '/refund'
     | '/register'
     | '/terms'
+    | '/docs'
+    | '/docs/api-reference'
     | '/dashboard'
     | '/admin/analytics'
     | '/admin/combo'
@@ -416,6 +436,8 @@ export interface FileRouteTypes {
     | '/refund'
     | '/register'
     | '/terms'
+    | '/docs'
+    | '/docs/api-reference'
     | '/admin/analytics'
     | '/admin/combo'
     | '/admin/keys'
@@ -455,6 +477,8 @@ export interface FileRouteTypes {
     | '/refund'
     | '/register'
     | '/terms'
+    | '/docs'
+    | '/docs/api-reference'
     | '/_client/dashboard'
     | '/admin/analytics'
     | '/admin/combo'
@@ -497,6 +521,7 @@ export interface RootRouteChildren {
   RefundRoute: typeof RefundRoute
   RegisterRoute: typeof RegisterRoute
   TermsRoute: typeof TermsRoute
+  DocsRoute: typeof DocsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -577,6 +602,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs/api-reference': {
+      id: '/docs/api-reference'
+      path: '/api-reference'
+      fullPath: '/docs/api-reference'
+      preLoaderRoute: typeof DocsApiReferenceRouteImport
+      parentRoute: typeof DocsRoute
     }
     '/_client/dashboard': {
       id: '/_client/dashboard'
@@ -879,6 +918,16 @@ const CatalogRouteChildren: CatalogRouteChildren = {
 const CatalogRouteWithChildren =
   CatalogRoute._addFileChildren(CatalogRouteChildren)
 
+interface DocsRouteChildren {
+  DocsApiReferenceRoute: typeof DocsApiReferenceRoute
+}
+
+const DocsRouteChildren: DocsRouteChildren = {
+  DocsApiReferenceRoute: DocsApiReferenceRoute,
+}
+
+const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientRoute: ClientRouteWithChildren,
@@ -891,6 +940,7 @@ const rootRouteChildren: RootRouteChildren = {
   RefundRoute: RefundRoute,
   RegisterRoute: RegisterRoute,
   TermsRoute: TermsRoute,
+  DocsRoute: DocsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

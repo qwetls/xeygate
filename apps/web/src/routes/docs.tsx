@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
     BookOpen,
     Code2,
@@ -12,6 +12,7 @@ import {
     ExternalLink,
     ArrowRight
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/docs")({
     component: DocsLayout
@@ -80,6 +81,9 @@ function DocsSidebar() {
 }
 
 function DocsLayout() {
+    const matches = useRouterState({ select: (s) => s.matches });
+    const isRootDocs = matches.length > 0 && matches[matches.length - 1]?.fullPath === "/docs";
+
     return (
         <div className="min-h-screen bg-background text-foreground font-mono">
             {/* Nav */}
@@ -118,15 +122,12 @@ function DocsLayout() {
                 <DocsSidebar />
                 <main className="flex-1 min-w-0">
                     <Outlet />
-                    {/* Default content when no child route is active */}
-                    <DocsHome />
+                    {isRootDocs && <DocsHome />}
                 </main>
             </div>
         </div>
     );
 }
-
-import { Button } from "@/components/ui/button";
 
 function DocsHome() {
     return (
