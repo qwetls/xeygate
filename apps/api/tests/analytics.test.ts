@@ -90,7 +90,7 @@ function createTestApp() {
 async function authedRequest(app: Hono, path: string) {
     const token = await createTestAdminSession();
     return app.request(path, {
-        headers: { Cookie: `__Host-xeygate_user_session=${token}` }
+        headers: { Cookie: `xeygate_user_session=${token}` }
     });
 }
 

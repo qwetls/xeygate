@@ -16,7 +16,7 @@ afterEach(async () => {
 async function getAuthHeaders(extraHeaders: Record<string, string> = {}) {
     const sessionToken = await createTestAdminSession();
     return {
-        Cookie: `__Host-xeygate_user_session=${sessionToken}`,
+        Cookie: `xeygate_user_session=${sessionToken}`,
         ...extraHeaders
     };
 }

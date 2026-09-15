@@ -79,7 +79,7 @@ async function startFlow() {
     const location = res.headers.get("location") ?? "";
     const setCookie = res.headers.get("set-cookie") ?? "";
     const state = new URL(location).searchParams.get("state");
-    const rawCookie = /__Host-xeygate_github_oauth=([^;]+)/.exec(setCookie)?.[1];
+    const rawCookie = /xeygate_github_oauth=([^;]+)/.exec(setCookie)?.[1];
     // Hono percent-encodes the "|" separator in the cookie value.
     const cookie = rawCookie ? decodeURIComponent(rawCookie) : undefined;
     return { res, location, state, cookie };
@@ -115,7 +115,7 @@ test("callback with a mismatched state is rejected (CSRF guard)", async () => {
     const { cookie } = await startFlow();
     const res = await get(
         "/v1/users/oauth/github/callback?code=test-code&state=tampered-state",
-        `__Host-xeygate_github_oauth=${cookie}`
+        `xeygate_github_oauth=${cookie}`
     );
     assert.equal(res.headers.get("location"), "/login?error=github_state_mismatch");
 });
@@ -129,7 +129,7 @@ test("callback honors the user-cancelling-the-consent error", async () => {
     const { state, cookie } = await startFlow();
     const res = await get(
         `/v1/users/oauth/github/callback?error=access_denied&state=${state}`,
-        `__Host-xeygate_github_oauth=${cookie}`
+        `xeygate_github_oauth=${cookie}`
     );
     assert.equal(res.headers.get("location"), "/login?error=github_cancelled");
 });
@@ -143,10 +143,10 @@ test("new GitHub account is created, consented, and signed in", async () => {
     const { state, cookie } = await startFlow();
     const res = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${state}`,
-        `__Host-xeygate_github_oauth=${cookie}`
+        `xeygate_github_oauth=${cookie}`
     );
     assert.equal(res.headers.get("location"), "/onboarding");
-    assert.match(res.headers.get("set-cookie") ?? "", /__Host-xeygate_user_session=/);
+    assert.match(res.headers.get("set-cookie") ?? "", /xeygate_user_session=/);
 
     const user = await userAuthStore.getUserByEmail(email);
     assert.ok(user);
@@ -160,7 +160,7 @@ test("new GitHub account is created, consented, and signed in", async () => {
     const second = await startFlow();
     const res2 = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${second.state}`,
-        `__Host-xeygate_github_oauth=${second.cookie}`
+        `xeygate_github_oauth=${second.cookie}`
     );
     assert.equal(res2.headers.get("location"), "/dashboard");
     const again = await userAuthStore.getUserByGitHubId(githubId);
@@ -175,7 +175,7 @@ test("GitHub email fallback: hidden profile email uses the noreply address", asy
     const { state, cookie } = await startFlow();
     const res = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${state}`,
-        `__Host-xeygate_github_oauth=${cookie}`
+        `xeygate_github_oauth=${cookie}`
     );
     assert.equal(res.headers.get("location"), "/onboarding");
 
@@ -203,7 +203,7 @@ test("existing email account gets the GitHub identity linked, not duplicated", a
     const { state, cookie } = await startFlow();
     const res = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${state}`,
-        `__Host-xeygate_github_oauth=${cookie}`
+        `xeygate_github_oauth=${cookie}`
     );
     assert.equal(res.headers.get("location"), "/dashboard");
 
@@ -231,13 +231,13 @@ test("legacy linked account re-consents through the checkbox flag", async () => 
     // Cookie flag forged to 0: simulates a flow started without consent.
     const denied = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${flow.state}`,
-        `__Host-xeygate_github_oauth=${flow.state}|0`
+        `xeygate_github_oauth=${flow.state}|0`
     );
     assert.equal(denied.headers.get("location"), "/login?error=github_terms_required");
 
     const granted = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${flow.state}`,
-        `__Host-xeygate_github_oauth=${flow.state}|1`
+        `xeygate_github_oauth=${flow.state}|1`
     );
     assert.equal(granted.headers.get("location"), "/dashboard");
     const user = await userAuthStore.getUserByGitHubId(githubId);
@@ -256,7 +256,7 @@ test("registration gate holds new GitHub accounts as pending", async () => {
         const { state, cookie } = await startFlow();
         const res = await get(
             `/v1/users/oauth/github/callback?code=test-code&state=${state}`,
-            `__Host-xeygate_github_oauth=${cookie}`
+            `xeygate_github_oauth=${cookie}`
         );
         assert.equal(res.headers.get("location"), "/login?error=github_pending_approval");
         const user = await userAuthStore.getUserByGitHubId(githubId);
@@ -284,7 +284,7 @@ test("banned account cannot sign in through GitHub", async () => {
     const { state, cookie } = await startFlow();
     const res = await get(
         `/v1/users/oauth/github/callback?code=test-code&state=${state}`,
-        `__Host-xeygate_github_oauth=${cookie}`
+        `xeygate_github_oauth=${cookie}`
     );
     assert.equal(res.headers.get("location"), "/login?error=github_banned");
 });
