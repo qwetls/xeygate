@@ -426,7 +426,7 @@ erDiagram
     users ||--o{ api_keys : keys
     users ||--o{ transactions : ledger
     users ||--o{ creator_earnings : earns
-    users ||--o{ topup_orders : tops-up
+    users ||--o{ topup_orders : topsup
     users ||--o{ payouts : withdraws
     providers ||--o{ custom_models : lists
     providers ||--o{ disabled_models : blocks
