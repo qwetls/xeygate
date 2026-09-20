@@ -97,13 +97,18 @@ CatalogRouter.get("/catalog", async (c) => {
             const models = customModels.map((mr) => {
                 const modelId = mr.modelId;
                 const displayId = ProviderRegistry.toDisplayModelId(modelId);
+                // fullId is the internal routing form. Stored IDs now carry the
+                // gateway prefix, so avoid double-prefixing with alias.
+                const fullId = modelId.toLowerCase().startsWith(alias + "/")
+                    ? modelId
+                    : `${alias}/${modelId}`;
                 const override = pricingOverrides.find(
                     (o) => o.providerId === p.providerId && o.model === modelId
                 );
                 if (override) {
                     return {
                         id: displayId,
-                        fullId: `${alias}/${modelId}`,
+                        fullId,
                         pricing: {
                             input: override.input,
                             output: override.output,
@@ -117,7 +122,7 @@ CatalogRouter.get("/catalog", async (c) => {
                 const staticPrice = getPricingForModel(p.providerId, modelId);
                 return {
                     id: displayId,
-                    fullId: `${alias}/${modelId}`,
+                    fullId,
                     pricing: {
                         input: staticPrice.input,
                         output: staticPrice.output,
