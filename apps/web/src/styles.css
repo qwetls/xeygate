@@ -235,16 +235,6 @@ samp,
     z-index: 1;
 }
 
-/* Beautiful UI inspired AI-native primitives */
-@keyframes shimmer-text {
-    0% {
-        background-position: 200% 0;
-    }
-    100% {
-        background-position: -200% 0;
-    }
-}
-
 @keyframes pixel-on {
     0%,
     100% {
@@ -275,19 +265,6 @@ samp,
     }
 }
 
-.animate-shimmer-text {
-    background-image: linear-gradient(
-        90deg,
-        var(--muted-foreground) 25%,
-        var(--foreground) 50%,
-        var(--muted-foreground) 75%
-    );
-    background-size: 200% 100%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shimmer-text 1.6s linear infinite;
-}
-
 @keyframes pop-in {
     from {
         opacity: 0;
@@ -296,30 +273,6 @@ samp,
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
-    }
-}
-
-/* Infinite horizontal marquee (landing announcement strip) */
-@keyframes marquee {
-    from {
-        transform: translateX(0);
-    }
-    to {
-        transform: translateX(-50%);
-    }
-}
-
-.animate-marquee {
-    animation: marquee 28s linear infinite;
-}
-
-.animate-marquee:hover {
-    animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .animate-marquee {
-        animation: none;
     }
 }
 

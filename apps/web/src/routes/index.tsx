@@ -16,7 +16,6 @@ import {
     Rocket,
     Search,
     ShieldCheck,
-    Sparkles,
     Terminal,
     TrendingUp,
     Workflow,
@@ -121,44 +120,6 @@ function fmtPct(n: number): string {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Marquee                                                             */
-/* ------------------------------------------------------------------ */
-
-const marqueeItems = [
-    "ONE ENDPOINT · EVERY AI PROVIDER",
-    "OPENAI + ANTHROPIC COMPATIBLE",
-    "VIRTUAL KEYS — sr-live-*",
-    "QUOTAS & RATE LIMITS",
-    "COMBO ROUTING + FAILOVER",
-    "REALTIME LOGS & ANALYTICS",
-    "USD BILLING PER MODEL"
-];
-
-function Marquee() {
-    const row = (ariaHidden: boolean) => (
-        <div aria-hidden={ariaHidden} className="flex shrink-0 items-center">
-            {marqueeItems.map((item) => (
-                <span
-                    key={`${item}${ariaHidden ? "-b" : "-a"}`}
-                    className="flex items-center gap-6 pr-6 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
-                >
-                    {item}
-                    <Sparkles className="size-3 text-emerald-500" />
-                </span>
-            ))}
-        </div>
-    );
-    return (
-        <div className="overflow-hidden border-b border-border/60 bg-secondary/40 py-2">
-            <div className="animate-marquee flex w-max">
-                {row(false)}
-                {row(true)}
-            </div>
-        </div>
-    );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Code showcase                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -221,7 +182,7 @@ function CodeShowcase() {
             <div className="grid items-start gap-8 lg:grid-cols-[1fr_1.1fr]">
                 <div className="space-y-5">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-500">
-                        SW1TCH PR0V1D3R — JUST TH3 PR3FIX
+                        Switch providers by prefix
                     </p>
                     <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
                         Change providers by changing the <span className="text-emerald-500">model prefix</span>.
@@ -256,11 +217,9 @@ function CodeShowcase() {
 
                 <div className="overflow-hidden rounded-xl border border-border/70 bg-[var(--canvas)]">
                     <div className="flex items-center justify-between border-b border-border/60 bg-secondary/30 px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                            <span className="size-2.5 rounded-full bg-destructive/60" />
-                            <span className="size-2.5 rounded-full bg-yellow-500/60" />
-                            <span className="size-2.5 rounded-full bg-emerald-500/60" />
-                        </div>
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            Quickstart
+                        </span>
                         <div className="flex items-center gap-1 rounded-md bg-background p-0.5">
                             {(["TypeScript", "Python", "cURL"] as CodeTab[]).map((t) => (
                                 <button
@@ -583,23 +542,11 @@ function LiveAnalyticsSection() {
 /*  Section shell                                                       */
 /* ------------------------------------------------------------------ */
 
-function SectionHead({
-    kicker,
-    title,
-    leet,
-    desc
-}: {
-    kicker: string;
-    title: string;
-    leet: string;
-    desc: string;
-}) {
+function SectionHead({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
     return (
         <div className="mx-auto max-w-2xl space-y-3 text-center">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-500">{kicker}</p>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                {title} <span className="text-muted-foreground/60">{leet}</span>
-            </h2>
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
         </div>
     );
@@ -696,8 +643,6 @@ const officialSteps = [
 function LandingPage() {
     return (
         <div className="min-h-screen bg-background text-foreground font-mono">
-            <Marquee />
-
             {/* Nav */}
             <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-md">
                 <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
@@ -740,19 +685,13 @@ function LandingPage() {
             <main>
                 <section className="relative overflow-hidden">
                     <div className="pointer-events-none absolute inset-0 bg-grid-pattern" />
-                    <div className="pointer-events-none absolute -top-32 left-1/2 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
                     <div className="relative mx-auto max-w-5xl px-4 py-24 sm:py-28">
                         <div className="mx-auto max-w-3xl space-y-6 text-center">
-                            <p className="mx-auto inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-500">
-                                <Sparkles className="size-3" />
-                                AI Gateway · Marketplace · Multi-Provider
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-500">
+                                AI Gateway &amp; Model Marketplace
                             </p>
-                            <h1 className="text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
-                                ONE ENDPOINT.
-                                <br />
-                                <span className="animate-shimmer-text">EVERY AI MODEL.</span>
-                                <br />
-                                <span className="text-muted-foreground">FULL CONTROL.</span>
+                            <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
+                                One endpoint for every AI model
                             </h1>
                             <p className="mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
                                 XEYGATE is the cloud AI gateway that routes your requests to OpenAI,
@@ -785,9 +724,8 @@ function LandingPage() {
                 <section className="border-b border-border/60 bg-secondary/10 py-16 sm:py-20">
                     <div className="mx-auto max-w-5xl px-4">
                         <SectionHead
-                            kicker="USE C4S3S"
-                            title="Built for"
-                            leet="[A1 APPS, AG3NTS, PR0DUCT T34MS]"
+                            kicker="USE CASES"
+                            title="Built for AI apps, agents, and product teams"
                             desc="From chatbots to batch pipelines — if it touches many AI models, XEYGATE sits in the middle."
                         />
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -814,9 +752,8 @@ function LandingPage() {
                 <section className="border-b border-border/60 py-16 sm:py-20">
                     <div className="mx-auto max-w-5xl px-4">
                         <SectionHead
-                            kicker="F3ATUR3S"
+                            kicker="FEATURES"
                             title="The gateway"
-                            leet="[PR0DUCT10N TRU5TS]"
                             desc="Everything that keeps one key safe to share across customers — and makes every token dollar accountable."
                         />
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -888,14 +825,12 @@ function LandingPage() {
                 {/* Final CTA */}
                 <section className="relative overflow-hidden py-20 sm:py-24">
                     <div className="pointer-events-none absolute inset-0 bg-grid-pattern" />
-                    <div className="pointer-events-none absolute bottom-0 left-1/2 h-64 w-[36rem] -translate-x-1/2 rounded-full bg-emerald-500/10 blur-3xl" />
                     <div className="relative mx-auto max-w-2xl space-y-6 px-4 text-center">
-                        <h2 className="text-2xl font-bold tracking-tight sm:text-4xl">
-                            BUILD W1TH <span className="animate-shimmer-text">XEYGATE</span>
+                        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                            Start with one key
                         </h2>
                         <p className="text-sm text-muted-foreground leading-relaxed">
-                            One account, one key, every AI model. Free to start right now — no credit card,
-                            no sales call, five minutes to your first request.
+                            Create an account, issue a key, and send your first request. No card required.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                             <Button size="lg" render={<Link to="/register" />} className="cursor-pointer gap-2">
@@ -991,7 +926,7 @@ function LandingPage() {
                         <span>© {new Date().getFullYear()} XeyCompany · XEYGATE</span>
                         <span className="flex items-center gap-1">
                             <Gauge className="size-3" />
-                            {GATEWAY_BASE_URL} · one endpoint to rule them all
+                            {GATEWAY_BASE_URL}
                         </span>
                     </div>
                 </div>
