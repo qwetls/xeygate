@@ -26,7 +26,12 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
           port: 22
-          script_stop: true
+          # appleboy/ssh-action v1 deleted the `script_stop` input, so passing it
+          # only earns a warning annotation and changes nothing. `set -e` below
+          # is what actually aborts this deploy on the first failed command — do
+          # not drop it: without it a failed `docker compose up` would fall
+          # through to the health check, which happily probes whatever container
+          # is still running, and the run would go green with nothing shipped.
           script: |
             set -e
             APP_DIR=/opt/xeygate
@@ -56,7 +61,12 @@ jobs:
             # provider credentials. Only ever create it: regenerating the key would
             # leave every stored secret undecryptable.
             if [ ! -f .env ]; then
-              SECRET=$(openssl rand -hex 32 2>/dev/null || tr -dc 'a-f0-9' < /proc/sys/kernel/random/uuid; cat /proc/sys/kernel/random/uuid /proc/sys/kernel/random/uuid)
+              # One value from one source. Keep this a single `||` chain: a `;`
+              # between the two would append the uuid fallback to openssl's
+              # output even when openssl succeeded, and those embedded newlines
+              # land in .env as junk lines that docker compose parses as
+              # env_file. Both branches yield 32 bytes of hex.
+              SECRET=$(openssl rand -hex 32 2>/dev/null || { cat /proc/sys/kernel/random/uuid /proc/sys/kernel/random/uuid | tr -d '\n-'; })
               printf 'PORT=3000\nOAUTH_PORT=1455\nNODE_ENV=production\nDATABASE_PATH=/app/data/xeygate.db\nJWT_SECRET=%s\n' "$SECRET" > .env
               echo "created .env with a fresh JWT_SECRET"
             fi
