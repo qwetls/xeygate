@@ -191,7 +191,7 @@ export class ChatLogic {
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
-        const displayModel = effectiveBody.model;
+        let displayModel = effectiveBody.model;
         const originalModel =
             depth === 0 ? await registry.normalizeModelId(displayModel) : displayModel;
         effectiveBody.model = originalModel;
@@ -340,7 +340,7 @@ export class ChatLogic {
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
-        const displayModel = effectiveBody.model;
+        let displayModel = effectiveBody.model;
         const originalModel =
             depth === 0 ? await registry.normalizeModelId(displayModel) : displayModel;
         effectiveBody.model = originalModel;
