@@ -3,7 +3,14 @@ import { streamSSE } from "hono/streaming";
 import type { ChatCompletionRequest, APIKeyZod } from "@srouter/types";
 import { ChatLogic } from "@/logic/chat.logic.js";
 import type { MarketplaceScope } from "@/logic/official.logic.js";
-import { Err, FormatErrorPayload, InferenceErrorStatus, Ok, ToContentfulStatusCode } from "@/utils/response.js";
+import {
+    EnsureRequestId,
+    Err,
+    FormatErrorPayload,
+    LogUpstreamFailure,
+    Ok,
+    PublicInferenceError
+} from "@/utils/response.js";
 
 function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequest {
     for (const msg of Body.messages) {
@@ -15,6 +22,7 @@ function NormalizeDeveloperRole(Body: ChatCompletionRequest): ChatCompletionRequ
 export class ChatController {
     public static async CreateCompletion(c: Context): Promise<Response> {
         const StartTime = Date.now();
+        EnsureRequestId(c);
         const Body = NormalizeDeveloperRole(
             c.req.valid("json" as never) as ChatCompletionRequest
         );
@@ -53,11 +61,12 @@ export class ChatController {
                         data: "[DONE]"
                     });
                 } catch (error) {
-                    const status = InferenceErrorStatus(error);
-                    const ErrorMessage =
-                        error instanceof Error ? error.message : "Error occurred during streaming";
+                    const { message, status, traceId } = PublicInferenceError(error);
+                    LogUpstreamFailure(traceId, error, status);
                     await stream.writeSSE({
-                        data: JSON.stringify(FormatErrorPayload(ErrorMessage, status))
+                        data: JSON.stringify(
+                            FormatErrorPayload(message, status, { request_id: traceId })
+                        )
                     });
                 }
             });
@@ -75,9 +84,9 @@ export class ChatController {
             );
             return Ok(c, ResponseData);
         } catch (error) {
-            const status = InferenceErrorStatus(error);
-            const ErrorMessage = error instanceof Error ? error.message : "Internal server error";
-            return Err(c, ErrorMessage, ToContentfulStatusCode(status));
+            const { message, status, traceId } = PublicInferenceError(error);
+            LogUpstreamFailure(traceId, error, status);
+            return Err(c, message, status, { request_id: traceId });
         }
     }
 }

@@ -10,10 +10,11 @@ import { ChatLogic } from "@/logic/chat.logic.js";
 import type { MarketplaceScope } from "@/logic/official.logic.js";
 import {
     AnthropicErr,
+    EnsureRequestId,
     FormatAnthropicErrorPayload,
-    InferenceErrorStatus,
+    LogUpstreamFailure,
     Ok,
-    ToContentfulStatusCode
+    PublicInferenceError
 } from "@/utils/response.js";
 import { GetApiKeyRow, IsModelAllowed } from "@/middleware/ModelAccess.js";
 import { MAX_BODY_BYTES } from "@/middleware/BodyLimit.js";
@@ -21,6 +22,7 @@ import { MAX_BODY_BYTES } from "@/middleware/BodyLimit.js";
 export class MessagesController {
     public static async CreateMessage(c: Context): Promise<Response> {
         const startTime = Date.now();
+        EnsureRequestId(c);
         const Raw = await c.req.text().catch(() => "");
         if (Buffer.byteLength(Raw) > MAX_BODY_BYTES) {
             return AnthropicErr(c, "Request body too large", 413, "invalid_request_error");
@@ -91,12 +93,11 @@ export class MessagesController {
                         });
                     }
                 } catch (error) {
-                    const status = InferenceErrorStatus(error);
-                    const errorMessage =
-                        error instanceof Error ? error.message : "Error occurred during streaming";
+                    const { message, status, traceId } = PublicInferenceError(error);
+                    LogUpstreamFailure(traceId, error, status);
                     await stream.writeSSE({
                         event: "error",
-                        data: JSON.stringify(FormatAnthropicErrorPayload(errorMessage, status))
+                        data: JSON.stringify(FormatAnthropicErrorPayload(message, status))
                     });
                 }
             });
@@ -117,9 +118,9 @@ export class MessagesController {
             });
             return Ok(c, AnthropicRes);
         } catch (error) {
-            const status = InferenceErrorStatus(error);
-            const errorMessage = error instanceof Error ? error.message : "Internal server error";
-            return AnthropicErr(c, errorMessage, ToContentfulStatusCode(status));
+            const { message, status, traceId } = PublicInferenceError(error);
+            LogUpstreamFailure(traceId, error, status);
+            return AnthropicErr(c, message, status);
         }
     }
 }

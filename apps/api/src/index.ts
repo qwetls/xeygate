@@ -36,6 +36,7 @@ import { initDatabase, isPostgres } from "@srouter/db";
 
 import { HTTPException } from "hono/http-exception";
 import { API_VERSION } from "@srouter/constants";
+import { EnsureRequestId } from "@/utils/response.js";
 
 const app = new Hono();
 
@@ -145,8 +146,9 @@ const errorHandler = (label: string) => (err: Error, c: Context) => {
     return c.json(
         {
             error: {
-                message: err.message || "Internal Server Error",
-                type: "internal_error"
+                message: "Internal Server Error",
+                type: "internal_error",
+                request_id: EnsureRequestId(c)
             }
         },
         500

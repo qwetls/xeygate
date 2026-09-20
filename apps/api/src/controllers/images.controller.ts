@@ -2,10 +2,16 @@ import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { ImageGenerationRequest } from "@srouter/types";
 import { ImagesLogic } from "@/logic/images.logic.js";
-import { GetErrorTypeFromStatus, InferenceErrorStatus } from "@/utils/response.js";
+import {
+    GetErrorTypeFromStatus,
+    EnsureRequestId,
+    LogUpstreamFailure,
+    PublicInferenceError
+} from "@/utils/response.js";
 
 export class ImagesController {
     public static async generate(c: Context) {
+        EnsureRequestId(c);
         const body = c.req.valid("json" as never) as ImageGenerationRequest;
         const apiKeyRow = c.get("apiKeyRow");
         const clientIp =
@@ -27,14 +33,15 @@ export class ImagesController {
             if (err instanceof HTTPException) {
                 throw err;
             }
-            const message = err instanceof Error ? err.message : String(err);
-            const status = InferenceErrorStatus(err);
+            const { message, status, traceId } = PublicInferenceError(err);
+            LogUpstreamFailure(traceId, err, status);
             throw new HTTPException(status, {
                 message: JSON.stringify({
                     error: {
                         message,
                         type: GetErrorTypeFromStatus(status),
-                        code: "image_generation_failed"
+                        code: "image_generation_failed",
+                        request_id: traceId
                     }
                 })
             });
