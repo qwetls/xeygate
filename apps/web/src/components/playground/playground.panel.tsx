@@ -147,7 +147,7 @@ function ModelPicker({
             }
             setList(models);
             setLoaded(true);
-            if (!value && models[0]) onChange(models[0].id);
+            if (!value && models[0]) onChange(models[0].id, models[0].routingId ?? models[0].id);
         } catch (err) {
             onError(err instanceof Error ? err.message : "Failed to load models.");
         } finally {
