@@ -139,6 +139,59 @@ export class ProviderRegistry {
         return slash >= 0 ? modelId.slice(slash + 1) : modelId;
     }
 
+    /**
+     * Strip upstream vendor prefix from a model id for display.
+     * "stealth/neko/hy3" → "stealth/hy3", "bai/gpt-image-2" → "bai/gpt-image-2".
+     */
+    static toDisplayModelId(modelId: string): string {
+        const slash = modelId.indexOf("/");
+        if (slash < 0) return modelId;
+        const prefix = modelId.slice(0, slash);
+        const bare = modelId.slice(slash + 1);
+        const lastSlash = bare.lastIndexOf("/");
+        if (lastSlash < 0) return modelId;
+        return `${prefix}/${bare.slice(lastSlash + 1)}`;
+    }
+
+    /**
+     * Resolve a display model id (vendor-prefix-stripped) back to the full
+     * routable model id by matching against provider model lists.
+     * "stealth/hy3" → "stealth/neko/hy3" (finds upstream model neko/hy3).
+     * Returns the input unchanged if no resolution is found.
+     */
+    async normalizeModelId(displayId: string): Promise<string> {
+        const slash = displayId.indexOf("/");
+        if (slash < 0) return displayId;
+        const prefix = displayId.slice(0, slash);
+        const displayBare = displayId.slice(slash + 1);
+
+        // Find provider by alias matching the prefix
+        const provider = Array.from(this.providers.values()).find(
+            (p) => p.id !== "default" && p.alias && p.alias === prefix
+        );
+        if (!provider) return displayId;
+
+        const models = await this.getProviderModels(provider);
+        const alias = providerAliasFor(provider);
+
+        // 1. Exact bare id match (idempotent — display id equals full id)
+        for (const m of models) {
+            const bareId = stripModelPrefix(m.id, alias, provider.id);
+            if (bareId === displayBare) return m.id;
+        }
+
+        // 2. Last-segment match (display bare = vendor-stripped bare)
+        for (const m of models) {
+            const bareId = stripModelPrefix(m.id, alias, provider.id);
+            const segments = bareId.split("/");
+            if (segments.length > 1 && segments[segments.length - 1] === displayBare) {
+                return m.id;
+            }
+        }
+
+        return displayId;
+    }
+
     constructor(
         defaultProvider?: AIProvider,
         modelsTtlMs?: number,

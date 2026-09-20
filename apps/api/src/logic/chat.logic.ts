@@ -117,6 +117,8 @@ async function LogCompletion(
         ipAddress?: string;
         userAgent?: string;
         servedProviderId?: string;
+        /** Client-facing display model (vendor-prefix-stripped) for request_logs. */
+        displayModel?: string;
     }
 ): Promise<void> {
     // Normalize alias/bare provider id to the registered base id so quota
@@ -159,7 +161,7 @@ async function LogCompletion(
         ipAddress: options.ipAddress,
         userAgent: options.userAgent,
         providerId: normalizedProviderId,
-        model,
+        model: options.displayModel ?? model,
         promptTokens: options.statusCode === 200 ? breakdown.prompt_tokens : 0,
         completionTokens: options.statusCode === 200 ? breakdown.completion_tokens : 0,
         totalTokens: options.statusCode === 200 ? breakdown.total_tokens : 0,
@@ -189,7 +191,10 @@ export class ChatLogic {
     ): Promise<ChatCompletionResponse> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
-        const originalModel = effectiveBody.model;
+        const displayModel = effectiveBody.model;
+        const originalModel =
+            depth === 0 ? await registry.normalizeModelId(displayModel) : displayModel;
+        effectiveBody.model = originalModel;
         let candidates = await ResolveCandidates(originalModel);
 
         // Marketplace models route across the listings of the request's
@@ -288,7 +293,8 @@ export class ChatLogic {
                     apiKeyId,
                     ipAddress,
                     userAgent,
-                    servedProviderId
+                    servedProviderId,
+                    displayModel
                 });
 
                 return response;
@@ -313,7 +319,8 @@ export class ChatLogic {
             fallbackReason,
             apiKeyId,
             ipAddress,
-            userAgent
+            userAgent,
+            displayModel
         });
 
         throw lastError;
@@ -332,7 +339,10 @@ export class ChatLogic {
     ): AsyncGenerator<ChatCompletionChunk, void, void> {
         const effectiveBody =
             depth === 0 ? applyTokenSaver(body, await getTokenSaverSettingsDB()).request : body;
-        const originalModel = effectiveBody.model;
+        const displayModel = effectiveBody.model;
+        const originalModel =
+            depth === 0 ? await registry.normalizeModelId(displayModel) : displayModel;
+        effectiveBody.model = originalModel;
         let candidates = await ResolveCandidates(originalModel);
 
         // Marketplace models route across the listings of the request's
@@ -503,7 +513,8 @@ export class ChatLogic {
                     apiKeyId,
                     ipAddress,
                     userAgent,
-                    servedProviderId
+                    servedProviderId,
+                    displayModel
                 });
 
                 return;
@@ -526,7 +537,8 @@ export class ChatLogic {
                     fallbackReason,
                     apiKeyId,
                     ipAddress,
-                    userAgent
+                    userAgent,
+                    displayModel
                 });
                 throw err;
             }

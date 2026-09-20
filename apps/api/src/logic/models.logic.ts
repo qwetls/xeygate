@@ -6,6 +6,7 @@ import {
     getAllProvidersDB
 } from "@srouter/db";
 import { isSeedProvider, providerAlias, providerBaseId } from "@srouter/constants";
+import { ProviderRegistry } from "@srouter/providers";
 import {
     IsOfficialProviderRow,
     SelectMarketplaceRows,
@@ -22,9 +23,10 @@ export class ModelsLogic {
         const Models = await registry.listAllModels(Provider, ForceRefresh);
         const Scoped = Scope === "all" ? Models : await this.FilterModelsByScope(Models, Scope);
         const Merged = await this.MergeCustomModels(Scoped, Provider, Scope);
-        return this.ExcludeDisabled(
+        const Filtered = await this.ExcludeDisabled(
             Scope === "all" ? await this.MergeComboModels(Merged) : Merged
         );
+        return this.ToDisplayIds(Filtered);
     }
 
     /**
@@ -88,6 +90,17 @@ export class ModelsLogic {
                 : M.id;
             return !Bucket.has(Bare.toLowerCase());
         });
+    }
+
+    /**
+     * Rewrite model ids from the full internal form (e.g. `stealth/neko/hy3`)
+     * to a clean display form that strips upstream vendor segments (→ `stealth/hy3`).
+     */
+    private static ToDisplayIds(Models: ModelObject[]): ModelObject[] {
+        return Models.map((M) => ({
+            ...M,
+            id: ProviderRegistry.toDisplayModelId(M.id)
+        }));
     }
 
     /**
@@ -230,12 +243,13 @@ export class ModelsLogic {
         const CleanId = ModelId.replace(/^srouter\//, "");
         const Candidates = await this.ExcludeDisabled(Scoped);
 
-        return Candidates.find(
+        const Found = Candidates.find(
             (M) =>
                 M.id.replace(/^srouter\//, "") === CleanId ||
                 M.id.endsWith(`/${CleanId}`) ||
                 CleanId.endsWith(`/${M.id}`)
         );
+        return Found ? { ...Found, id: ProviderRegistry.toDisplayModelId(Found.id) } : undefined;
     }
 
     public static RefreshModels(ForceRefresh = false): Promise<ModelObject[]> {
