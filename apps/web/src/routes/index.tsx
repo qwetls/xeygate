@@ -17,30 +17,14 @@ import {
     Search,
     ShieldCheck,
     Terminal,
-    TrendingUp,
     Workflow,
     Zap
 } from "lucide-react";
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar
-} from "recharts";
 import { api } from "@/lib/api";
 import { Api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import type {
-    MarketplaceAnalyticsOverview,
-    MarketplaceProviderStats,
-    MarketplaceLeaderboard,
-    MarketplaceStatPoint,
-    MarketplaceModelStat,
-    MarketplaceProviderStat
+    MarketplaceAnalyticsOverview
 } from "@srouter/types";
 
 export const Route = createFileRoute("/")({
@@ -82,24 +66,6 @@ function useAnalyticsOverview() {
     return useQuery<MarketplaceAnalyticsOverview>({
         queryKey: ["landing-analytics-overview"],
         queryFn: () => Api.getMarketplaceOverview("24h"),
-        retry: false,
-        refetchInterval: 60_000
-    });
-}
-
-function useAnalyticsEndpoints() {
-    return useQuery<MarketplaceProviderStats>({
-        queryKey: ["landing-analytics-endpoints"],
-        queryFn: () => Api.getMarketplaceEndpoints("24h"),
-        retry: false,
-        refetchInterval: 60_000
-    });
-}
-
-function useAnalyticsLeaderboard() {
-    return useQuery<MarketplaceLeaderboard>({
-        queryKey: ["landing-analytics-leaderboard"],
-        queryFn: () => Api.getMarketplaceModels("7d"),
         retry: false,
         refetchInterval: 60_000
     });
@@ -244,7 +210,7 @@ function CodeShowcase() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Live Analytics Section                                              */
+/*  Live Catalog Stats Panel                                          */
 /* ------------------------------------------------------------------ */
 
 function LiveStatsPanel() {
@@ -294,270 +260,6 @@ function LiveStatsPanel() {
                 ))}
             </div>
         </div>
-    );
-}
-
-function TrafficAreaChart({ series }: { series: MarketplaceStatPoint[] }) {
-    const data = series.map((p) => ({
-        time: new Date(p.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        requests: p.requests,
-        tokens: p.tokens
-    }));
-
-    return (
-        <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={data}>
-                <defs>
-                    <linearGradient id="gradRequests" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                </defs>
-                <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                    contentStyle={{
-                        backgroundColor: "var(--background)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        fontSize: "11px",
-                        fontFamily: "monospace"
-                    }}
-                />
-                <Area type="monotone" dataKey="requests" stroke="#10b981" fill="url(#gradRequests)" strokeWidth={1.5} name="Requests" />
-            </AreaChart>
-        </ResponsiveContainer>
-    );
-}
-
-function LatencyBarChart({ series }: { series: MarketplaceStatPoint[] }) {
-    const data = series.map((p) => ({
-        time: new Date(p.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        avgMs: Math.round(p.avgLatencyMs)
-    }));
-
-    return (
-        <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={data}>
-                <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                    contentStyle={{
-                        backgroundColor: "var(--background)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        fontSize: "11px",
-                        fontFamily: "monospace"
-                    }}
-                />
-                <Bar dataKey="avgMs" fill="#10b981" name="Avg ms" radius={[2, 2, 0, 0]} />
-            </BarChart>
-        </ResponsiveContainer>
-    );
-}
-
-function TokenAreaChart({ series }: { series: MarketplaceStatPoint[] }) {
-    const data = series.map((p) => ({
-        time: new Date(p.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        tokens: p.tokens
-    }));
-
-    return (
-        <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={data}>
-                <defs>
-                    <linearGradient id="gradTokens" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#6366f1" stopOpacity={0} />
-                    </linearGradient>
-                </defs>
-                <XAxis dataKey="time" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                    contentStyle={{
-                        backgroundColor: "var(--background)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "8px",
-                        fontSize: "11px",
-                        fontFamily: "monospace"
-                    }}
-                />
-                <Area type="monotone" dataKey="tokens" stroke="#6366f1" fill="url(#gradTokens)" strokeWidth={1.5} name="Tokens" />
-            </AreaChart>
-        </ResponsiveContainer>
-    );
-}
-
-function ModelLeaderboard({ models }: { models: MarketplaceModelStat[] }) {
-    const top = models.slice(0, 8);
-    if (top.length === 0) return null;
-    const maxReqs = Math.max(...top.map((m) => m.totalRequests), 1);
-
-    return (
-        <div className="space-y-2">
-            {top.map((m, i) => (
-                <div key={m.model} className="flex items-center gap-3">
-                    <span className="w-5 text-right text-[10px] font-bold text-muted-foreground">
-                        {i + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                            <span className="truncate text-xs font-semibold">{m.model}</span>
-                            <span className="shrink-0 text-[10px] text-muted-foreground">
-                                {fmtCompact(m.totalRequests)} req · {fmtPct(m.successRate)} ok
-                            </span>
-                        </div>
-                        <div className="h-1.5 rounded-full bg-secondary/60 overflow-hidden">
-                            <div
-                                className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                                style={{ width: `${(m.totalRequests / maxReqs) * 100}%` }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function ProviderEndpoints({ providers }: { providers: MarketplaceProviderStat[] }) {
-    if (providers.length === 0) return null;
-    const sorted = [...providers].sort((a, b) => b.totalRequests - a.totalRequests).slice(0, 8);
-
-    return (
-        <div className="space-y-2">
-            {sorted.map((p) => (
-                <div key={p.providerId} className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-secondary/10 px-3 py-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        <span className={`size-2 rounded-full shrink-0 ${p.official ? "bg-emerald-500" : "bg-amber-500"}`} />
-                        <span className="truncate text-xs font-semibold">{p.displayName}</span>
-                        {p.official && (
-                            <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/10 px-1 py-0.5 text-[8px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                <BadgeCheck className="size-2" />
-                                OFFICIAL
-                            </span>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0 text-[10px] text-muted-foreground">
-                        <span>{fmtCompact(p.totalRequests)} req</span>
-                        <span>{fmtPct(p.successRate)} ok</span>
-                        <span>{Math.round(p.avgLatencyMs)}ms</span>
-                        <span>{p.models} models</span>
-                    </div>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function LiveAnalyticsSection() {
-    const overview = useAnalyticsOverview();
-    const leaderboard = useAnalyticsLeaderboard();
-    const endpoints = useAnalyticsEndpoints();
-
-    const hasTraffic = (overview.data?.totalRequests ?? 0) > 0;
-
-    return (
-        <section className="border-b border-border/60 bg-secondary/10">
-            <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
-                <SectionHead
-                    kicker="LIVE TRAFFIC"
-                    title="Every request, accounted for"
-                    desc="Throughput, latency, token volume, and the models actually serving traffic — read from the gateway's own analytics, not a dashboard mockup."
-                />
-            </div>
-
-            {/* Charts (only if traffic exists) */}
-            {hasTraffic && overview.data && (
-                <div className="mx-auto max-w-6xl px-4 pb-10">
-                    {/* Big metrics */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                        {[
-                            { label: "Requests", value: fmtCompact(overview.data.totalRequests) },
-                            { label: "Success Rate", value: fmtPct(overview.data.successRate) },
-                            { label: "Avg Latency", value: `${Math.round(overview.data.avgLatencyMs)} ms` },
-                            { label: "P95 Latency", value: `${Math.round(overview.data.p95LatencyMs)} ms` }
-                        ].map((m) => (
-                            <div key={m.label} className="rounded-lg border border-border/40 bg-card p-3 text-center">
-                                <p className="text-lg font-bold text-emerald-500">{m.value}</p>
-                                <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">{m.label}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                        {/* Traffic chart */}
-                        <div className="rounded-xl border border-border/40 bg-card p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <TrendingUp className="size-3.5 text-emerald-500" />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                    Traffic (24h)
-                                </h3>
-                            </div>
-                            <TrafficAreaChart series={overview.data.series} />
-                        </div>
-
-                        {/* Latency chart */}
-                        <div className="rounded-xl border border-border/40 bg-card p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Gauge className="size-3.5 text-amber-500" />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                    Latency (24h)
-                                </h3>
-                            </div>
-                            <LatencyBarChart series={overview.data.series} />
-                        </div>
-                    </div>
-
-                    {/* Token chart full width */}
-                    <div className="rounded-xl border border-border/40 bg-card p-4 mb-4">
-                        <div className="flex items-center gap-2 mb-3">
-                            <Layers className="size-3.5 text-indigo-500" />
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                Token Volume (24h)
-                            </h3>
-                        </div>
-                        <TokenAreaChart series={overview.data.series} />
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* Model leaderboard */}
-                        <div className="rounded-xl border border-border/40 bg-card p-4">
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                    <BarChart3 className="size-3.5 text-emerald-500" />
-                                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                        Top Models (7d)
-                                    </h3>
-                                </div>
-                                <Link to="/catalog" className="text-[10px] text-emerald-500 hover:underline">
-                                    View all →
-                                </Link>
-                            </div>
-                            <ModelLeaderboard models={leaderboard.data?.models ?? []} />
-                        </div>
-
-                        {/* Provider endpoints */}
-                        <div className="rounded-xl border border-border/40 bg-card p-4">
-                            <div className="flex items-center gap-2 mb-3">
-                                <Boxes className="size-3.5 text-amber-500" />
-                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                                    Supply Endpoints (24h)
-                                </h3>
-                            </div>
-                            <ProviderEndpoints providers={endpoints.data?.providers ?? []} />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* CTA when no data yet */}
-            {!hasTraffic && !overview.isLoading && (
-                <p className="pb-6 text-center text-[10px] text-muted-foreground/70">
-                    The catalog is warming up — charts will appear once the first requests flow through.
-                </p>
-            )}
-        </section>
     );
 }
 
@@ -737,9 +439,6 @@ function LandingPage() {
                         <LiveStatsPanel />
                     </div>
                 </section>
-
-                {/* Live Analytics — stats + charts */}
-                <LiveAnalyticsSection />
 
                 {/* Code showcase */}
                 <section className="border-b border-border/60">

@@ -29,6 +29,7 @@ import { RequireUserAuth } from "@/middleware/UserAuth.js";
 import { GetDirectClientAddress } from "@/middleware/ApiKeyAuth.js";
 import { GrantDailyLoginReward } from "@/services/dailyReward.js";
 import { Err, Ok } from "@/utils/response.js";
+import { CreateAPIKeySchema } from "@srouter/types";
 
 export const UserAuthRouter = new Hono();
 
@@ -461,12 +462,20 @@ UserAuthRouter.get("/users/transactions", RequireUserAuth, async (c) => {
 // ── Create API key ──
 UserAuthRouter.post("/users/keys", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
-    const body = await c.req.json<{ name?: string }>().catch(() => ({}));
-    const name = body.name?.trim();
-    if (!name || name.length < 1 || name.length > 64) {
-        return Err(c, "Key name must be 1-64 characters", 400);
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = CreateAPIKeySchema.safeParse(body);
+    if (!parsed.success) {
+        const msg = parsed.error.issues[0]?.message ?? "Invalid payload";
+        return Err(c, msg, 400);
     }
-    const key = await userAuthStore.createUserKey(userId, name);
+    const { name, enabled, rate_limit, quota_limit, credit_limit, allowed_models } = parsed.data;
+    const key = await userAuthStore.createUserKey(userId, name, {
+        enabled: enabled ?? true,
+        rate_limit: rate_limit ?? 0,
+        quota_limit: quota_limit ?? 0,
+        credit_limit: credit_limit ?? 0,
+        allowed_models: allowed_models ?? null
+    });
     if (!key) return Err(c, "Failed to create key", 500);
     return Ok(c, key);
 });

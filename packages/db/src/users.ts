@@ -624,35 +624,44 @@ export class UserAuthStore {
 
     // ── User's API Keys ──
 
-    public async getUserKeys(userId: string): Promise<Array<{ id: string; name: string; key: string; enabled: boolean; usageTokens: number; creditLimit: number; usageCost: number; createdAt: number }>> {
+    public async getUserKeys(userId: string): Promise<Array<{ id: string; name: string; key: string; enabled: boolean; rateLimit: number; quotaLimit: number; usageTokens: number; creditLimit: number; usageCost: number; allowedModels: string[] | null; createdAt: number }>> {
         await this.ensureTables();
         const Rows = (await this.client.all(
-            `SELECT id, name, key, enabled, usage_tokens, credit_limit, usage_cost, created_at
+            `SELECT id, name, key, enabled, rate_limit, quota_limit, usage_tokens, credit_limit, usage_cost, allowed_models, created_at
              FROM api_keys WHERE user_id = ? ORDER BY created_at DESC`,
             userId
-        )) as unknown as Array<{ id: string; name: string; key: string; enabled: number; usage_tokens: number; credit_limit: number; usage_cost: number; created_at: number }>;
+        )) as unknown as Array<{ id: string; name: string; key: string; enabled: number; rate_limit: number; quota_limit: number; usage_tokens: number; credit_limit: number; usage_cost: number; allowed_models: string | null; created_at: number }>;
         return Rows.map((r) => ({
             id: str(r.id),
             name: str(r.name),
             key: str(r.key),
             enabled: Boolean(r.enabled),
+            rateLimit: num(r.rate_limit),
+            quotaLimit: num(r.quota_limit),
             usageTokens: num(r.usage_tokens),
             creditLimit: num(r.credit_limit),
             usageCost: num(r.usage_cost),
+            allowedModels: r.allowed_models ? JSON.parse(r.allowed_models) : null,
             createdAt: num(r.created_at)
         }));
     }
 
-    public async createUserKey(userId: string, name: string): Promise<{ id: string; name: string; key: string } | null> {
+    public async createUserKey(userId: string, name: string, opts?: { enabled?: boolean; rate_limit?: number; quota_limit?: number; credit_limit?: number; allowed_models?: string[] | null }): Promise<{ id: string; name: string; key: string } | null> {
         await this.ensureTables();
         const id = `key_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
         const key = `xg_${crypto.randomUUID().replace(/-/g, "")}`;
         const now = Date.now();
         try {
             await this.client.run(
-                `INSERT INTO api_keys (id, key, name, enabled, rate_limit, quota_limit, usage_tokens, credit_limit, usage_cost, created_at, user_id)
-                 VALUES (?, ?, ?, 1, 0, 0, 0, 0, 0, ?, ?)`,
-                id, key, name, now, userId
+                `INSERT INTO api_keys (id, key, name, enabled, rate_limit, quota_limit, usage_tokens, credit_limit, usage_cost, allowed_models, created_at, user_id)
+                 VALUES (?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?, ?)`,
+                id, key, name,
+                opts?.enabled ?? 1,
+                opts?.rate_limit ?? 0,
+                opts?.quota_limit ?? 0,
+                opts?.credit_limit ?? 0,
+                opts?.allowed_models ? JSON.stringify(opts.allowed_models) : null,
+                now, userId
             );
             return { id, name, key };
         } catch {

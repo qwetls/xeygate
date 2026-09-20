@@ -3,9 +3,10 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { Copy, Check, Trash2, Plus, KeyRound, Eye, EyeOff } from "lucide-react";
+import { CreateKeyDialog } from "@/components/keys";
+import type { CreateAPIKeyZod } from "@srouter/types";
 
 export const Route = createFileRoute("/_client/dashboard/keys")({
     staticData: { title: "API Keys" },
@@ -17,15 +18,17 @@ interface ApiKey {
     name: string;
     key: string;
     enabled: boolean;
+    rateLimit: number;
+    quotaLimit: number;
     usageTokens: number;
     creditLimit: number;
     usageCost: number;
+    allowedModels: string[] | null;
     createdAt: number;
 }
 
 function ClientKeysPage() {
     const queryClient = useQueryClient();
-    const [newKeyName, setNewKeyName] = useState("");
     const [showCreate, setShowCreate] = useState(false);
 
     const { data, isPending } = useQuery({
@@ -34,10 +37,10 @@ function ClientKeysPage() {
     });
 
     const createMutation = useMutation({
-        mutationFn: (name: string) => api.post<{ id: string; name: string; key: string }>("/v1/users/keys", { name }),
+        mutationFn: (payload: CreateAPIKeyZod) =>
+            api.post<{ id: string; name: string; key: string }>("/v1/users/keys", payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["user-keys"] });
-            setNewKeyName("");
             setShowCreate(false);
         }
     });
@@ -54,37 +57,25 @@ function ClientKeysPage() {
                     <h1 className="text-2xl font-bold tracking-tight">API Keys</h1>
                     <p className="mt-1 text-xs text-muted-foreground">Create and manage your API keys for gateway access.</p>
                 </div>
-                <Button size="sm" className="gap-1.5 text-xs cursor-pointer" onClick={() => setShowCreate(!showCreate)}>
+                <Button size="sm" className="gap-1.5 text-xs cursor-pointer" onClick={() => setShowCreate(true)}>
                     <Plus className="size-3" />
                     Create Key
                 </Button>
             </header>
 
-            {showCreate && (
-                <Card>
-                    <CardContent className="pt-6">
-                        <form
-                            className="flex gap-2"
-                            onSubmit={(e) => { e.preventDefault(); if (newKeyName.trim()) createMutation.mutate(newKeyName.trim()); }}
-                        >
-                            <Input
-                                value={newKeyName}
-                                onChange={(e) => setNewKeyName(e.target.value)}
-                                placeholder="Key name (e.g. Production, Dev)"
-                                className="flex-1 text-xs"
-                                autoFocus
-                                maxLength={64}
-                            />
-                            <Button type="submit" size="sm" disabled={createMutation.isPending || !newKeyName.trim()} className="text-xs cursor-pointer">
-                                {createMutation.isPending ? "Creating..." : "Create"}
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => setShowCreate(false)} className="text-xs cursor-pointer">Cancel</Button>
-                        </form>
-                        {createMutation.isError && (
-                            <p className="mt-2 text-xs text-destructive">{createMutation.error instanceof ApiError ? createMutation.error.message : "Failed to create key"}</p>
-                        )}
-                    </CardContent>
-                </Card>
+            <CreateKeyDialog
+                open={showCreate}
+                creating={createMutation.isPending}
+                onOpenChange={setShowCreate}
+                onSubmit={async (payload) => {
+                    await createMutation.mutateAsync(payload);
+                }}
+            />
+
+            {createMutation.isError && (
+                <p className="text-xs text-destructive">
+                    {createMutation.error instanceof ApiError ? createMutation.error.message : "Failed to create key"}
+                </p>
             )}
 
             {isPending ? (
@@ -106,6 +97,11 @@ function ClientKeysPage() {
             )}
         </div>
     );
+}
+
+function formatLimit(val: number | undefined | null, suffix: string): string {
+    if (!val || val <= 0) return "Unlimited";
+    return `${val.toLocaleString()}${suffix}`;
 }
 
 function KeyCard({ apiKeyKey, onDelete, isDeleting }: { apiKeyKey: ApiKey; onDelete: () => void; isDeleting: boolean }) {
@@ -143,9 +139,15 @@ function KeyCard({ apiKeyKey, onDelete, isDeleting }: { apiKeyKey: ApiKey; onDel
                                 {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
                             </button>
                         </div>
-                        <div className="mt-2 flex gap-4 text-[10px] text-muted-foreground">
-                            <span>Tokens: {(apiKeyKey.usageTokens ?? 0).toLocaleString()}</span>
-                            <span>Cost: ${(apiKeyKey.usageCost ?? 0).toFixed(4)}</span>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+                            <span>Tokens: {apiKeyKey.usageTokens.toLocaleString()}</span>
+                            <span>Cost: ${apiKeyKey.usageCost.toFixed(4)}</span>
+                            <span>Credit: {formatLimit(apiKeyKey.creditLimit, "$")}</span>
+                            <span>Rate: {formatLimit(apiKeyKey.rateLimit, " req/m")}</span>
+                            <span>Quota: {formatLimit(apiKeyKey.quotaLimit, " tok")}</span>
+                            {apiKeyKey.allowedModels && (
+                                <span>Models: {apiKeyKey.allowedModels.length} restricted</span>
+                            )}
                         </div>
                     </div>
                     <div className="flex items-center gap-1">

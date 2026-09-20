@@ -12,17 +12,17 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ClientRouteImport } from './routes/_client'
 import { Route as AcceptableUseRouteImport } from './routes/acceptable-use'
-import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ApplyCreatorRouteImport } from './routes/apply-creator'
 import { Route as CatalogRouteImport } from './routes/catalog'
+import { Route as CookiesRouteImport } from './routes/cookies'
+import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as TermsRouteImport } from './routes/terms'
-import { Route as DocsRouteImport } from './routes/docs'
-import { Route as DocsApiReferenceRouteImport } from './routes/docs.api-reference'
 import { Route as ClientDashboardRouteImport } from './routes/_client.dashboard'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
@@ -39,6 +39,7 @@ import { Route as AdminTopupsRouteImport } from './routes/admin.topups'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as CatalogIndexRouteImport } from './routes/catalog/index'
 import { Route as CatalogSplatRouteImport } from './routes/catalog/$'
+import { Route as DocsApiReferenceRouteImport } from './routes/docs.api-reference'
 import { Route as ClientDashboardIndexRouteImport } from './routes/_client.dashboard.index'
 import { Route as ClientDashboardAnalyticsRouteImport } from './routes/_client.dashboard.analytics'
 import { Route as ClientDashboardBillingRouteImport } from './routes/_client.dashboard.billing'
@@ -66,19 +67,29 @@ const AcceptableUseRoute = AcceptableUseRouteImport.update({
   path: '/acceptable-use',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CookiesRoute = CookiesRouteImport.update({
-  id: '/cookies',
-  path: '/cookies',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApplyCreatorRoute = ApplyCreatorRouteImport.update({
+  id: '/apply-creator',
+  path: '/apply-creator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CatalogRoute = CatalogRouteImport.update({
   id: '/catalog',
   path: '/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocsRoute = DocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -110,16 +121,6 @@ const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
   getParentRoute: () => rootRouteImport,
-} as any)
-const DocsRoute = DocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocsApiReferenceRoute = DocsApiReferenceRouteImport.update({
-  id: '/api-reference',
-  path: '/api-reference',
-  getParentRoute: () => DocsRoute,
 } as any)
 const ClientDashboardRoute = ClientDashboardRouteImport.update({
   id: '/dashboard',
@@ -201,6 +202,11 @@ const CatalogSplatRoute = CatalogSplatRouteImport.update({
   path: '/$',
   getParentRoute: () => CatalogRoute,
 } as any)
+const DocsApiReferenceRoute = DocsApiReferenceRouteImport.update({
+  id: '/api-reference',
+  path: '/api-reference',
+  getParentRoute: () => DocsRoute,
+} as any)
 const ClientDashboardIndexRoute = ClientDashboardIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -269,16 +275,16 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acceptable-use': typeof AcceptableUseRoute
   '/admin': typeof AdminRouteWithChildren
+  '/apply-creator': typeof ApplyCreatorRoute
   '/catalog': typeof CatalogRouteWithChildren
   '/cookies': typeof CookiesRoute
+  '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
-  '/docs': typeof DocsRouteWithChildren
-  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/dashboard': typeof ClientDashboardRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/admin/topups': typeof AdminTopupsRoute
   '/admin/users': typeof AdminUsersRoute
   '/catalog/$': typeof CatalogSplatRoute
+  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/admin/': typeof AdminIndexRoute
   '/catalog/': typeof CatalogIndexRoute
   '/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
@@ -311,15 +318,15 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acceptable-use': typeof AcceptableUseRoute
+  '/apply-creator': typeof ApplyCreatorRoute
   '/cookies': typeof CookiesRoute
+  '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
-  '/docs': typeof DocsRouteWithChildren
-  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/admin/topups': typeof AdminTopupsRoute
   '/admin/users': typeof AdminUsersRoute
   '/catalog/$': typeof CatalogSplatRoute
+  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/admin': typeof AdminIndexRoute
   '/catalog': typeof CatalogIndexRoute
   '/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
@@ -352,17 +360,17 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_client': typeof ClientRouteWithChildren
   '/acceptable-use': typeof AcceptableUseRoute
-  '/cookies': typeof CookiesRoute
   '/admin': typeof AdminRouteWithChildren
+  '/apply-creator': typeof ApplyCreatorRoute
   '/catalog': typeof CatalogRouteWithChildren
+  '/cookies': typeof CookiesRoute
+  '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
   '/terms': typeof TermsRoute
-  '/docs': typeof DocsRouteWithChildren
-  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/_client/dashboard': typeof ClientDashboardRouteWithChildren
   '/admin/analytics': typeof AdminAnalyticsRoute
   '/admin/combo': typeof AdminComboRoute
@@ -377,6 +385,7 @@ export interface FileRoutesById {
   '/admin/topups': typeof AdminTopupsRoute
   '/admin/users': typeof AdminUsersRoute
   '/catalog/$': typeof CatalogSplatRoute
+  '/docs/api-reference': typeof DocsApiReferenceRoute
   '/admin/': typeof AdminIndexRoute
   '/catalog/': typeof CatalogIndexRoute
   '/_client/dashboard/analytics': typeof ClientDashboardAnalyticsRoute
@@ -398,16 +407,16 @@ export interface FileRouteTypes {
     | '/'
     | '/acceptable-use'
     | '/admin'
+    | '/apply-creator'
     | '/catalog'
     | '/cookies'
+    | '/docs'
     | '/login'
     | '/onboarding'
     | '/privacy'
     | '/refund'
     | '/register'
     | '/terms'
-    | '/docs'
-    | '/docs/api-reference'
     | '/dashboard'
     | '/admin/analytics'
     | '/admin/combo'
@@ -422,6 +431,7 @@ export interface FileRouteTypes {
     | '/admin/topups'
     | '/admin/users'
     | '/catalog/$'
+    | '/docs/api-reference'
     | '/admin/'
     | '/catalog/'
     | '/dashboard/analytics'
@@ -440,15 +450,15 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/acceptable-use'
+    | '/apply-creator'
     | '/cookies'
+    | '/docs'
     | '/login'
     | '/onboarding'
     | '/privacy'
     | '/refund'
     | '/register'
     | '/terms'
-    | '/docs'
-    | '/docs/api-reference'
     | '/admin/analytics'
     | '/admin/combo'
     | '/admin/keys'
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/admin/topups'
     | '/admin/users'
     | '/catalog/$'
+    | '/docs/api-reference'
     | '/admin'
     | '/catalog'
     | '/dashboard/analytics'
@@ -480,17 +491,17 @@ export interface FileRouteTypes {
     | '/'
     | '/_client'
     | '/acceptable-use'
-    | '/cookies'
     | '/admin'
+    | '/apply-creator'
     | '/catalog'
+    | '/cookies'
+    | '/docs'
     | '/login'
     | '/onboarding'
     | '/privacy'
     | '/refund'
     | '/register'
     | '/terms'
-    | '/docs'
-    | '/docs/api-reference'
     | '/_client/dashboard'
     | '/admin/analytics'
     | '/admin/combo'
@@ -505,6 +516,7 @@ export interface FileRouteTypes {
     | '/admin/topups'
     | '/admin/users'
     | '/catalog/$'
+    | '/docs/api-reference'
     | '/admin/'
     | '/catalog/'
     | '/_client/dashboard/analytics'
@@ -525,16 +537,17 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ClientRoute: typeof ClientRouteWithChildren
   AcceptableUseRoute: typeof AcceptableUseRoute
-  CookiesRoute: typeof CookiesRoute
   AdminRoute: typeof AdminRouteWithChildren
+  ApplyCreatorRoute: typeof ApplyCreatorRoute
   CatalogRoute: typeof CatalogRouteWithChildren
+  CookiesRoute: typeof CookiesRoute
+  DocsRoute: typeof DocsRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
   RegisterRoute: typeof RegisterRoute
   TermsRoute: typeof TermsRoute
-  DocsRoute: typeof DocsRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -560,13 +573,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptableUseRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/cookies': {
-      id: '/cookies'
-      path: '/cookies'
-      fullPath: '/cookies'
-      preLoaderRoute: typeof CookiesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -574,11 +580,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/apply-creator': {
+      id: '/apply-creator'
+      path: '/apply-creator'
+      fullPath: '/apply-creator'
+      preLoaderRoute: typeof ApplyCreatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/catalog': {
       id: '/catalog'
       path: '/catalog'
       fullPath: '/catalog'
       preLoaderRoute: typeof CatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/docs': {
+      id: '/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof DocsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -622,20 +649,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/docs': {
-      id: '/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof DocsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/docs/api-reference': {
-      id: '/docs/api-reference'
-      path: '/api-reference'
-      fullPath: '/docs/api-reference'
-      preLoaderRoute: typeof DocsApiReferenceRouteImport
-      parentRoute: typeof DocsRoute
     }
     '/_client/dashboard': {
       id: '/_client/dashboard'
@@ -748,6 +761,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/catalog/$'
       preLoaderRoute: typeof CatalogSplatRouteImport
       parentRoute: typeof CatalogRoute
+    }
+    '/docs/api-reference': {
+      id: '/docs/api-reference'
+      path: '/api-reference'
+      fullPath: '/docs/api-reference'
+      preLoaderRoute: typeof DocsApiReferenceRouteImport
+      parentRoute: typeof DocsRoute
     }
     '/_client/dashboard/': {
       id: '/_client/dashboard/'
@@ -952,16 +972,17 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ClientRoute: ClientRouteWithChildren,
   AcceptableUseRoute: AcceptableUseRoute,
-  CookiesRoute: CookiesRoute,
   AdminRoute: AdminRouteWithChildren,
+  ApplyCreatorRoute: ApplyCreatorRoute,
   CatalogRoute: CatalogRouteWithChildren,
+  CookiesRoute: CookiesRoute,
+  DocsRoute: DocsRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
   RegisterRoute: RegisterRoute,
   TermsRoute: TermsRoute,
-  DocsRoute: DocsRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
