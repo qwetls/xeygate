@@ -46,7 +46,16 @@ async function EnabledListings(
         SelectDisabledModelIds(p)
     ]);
     if (disabled.size === 0) return rows;
-    return rows.filter((r) => !disabled.has(r.modelId.toLowerCase()));
+    // A rule is written against the id the operator saw in the dashboard
+    // ("hy3"), while the stored listing may still carry the vendor segment
+    // ("xeygate/neko/hy3") — match on both spellings.
+    return rows.filter((r) => {
+        const stored = r.modelId.toLowerCase();
+        return (
+            !disabled.has(stored) &&
+            !disabled.has(ProviderRegistry.toDisplayModelId(r.modelId).toLowerCase())
+        );
+    });
 }
 
 /**

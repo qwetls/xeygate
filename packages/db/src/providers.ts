@@ -2,6 +2,7 @@ import type { ProviderCategory, ProviderConfig, ProviderProtocol } from "@sroute
 import { db } from "./db.js";
 import { EncryptSecret, DecryptSecret } from "./encryption.js";
 import { deleteDisabledModelsByProviderDB } from "./disabledModels.js";
+import { deleteCustomModelsByProviderDB } from "./customModels.js";
 import { num, optStr, str } from "./row-utils.js";
 
 interface ProviderRow {
@@ -132,10 +133,13 @@ export async function deleteProviderDB(id: string): Promise<boolean> {
     const Result = await db.prepare("DELETE FROM providers WHERE id = ?").run(id);
     const Deleted = num(Result.changes) > 0;
     if (Deleted) {
-        // Denylist rules keyed by this connection id die with it. Official
-        // rules live under the shared base id instead, so they intentionally
-        // survive one connection's deletion.
+        // Denylist rules and marketplace listings keyed by this connection id
+        // die with it. Official rows live under the shared base id instead, so
+        // they intentionally survive one connection's deletion. Leaving
+        // listings behind orphans them: the card keeps rendering off the base
+        // id and advertises models no surviving connection can serve.
         await deleteDisabledModelsByProviderDB(id);
+        await deleteCustomModelsByProviderDB(id);
     }
     return Deleted;
 }

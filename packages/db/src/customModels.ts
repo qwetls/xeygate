@@ -72,7 +72,7 @@ export async function deleteCustomModelDB(providerId: string, modelId: string): 
 export async function deleteCustomModelsByProviderDB(providerId: string): Promise<number> {
     const Result = await db
         .prepare("DELETE FROM custom_models WHERE provider_id = ?")
-        .run(providerId);
+        .run(providerId.toLowerCase());
     return num(Result.changes);
 }
 

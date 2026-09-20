@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { ArrowLeft, BadgeCheck, Clock, Gauge, Layers, Percent, Search, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCatalogModel, useCatalogModels, useMarketplaceModelStats } from "@/hooks/usePublicCatalog";
+import { useCatalogModel, useCatalogModels, useMarketplaceModelStats, useSessionUser } from "@/hooks/usePublicCatalog";
 import type { MarketplaceAnalyticsWindow } from "@srouter/types";
 import type { CatalogFlatOffer } from "@/lib/api";
 
@@ -60,6 +60,7 @@ function StatCard({ icon: Icon, label, value }: { icon: typeof Zap; label: strin
 export function CatalogModelDetailPage() {
     const { _splat: modelId } = useParams({ from: "/catalog/$" });
     const [window, setWindow] = useState<MarketplaceAnalyticsWindow>("7d");
+    const { user } = useSessionUser();
 
     const flat = useCatalogModels();
     const model = (flat.data?.models ?? []).find((m) => m.id === modelId);
@@ -241,9 +242,15 @@ export function CatalogModelDetailPage() {
                 <Button variant="outline" size="sm" render={<Link to="/catalog" />} className="cursor-pointer gap-2">
                     <ArrowLeft className="size-4" /> Back to marketplace
                 </Button>
-                <Button size="sm" render={<Link to="/register" />} className="cursor-pointer gap-2">
-                    Get your own key <Zap className="size-4" />
-                </Button>
+                {user ? (
+                    <Button size="sm" render={<Link to="/dashboard" />} className="cursor-pointer gap-2">
+                        Go to dashboard <Zap className="size-4" />
+                    </Button>
+                ) : (
+                    <Button size="sm" render={<Link to="/register" />} className="cursor-pointer gap-2">
+                        Get your own key <Zap className="size-4" />
+                    </Button>
+                )}
             </div>
         </div>
     );

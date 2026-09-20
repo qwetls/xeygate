@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, BadgeCheck, Boxes, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCatalogModels } from "@/hooks/usePublicCatalog";
+import { useCatalogModels, useSessionUser } from "@/hooks/usePublicCatalog";
 import type { CatalogFlatModel } from "@/lib/api";
 
 export const Route = createFileRoute("/catalog/")({ component: CatalogModelsPage });
@@ -24,6 +24,7 @@ function matches(m: CatalogFlatModel, term: string): boolean {
 
 export function CatalogModelsPage() {
     const catalog = useCatalogModels();
+    const { user } = useSessionUser();
     const [q, setQ] = useState("");
 
     const filtered = useMemo(() => {
@@ -53,8 +54,8 @@ export function CatalogModelsPage() {
                 <div className="rounded-xl border border-border/60 bg-card p-8 text-center">
                     <Boxes className="mx-auto size-10 text-muted-foreground/40" />
                     <p className="mt-3 text-sm font-semibold">No listings yet</p>
-                    <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">Ask a creator to add an API provider — or become a creator yourself after signing in and choosing “Sell APIs”.</p>
-                    <Button size="sm" render={<Link to="/register" />} className="mt-4 gap-2 cursor-pointer">Become a creator <ArrowRight className="size-4" /></Button>
+                    <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto">Ask a creator to add an API provider — or become a creator yourself by choosing “Sell APIs” from your dashboard.</p>
+                    <Button size="sm" render={<Link to={user ? "/dashboard" : "/register"} />} className="mt-4 gap-2 cursor-pointer">Become a creator <ArrowRight className="size-4" /></Button>
                 </div>
             ) : null}
 
@@ -100,7 +101,11 @@ export function CatalogModelsPage() {
 
             <div className="flex flex-wrap gap-3">
                 <Button variant="outline" size="sm" render={<Link to="/" />} className="cursor-pointer">Back to home</Button>
-                <Button size="sm" render={<Link to="/register" />} className="cursor-pointer gap-2">Register to buy or sell <ArrowRight className="size-4" /></Button>
+                {user ? (
+                    <Button size="sm" render={<Link to="/dashboard" />} className="cursor-pointer gap-2">Go to dashboard <ArrowRight className="size-4" /></Button>
+                ) : (
+                    <Button size="sm" render={<Link to="/register" />} className="cursor-pointer gap-2">Register to buy or sell <ArrowRight className="size-4" /></Button>
+                )}
             </div>
         </div>
     );

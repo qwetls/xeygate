@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Api, ApiError } from "@/lib/api";
+import { api, Api, ApiError } from "@/lib/api";
+import type { ShellUserInfo } from "@/components/layout";
 import type { MarketplaceAnalyticsWindow } from "@srouter/types";
 
 // Public (unauthenticated) model-centric storefront data. Keyed separately
@@ -41,4 +42,20 @@ export function useMarketplaceModelStats(model: string | undefined, window: Mark
         placeholderData: (prev) => prev,
         refetchInterval: 60_000
     });
+}
+
+/**
+ * The signed-in account, or null. Shares the cache entry the portal layouts
+ * use ("user-auth-status"), so a marketplace page never fires a second session
+ * probe and inherits their 60s freshness window instead of re-asking on every
+ * navigation.
+ */
+export function useSessionUser(): { user: ShellUserInfo | null; isPending: boolean } {
+    const query = useQuery({
+        queryKey: ["user-auth-status"],
+        queryFn: () => api.get<ShellUserInfo>("/v1/users/me"),
+        retry: false,
+        staleTime: 60_000
+    });
+    return { user: query.data ?? null, isPending: query.isPending };
 }

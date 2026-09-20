@@ -76,17 +76,33 @@ async function disabledModelPairs(): Promise<Set<string>> {
 }
 
 /**
+ * A model id can reach the gate in its bare stored form ("neko/hy3") or its
+ * display form ("hy3"). Operators disable models by the id they picked from
+ * the dashboard, so both spellings must veto the same model.
+ */
+function DisabledCandidates(modelId: string): string[] {
+    const bare = modelId.toLowerCase();
+    const display = ProviderRegistry.toDisplayModelId(modelId).toLowerCase();
+    return bare === display ? [bare] : [bare, display];
+}
+
+/**
  * Official rules are stored under the shared base id, so they must shadow
  * every connection of that driver; creator rules are stored under the
  * connection id and can never collide with a base id.
  */
 export async function IsModelDisabled(providerId: string, bareModelId: string): Promise<boolean> {
     const pairs = await disabledModelPairs();
-    const model = bareModelId.toLowerCase();
+    const models = DisabledCandidates(bareModelId);
     const connection = providerId.toLowerCase();
-    if (pairs.has(disabledPairKey(connection, model))) return true;
     const base = providerBaseId(connection).toLowerCase();
-    return base !== connection && pairs.has(disabledPairKey(base, model));
+    const keys = base === connection ? [connection] : [connection, base];
+    for (const key of keys) {
+        for (const model of models) {
+            if (pairs.has(disabledPairKey(key, model))) return true;
+        }
+    }
+    return false;
 }
 
 export function InvalidateDisabledModelsCache(): void {

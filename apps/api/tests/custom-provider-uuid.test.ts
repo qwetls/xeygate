@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { deleteProviderDB, getProviderByIdDB, getAllProvidersDB } from "@srouter/db";
+import {
+    addCustomModelDB,
+    deleteProviderDB,
+    getCustomModelsByProviderDB,
+    getProviderByIdDB,
+    getAllProvidersDB
+} from "@srouter/db";
 import { providerBaseId } from "@srouter/constants";
 import { ProvidersLogic } from "../src/logic/providers.logic.js";
 
@@ -233,5 +239,34 @@ test("delete provider by UUID works", async () => {
     // Verify deleted
     assert.equal(await await getProviderByIdDB(result.id), null, "Provider must be gone after delete");
     // Remove from cleanup list since already deleted
+    createdIds.splice(createdIds.indexOf(result.id), 1);
+});
+
+test("deleting a provider does not orphan its marketplace listings", async () => {
+    const result = await await ProvidersLogic.AddProvider({
+        name: "Orphan Check",
+        category: "custom_provider",
+        protocol: "openai",
+        base_url: "https://orphan.example.com/v1",
+        api_key: "«redacted:sk-…»"
+    });
+    createdIds.push(result.id);
+
+    await addCustomModelDB(result.id, "orphan-model-1");
+    assert.equal(
+        (await getCustomModelsByProviderDB(result.id)).length,
+        1,
+        "listing must exist before delete"
+    );
+
+    await deleteProviderDB(result.id);
+
+    // An orphaned row keeps a phantom catalog card alive off the base id and
+    // advertises a model no surviving connection can serve.
+    assert.equal(
+        (await getCustomModelsByProviderDB(result.id)).length,
+        0,
+        "listings must not outlive the connection"
+    );
     createdIds.splice(createdIds.indexOf(result.id), 1);
 });
