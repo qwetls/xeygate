@@ -227,6 +227,7 @@ export class ChatLogic {
             }
 
             const currentModel = candidate.model;
+            displayModel = currentModel;
             const currentReq: ChatCompletionRequest = { ...effectiveBody, model: currentModel };
             const providerId = currentModel.split("/")[0] || "default";
             let servedProviderId: string | undefined;
@@ -375,6 +376,7 @@ export class ChatLogic {
             }
 
             const currentModel = candidate.model;
+            displayModel = currentModel;
             const currentReq: ChatCompletionRequest = { ...effectiveBody, model: currentModel };
             const providerId = currentModel.split("/")[0] || "default";
 
