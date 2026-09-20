@@ -247,12 +247,52 @@ function CodeShowcase() {
 /*  Live Analytics Section                                              */
 /* ------------------------------------------------------------------ */
 
-function StatBlock({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function LiveStatsPanel() {
+    const catalogStats = useLiveStats();
+    const overview = useAnalyticsOverview();
+
+    const stats = [
+        {
+            label: "Models live",
+            value: catalogStats.data ? String(catalogStats.data.models) : "—",
+            sub: "in catalog"
+        },
+        {
+            label: "Providers",
+            value: catalogStats.data ? String(catalogStats.data.providers) : "—",
+            sub: "connected"
+        },
+        {
+            label: "Requests 24h",
+            value: overview.data ? fmtCompact(overview.data.totalRequests) : "—",
+            sub: overview.data ? `${fmtPct(overview.data.successRate)} success` : undefined
+        },
+        {
+            label: "Avg latency",
+            value: overview.data ? `${Math.round(overview.data.avgLatencyMs)}ms` : "—",
+            sub: "last 24h"
+        }
+    ];
+
     return (
-        <div className="space-y-1 px-4 py-3 text-center">
-            <p className="text-2xl font-bold tracking-tight text-emerald-500 sm:text-3xl">{value}</p>
-            <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-            {sub && <p className="text-[10px] text-muted-foreground/60">{sub}</p>}
+        <div className="overflow-hidden rounded-xl border border-border/70 bg-card">
+            <div className="flex items-center gap-2 border-b border-border/60 px-4 py-3">
+                <span className="size-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Live
+                </span>
+            </div>
+            <div className="grid grid-cols-2 gap-px bg-border/40">
+                {stats.map((s) => (
+                    <div key={s.label} className="space-y-1 bg-card p-4">
+                        <p className="text-xl font-bold tracking-tight text-emerald-500 sm:text-2xl">{s.value}</p>
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            {s.label}
+                        </p>
+                        {s.sub && <p className="text-[10px] text-muted-foreground/60">{s.sub}</p>}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 }
@@ -411,7 +451,6 @@ function ProviderEndpoints({ providers }: { providers: MarketplaceProviderStat[]
 }
 
 function LiveAnalyticsSection() {
-    const catalogStats = useLiveStats();
     const overview = useAnalyticsOverview();
     const leaderboard = useAnalyticsLeaderboard();
     const endpoints = useAnalyticsEndpoints();
@@ -419,34 +458,18 @@ function LiveAnalyticsSection() {
     const hasTraffic = (overview.data?.totalRequests ?? 0) > 0;
 
     return (
-        <section className="border-y border-border/60 bg-secondary/10">
-            {/* Hero stats band */}
-            <div className="mx-auto grid max-w-5xl grid-cols-2 gap-px px-4 py-8 sm:grid-cols-4">
-                <StatBlock
-                    label="MODELS LIVE"
-                    value={catalogStats.data ? String(catalogStats.data.models) : "—"}
-                    sub="from catalog"
-                />
-                <StatBlock
-                    label="PROVIDERS"
-                    value={catalogStats.data ? String(catalogStats.data.providers) : "—"}
-                    sub="connected"
-                />
-                <StatBlock
-                    label="REQUESTS 24H"
-                    value={overview.data ? fmtCompact(overview.data.totalRequests) : "—"}
-                    sub={overview.data ? `${fmtPct(overview.data.successRate)} success` : undefined}
-                />
-                <StatBlock
-                    label="TOKENS 24H"
-                    value={overview.data ? fmtCompact(overview.data.totalTokens) : "—"}
-                    sub={overview.data ? `${Math.round(overview.data.avgLatencyMs)}ms avg` : undefined}
+        <section className="border-b border-border/60 bg-secondary/10">
+            <div className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
+                <SectionHead
+                    kicker="LIVE TRAFFIC"
+                    title="Every request, accounted for"
+                    desc="Throughput, latency, token volume, and the models actually serving traffic — read from the gateway's own analytics, not a dashboard mockup."
                 />
             </div>
 
             {/* Charts (only if traffic exists) */}
             {hasTraffic && overview.data && (
-                <div className="mx-auto max-w-5xl px-4 pb-10">
+                <div className="mx-auto max-w-6xl px-4 pb-10">
                     {/* Big metrics */}
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
                         {[
@@ -544,10 +567,12 @@ function LiveAnalyticsSection() {
 
 function SectionHead({ kicker, title, desc }: { kicker: string; title: string; desc: string }) {
     return (
-        <div className="mx-auto max-w-2xl space-y-3 text-center">
+        <div className="border-t border-border/60 pt-6">
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-emerald-500">{kicker}</p>
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 sm:items-end sm:gap-10">
+                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+            </div>
         </div>
     );
 }
@@ -683,32 +708,33 @@ function LandingPage() {
 
             {/* Hero */}
             <main>
-                <section className="relative overflow-hidden">
+                <section className="relative overflow-hidden border-b border-border/60">
                     <div className="pointer-events-none absolute inset-0 bg-grid-pattern" />
-                    <div className="relative mx-auto max-w-5xl px-4 py-24 sm:py-28">
-                        <div className="mx-auto max-w-3xl space-y-6 text-center">
+                    <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-20 sm:py-24 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
+                        <div className="space-y-6">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-500">
                                 AI Gateway &amp; Model Marketplace
                             </p>
                             <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
-                                One endpoint for every AI model
+                                Every model behind one key.
                             </h1>
-                            <p className="mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-                                XEYGATE is the cloud AI gateway that routes your requests to OpenAI,
-                                Anthropic, Google and more with a single API key — quotas enforced, every
-                                request traced, and a live model marketplace where you buy the best price
-                                or sell your own supply. All from one dashboard.
+                            <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+                                XEYGATE sits in front of OpenAI, Anthropic, Google, and the creators
+                                selling supply on its marketplace. One key reaches all of them. Quotas
+                                are enforced per key, and every request is logged with the exact
+                                connection that served it.
                             </p>
-                            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                            <div className="flex flex-wrap items-center gap-3 pt-2">
                                 <Button size="lg" render={<Link to="/register" />} className="cursor-pointer gap-2">
-                                    START FOR FREE
+                                    Get started
                                     <ArrowRight className="size-4" />
                                 </Button>
                                 <Button size="lg" variant="outline" render={<Link to="/catalog" />} className="cursor-pointer">
-                                    VIEW MARKETPLACE
+                                    View marketplace
                                 </Button>
                             </div>
                         </div>
+                        <LiveStatsPanel />
                     </div>
                 </section>
 
@@ -725,7 +751,7 @@ function LandingPage() {
                     <div className="mx-auto max-w-5xl px-4">
                         <SectionHead
                             kicker="USE CASES"
-                            title="Built for AI apps, agents, and product teams"
+                            title="What gets routed through it"
                             desc="From chatbots to batch pipelines — if it touches many AI models, XEYGATE sits in the middle."
                         />
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -753,7 +779,7 @@ function LandingPage() {
                     <div className="mx-auto max-w-5xl px-4">
                         <SectionHead
                             kicker="FEATURES"
-                            title="The gateway"
+                            title="What one key gets you"
                             desc="Everything that keeps one key safe to share across customers — and makes every token dollar accountable."
                         />
                         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -827,14 +853,14 @@ function LandingPage() {
                     <div className="pointer-events-none absolute inset-0 bg-grid-pattern" />
                     <div className="relative mx-auto max-w-2xl space-y-6 px-4 text-center">
                         <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                            Start with one key
+                            Create your first key
                         </h2>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                             Create an account, issue a key, and send your first request. No card required.
                         </p>
                         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                             <Button size="lg" render={<Link to="/register" />} className="cursor-pointer gap-2">
-                                START FOR FREE
+                                Get started
                                 <ArrowRight className="size-4" />
                             </Button>
                             <Button size="lg" variant="outline" render={<Link to="/catalog" />} className="cursor-pointer">
