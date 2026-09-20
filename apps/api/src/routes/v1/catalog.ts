@@ -3,7 +3,6 @@ import { getAllProvidersDB, listModelPricingDB } from "@srouter/db";
 import type { ProviderConfig } from "@srouter/types";
 import { isSeedProvider, providerBaseId } from "@srouter/constants";
 import { getPricingForModel, getModelMetadata } from "@srouter/pricing";
-import { ProviderRegistry } from "@srouter/providers";
 import { IsOfficialProviderRow, SelectDisabledModelIds, SelectMarketplaceRows } from "@/logic/official.logic.js";
 import { RuntimeAliasFor, StorefrontName } from "@/logic/providers.logic.js";
 import { Ok } from "@/utils/response.js";
@@ -96,13 +95,12 @@ CatalogRouter.get("/catalog", async (c) => {
             const alias = RuntimeAliasFor((p.providerId || p.id).toLowerCase());
             const models = customModels.map((mr) => {
                 const modelId = mr.modelId;
-                const displayId = ProviderRegistry.toDisplayModelId(modelId);
                 const override = pricingOverrides.find(
                     (o) => o.providerId === p.providerId && o.model === modelId
                 );
                 if (override) {
                     return {
-                        id: displayId,
+                        id: modelId,
                         fullId: `${alias}/${modelId}`,
                         pricing: {
                             input: override.input,
@@ -116,7 +114,7 @@ CatalogRouter.get("/catalog", async (c) => {
                 }
                 const staticPrice = getPricingForModel(p.providerId, modelId);
                 return {
-                    id: displayId,
+                    id: modelId,
                     fullId: `${alias}/${modelId}`,
                     pricing: {
                         input: staticPrice.input,
@@ -276,8 +274,8 @@ CatalogRouter.get("/catalog/models", async (c) => {
                 )[0];
                 const meta = getModelMetadata(e.id) ?? getModelMetadata(BareModelId(e.id));
                 return {
-                    id: ProviderRegistry.toDisplayModelId(e.id),
-                    aliases: e.aliases.map((a) => ProviderRegistry.toDisplayModelId(a)),
+                    id: e.id,
+                    aliases: e.aliases,
                     endpoints: e.offers.length,
                     offers: e.offers,
                     bestOffer: cheapest ?? null,
@@ -319,9 +317,6 @@ CatalogRouter.get("/catalog/models", async (c) => {
         const firstModel = rows.find((mr) => {
             const stored = mr.modelId.toLowerCase();
             if (stored === requested || stored === requestedBare) return true;
-            // Accept display IDs: "stealth/hy3" resolves to stored "stealth/neko/hy3"
-            const displayStored = ProviderRegistry.toDisplayModelId(mr.modelId).toLowerCase();
-            if (displayStored === requested || displayStored === requestedBare) return true;
             // Legacy deep links were built from the old display id, which had
             // every leading segment stripped ("gpt-6-astra" → "cx/gpt-6-astra").
             return BareModelId(stored) === requested || BareModelId(stored) === requestedBare;
