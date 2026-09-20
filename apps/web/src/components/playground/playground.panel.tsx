@@ -57,6 +57,8 @@ function usePlaygroundKey(variant: PlaygroundVariant) {
 
 interface PickableModel {
     id: string;
+    /** Internal routing ID (with vendor prefix) — sent in API requests. */
+    routingId?: string;
     owned_by: string;
 }
 
@@ -65,6 +67,7 @@ function ModelPicker({
     apiKey,
     source,
     value,
+    routingValue,
     onChange,
     onError
 }: {
@@ -72,7 +75,9 @@ function ModelPicker({
     apiKey: string;
     source: "catalog" | "models";
     value: string;
-    onChange: (m: string) => void;
+    /** Routing ID sent in API requests (may differ from display value). */
+    routingValue?: string;
+    onChange: (displayId: string, routingId: string) => void;
     onError: (msg: string) => void;
 }) {
     const [open, setOpen] = useState(false);
@@ -110,7 +115,11 @@ function ModelPicker({
                 };
                 for (const p of data.providers ?? []) {
                     for (const m of p.models ?? []) {
-                        models.push({ id: m.fullId ?? m.id, owned_by: p.name });
+                        models.push({
+                            id: m.id,
+                            routingId: m.fullId,
+                            owned_by: p.name
+                        });
                     }
                 }
             } else {
@@ -201,7 +210,7 @@ function ModelPicker({
                                         key={m.id}
                                         type="button"
                                         onClick={() => {
-                                            onChange(m.id);
+                                            onChange(m.id, m.routingId ?? m.id);
                                             setOpen(false);
                                             setSearch("");
                                         }}
@@ -233,6 +242,7 @@ export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVa
     const selectedKey = keys.find((k) => k.id === selectedKeyId) ?? firstEnabled ?? keys[0];
 
     const [model, setModel] = useState("");
+    const [modelRouting, setModelRouting] = useState("");
     const [prompt, setPrompt] = useState("");
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [sending, setSending] = useState(false);
@@ -246,6 +256,7 @@ export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVa
     function handleKeyChange(id: string) {
         setSelectedKeyId(id);
         setModel("");
+        setModelRouting("");
         setError("");
     }
 
@@ -268,7 +279,7 @@ export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVa
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    model,
+                    model: modelRouting || model,
                     messages: nextMessages.map((m) => ({ role: m.role, content: m.content })),
                     stream: false
                 })
@@ -413,7 +424,11 @@ export function PlaygroundPanel({ variant = "client" }: { variant?: PlaygroundVa
                         apiKey={apiKey}
                         source={modelSource}
                         value={model}
-                        onChange={(m) => setModel(m)}
+                        routingValue={modelRouting}
+                        onChange={(display, routing) => {
+                            setModel(display);
+                            setModelRouting(routing);
+                        }}
                         onError={(msg) => setError(msg)}
                     />
                 ) : (
