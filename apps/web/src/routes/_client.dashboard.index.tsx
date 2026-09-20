@@ -14,8 +14,12 @@ import {
     Coins,
     Copy,
     KeyRound,
+    Shield,
     Store,
-    Users
+    Users,
+    Zap,
+    Rocket,
+    CreditCard
 } from "lucide-react";
 
 export const Route = createFileRoute("/_client/dashboard/")({
@@ -31,6 +35,7 @@ interface UserInfo {
     role: "buyer" | "creator";
     status: "active" | "pending" | "banned";
     creatorStatus: "none" | "pending" | "approved" | "rejected";
+    plan: "starter" | "pro" | "pro_max" | "payg";
 }
 
 interface PublicPlatformStats {
@@ -129,7 +134,8 @@ function ClientDashboard() {
                 </p>
             )}
 
-            <section className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            <section className="grid grid-cols-1 sm:grid-cols-4 gap-3.5">
+                <PlanCard plan={user?.plan} />
                 <article className="rounded-xl border border-border/80 bg-card/60 p-4">
                     <div className="flex items-center justify-between text-muted-foreground">
                         <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Credits</span>
@@ -276,5 +282,29 @@ function CopyableCode({ text }: { text: string }) {
                 {copied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3 text-muted-foreground" />}
             </button>
         </div>
+    );
+}
+
+const PLAN_CONFIG: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
+    starter: { label: "Starter", icon: Zap, color: "text-muted-foreground" },
+    pro: { label: "Pro", icon: Shield, color: "text-emerald-500" },
+    pro_max: { label: "Pro Max", icon: Rocket, color: "text-purple-500" },
+    payg: { label: "Pay-as-you-go", icon: CreditCard, color: "text-blue-500" }
+};
+
+function PlanCard({ plan }: { plan?: string }) {
+    const config = PLAN_CONFIG[plan ?? "starter"] ?? PLAN_CONFIG.starter;
+    const Icon = config.icon;
+    return (
+        <article className="rounded-xl border border-border/80 bg-card/60 p-4">
+            <div className="flex items-center justify-between text-muted-foreground">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Plan</span>
+                <Icon className={`size-4 ${config.color}`} />
+            </div>
+            <div className="mt-2 text-lg font-bold">{config.label}</div>
+            <Link to="/plans" className="mt-1 inline-block text-[10px] text-emerald-500 hover:underline">
+                View plans & upgrade →
+            </Link>
+        </article>
     );
 }

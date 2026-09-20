@@ -5,8 +5,7 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Copy, Check, Trash2, Plus, KeyRound, Eye, EyeOff } from "lucide-react";
-import { CreateKeyDialog } from "@/components/keys";
-import type { CreateAPIKeyZod } from "@srouter/types";
+import { ClientCreateKeyDialog } from "@/components/keys/keys.client-create-dialog";
 
 export const Route = createFileRoute("/_client/dashboard/keys")({
     staticData: { title: "API Keys" },
@@ -37,7 +36,7 @@ function ClientKeysPage() {
     });
 
     const createMutation = useMutation({
-        mutationFn: (payload: CreateAPIKeyZod) =>
+        mutationFn: (payload: { name: string; enabled: boolean }) =>
             api.post<{ id: string; name: string; key: string }>("/v1/users/keys", payload),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["user-keys"] });
@@ -63,7 +62,7 @@ function ClientKeysPage() {
                 </Button>
             </header>
 
-            <CreateKeyDialog
+            <ClientCreateKeyDialog
                 open={showCreate}
                 creating={createMutation.isPending}
                 onOpenChange={setShowCreate}

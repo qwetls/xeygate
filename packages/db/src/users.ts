@@ -7,6 +7,7 @@ const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export type UserRole = "buyer" | "creator";
 export type UserStatus = "active" | "pending" | "banned";
 export type CreatorStatus = "none" | "pending" | "approved" | "rejected";
+export type PlanId = "starter" | "pro" | "pro_max" | "payg";
 
 export interface User {
     id: string;
@@ -19,6 +20,7 @@ export interface User {
     creatorStatus: CreatorStatus;
     creatorShare: number;
     isAdmin: boolean;
+    plan: PlanId;
     acceptedTermsAt: number | null;
     termsVersion: string;
     githubId: string | null;
@@ -44,6 +46,7 @@ interface UserRow {
     creator_status: string;
     creator_share: number;
     is_admin: number | boolean;
+    plan: string;
     accepted_terms_at: number | null;
     terms_version: string;
     github_id: string | null;
@@ -192,6 +195,15 @@ export class UserAuthStore {
         } catch {
             // Index already exists
         }
+        // Migrate plan column (subscription tier: starter/pro/pro_max/payg).
+        // New accounts default to "starter".
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'starter'`
+            );
+        } catch {
+            // Column already exists
+        }
         this.initialized = true;
     }
 
@@ -326,6 +338,16 @@ export class UserAuthStore {
         await this.client.run(
             `UPDATE users SET accepted_terms_at = ?, terms_version = ?, updated_at = ? WHERE id = ?`,
             Date.now(), termsVersion, Date.now(), userId
+        );
+        return this.getUserById(userId);
+    }
+
+    /** Admin: assign a subscription plan to a user. */
+    public async updatePlan(userId: string, plan: PlanId): Promise<User | null> {
+        await this.ensureTables();
+        await this.client.run(
+            `UPDATE users SET plan = ?, updated_at = ? WHERE id = ?`,
+            plan, Date.now(), userId
         );
         return this.getUserById(userId);
     }
@@ -711,6 +733,8 @@ export class UserAuthStore {
 }
 
 function mapUserRow(row: UserRow): User {
+    const planVal = str(row.plan);
+    const validPlans: PlanId[] = ["starter", "pro", "pro_max", "payg"];
     return {
         id: str(row.id),
         email: str(row.email),
@@ -727,6 +751,7 @@ function mapUserRow(row: UserRow): User {
                 : "none",
         creatorShare: num(row.creator_share, 0.8),
         isAdmin: row.is_admin === 1 || (row.is_admin as unknown) === true,
+        plan: (validPlans as string[]).includes(planVal) ? (planVal as PlanId) : "starter",
         acceptedTermsAt:
             row.accepted_terms_at === null || row.accepted_terms_at === undefined
                 ? null

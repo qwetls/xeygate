@@ -22,3 +22,5 @@ AdminUsersRouter.post("/admin/payouts/:id/process", RequireAdmin, AdminUsersCont
 
 AdminUsersRouter.get("/admin/topups", RequireAdmin, AdminUsersController.ListTopups);
 AdminUsersRouter.post("/admin/topups/:id/process", RequireAdmin, AdminUsersController.ProcessTopup);
+
+AdminUsersRouter.patch("/admin/users/:id/plan", RequireAdmin, AdminUsersController.SetUserPlan);

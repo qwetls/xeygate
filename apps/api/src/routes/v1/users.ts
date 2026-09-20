@@ -192,6 +192,7 @@ UserAuthRouter.post("/users/login", async (c) => {
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
         credits: reward.awarded ? reward.credits : user.credits,
+        plan: user.plan,
         dailyReward: reward.awarded ? { day: reward.day, amount: reward.amount } : null
     });
 });
@@ -268,6 +269,7 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
         credits: user.credits,
+        plan: user.plan,
         acceptedTermsAt: user.acceptedTermsAt,
         termsVersion: user.termsVersion,
         createdAt: user.createdAt,
@@ -383,6 +385,14 @@ UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
         creatorStatus: updated.creatorStatus,
         requiresApproval: true
     });
+});
+
+// ── User's subscription plan ──
+UserAuthRouter.get("/users/plan", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const user = await userAuthStore.getUserById(userId);
+    if (!user) return Err(c, "User not found", 404);
+    return Ok(c, { plan: user.plan });
 });
 
 // The applicant's own application form (mirrors what the admin sees).
