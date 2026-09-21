@@ -131,29 +131,23 @@ export function EnforcePlanAccess(): MiddlewareHandler {
         }
 
         // ── 2. Model tier access (only for chat completions) ──
-        const url = new URL(c.req.url);
-        if (url.pathname.includes("/chat/completion")) {
-            try {
-                const body = await c.req.json<{ model?: string }>();
-                if (body?.model) {
-                    const modelTier = classifyModelTier(body.model);
-                    if (!planAllowsTier(planId, modelTier)) {
-                        return Err(
-                            c,
-                            `Model '${body.model}' requires the ${modelTier === "pro_max" ? "Pro Max" : "Pro"} plan or higher. Your current plan is ${plan.label}. Upgrade at ${PLANS_URL}`,
-                            403,
-                            {
-                                type: "invalid_request_error",
-                                code: "plan_upgrade_required",
-                                required_tier: modelTier,
-                                current_plan: planId,
-                                upgrade_url: PLANS_URL
-                            }
-                        );
+        // ValidateJson has already parsed the body, so we can safely read it.
+        const body = c.req.valid("json" as never) as { model?: string } | undefined;
+        if (body?.model) {
+            const modelTier = classifyModelTier(body.model);
+            if (!planAllowsTier(planId, modelTier)) {
+                return Err(
+                    c,
+                    `Model '${body.model}' requires the ${modelTier === "pro_max" ? "Pro Max" : "Pro"} plan or higher. Your current plan is ${plan.label}. Upgrade at ${PLANS_URL}`,
+                    403,
+                    {
+                        type: "invalid_request_error",
+                        code: "plan_upgrade_required",
+                        required_tier: modelTier,
+                        current_plan: planId,
+                        upgrade_url: PLANS_URL
                     }
-                }
-            } catch {
-                // Body not available (streamed or already consumed) — skip tier check
+                );
             }
         }
 

@@ -12,18 +12,18 @@ export const ChatRouter = new Hono();
 ChatRouter.post(
     "/chat/completions",
     ApiKeyAuth,
+    ValidateJson(ChatCompletionRequestSchema),
     EnforcePlanAccess,
     EnforceRateLimit,
-    ValidateJson(ChatCompletionRequestSchema),
     EnforceModelAccess(),
     ChatController.CreateCompletion
 );
 ChatRouter.post(
     "/chat/completion",
     ApiKeyAuth,
+    ValidateJson(ChatCompletionRequestSchema),
     EnforcePlanAccess,
     EnforceRateLimit,
-    ValidateJson(ChatCompletionRequestSchema),
     EnforceModelAccess(),
     ChatController.CreateCompletion
 );
