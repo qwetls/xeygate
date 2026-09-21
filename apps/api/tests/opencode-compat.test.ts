@@ -81,7 +81,8 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
     assert.equal(providersRes.status, 200);
 
     // 3. Test POST /v1/chat/completions (/v1 level)
-    const chatRes = await app.fetch(
+    console.error("DIAG app.fetch type:", typeof app.fetch);
+    const rawResult = app.fetch(
         new Request("http://localhost:3000/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -99,6 +100,8 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
             })
         })
     );
+    console.error("DIAG rawResult type:", typeof rawResult, rawResult?.constructor?.name);
+    const chatRes = await rawResult;
     console.error("DIAG chatRes:", typeof chatRes, chatRes?.constructor?.name, "status:", chatRes?.status, "ok:", chatRes?.ok);
     const text = await chatRes.text();
     console.error("DIAG body:", text?.slice(0, 500));
