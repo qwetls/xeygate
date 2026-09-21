@@ -466,14 +466,15 @@ UserAuthRouter.post("/users/topups/:id/pay", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const lookup = await GetPayableTopupOrder(c.req.param("id"), userId);
     if (!lookup.topup) {
-        return Err(c, lookup.error ?? "Top-up order not found", 404, {
-            code: "topup_not_found"
-        });
+        const payable = lookup.statusCode === 409;
+        return Err(
+            c,
+            lookup.error ?? "Top-up order not found",
+            lookup.statusCode ?? 404,
+            { code: payable ? "topup_not_payable" : "topup_not_found" }
+        );
     }
-    if (lookup.error) {
-        return Err(c, lookup.error, 409, { code: "topup_not_payable" });
-    }
-    const settled = await SettleTopupOrder(lookup.topup!.id);
+    const settled = await SettleTopupOrder(lookup.topup.id);
     if (!settled) return Err(c, "Order is not awaiting payment", 409, { code: "topup_not_payable" });
     return Ok(c, { topup: settled.topup, credits: settled.credits });
 });

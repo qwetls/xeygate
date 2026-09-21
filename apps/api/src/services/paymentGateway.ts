@@ -64,11 +64,11 @@ export async function SettleTopupOrder(
 export async function GetPayableTopupOrder(
     orderId: string,
     userId: string
-): Promise<{ topup?: TopupOrder; error?: string }> {
+): Promise<{ topup?: TopupOrder; error?: string; statusCode?: 404 | 409 }> {
     const topup = await getTopupOrderDB(orderId);
-    if (!topup || topup.userId !== userId) return { error: "Top-up order not found" };
-    if (topup.status !== "pending_payment") {
-        return { error: "Order is not awaiting payment" };
-    }
+    if (!topup || topup.userId !== userId)
+        return { error: "Top-up order not found", statusCode: 404 };
+    if (topup.status !== "pending_payment")
+        return { error: "Order is not awaiting payment", statusCode: 409 };
     return { topup };
 }
