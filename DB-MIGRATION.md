@@ -46,3 +46,20 @@ either engine. Existing SQLite files are untouched.
 
 **Placeholder syntax:** `?` in all queries is auto-translated to `$1, $2, ...`
 for PostgreSQL by the `PgClient` (see `packages/db/src/client.ts`).
+
+## 2026-09-21 — User plan system (`users.plan`)
+
+**Change:** Added `plan` TEXT column to `users` table for plan-based model access
+and rate limiting. Values: `starter` (default), `pro`, `pro_max`, `payg`.
+
+- Handled automatically by `initDatabase()` column sync — `users.plan`
+  is added with default `'starter'`, so existing accounts start on the
+  free tier.
+- Plan definitions live in `packages/constants/src/plans.ts`:
+  - `starter`: 10K tokens/day, 10 req/min, starter-tier models only
+  - `pro`: 500K tokens/day, 60 req/min, pro-tier models (GPT-4, Claude, etc.)
+  - `pro_max`: unlimited tokens, unlimited requests, all models
+  - `payg`: pay-as-you-go, unlimited tokens/requests, all models
+- `EnforcePlanAccess` middleware checks model tier, daily token budget,
+  and per-minute request rate. Admins bypass all plan restrictions.
+- Admins can change user plans via `PATCH /v1/admin/users/:id/plan`.
