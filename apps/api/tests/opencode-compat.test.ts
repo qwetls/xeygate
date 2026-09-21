@@ -81,8 +81,7 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
     assert.equal(providersRes.status, 200);
 
     // 3. Test POST /v1/chat/completions (/v1 level)
-    console.error("DIAG app.fetch type:", typeof app.fetch);
-    const rawResult = app.fetch(
+    const chatRes = await app.fetch(
         new Request("http://localhost:3000/v1/chat/completions", {
             method: "POST",
             headers: {
@@ -100,13 +99,8 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
             })
         })
     );
-    console.error("DIAG rawResult type:", typeof rawResult, rawResult?.constructor?.name);
-    const chatRes = await rawResult;
-    console.error("DIAG chatRes:", typeof chatRes, chatRes?.constructor?.name, "status:", chatRes?.status, "ok:", chatRes?.ok);
-    const text = await chatRes.text();
-    console.error("DIAG body:", text?.slice(0, 500));
     assert.equal(chatRes.status, 200);
-    const chatBody = JSON.parse(text) as ChatCompletionResponse;
+    const chatBody = (await chatRes.json()) as ChatCompletionResponse;
     assert.equal(chatBody.choices[0].message.content, "SRouter siap digunakan!");
 
     // 4. Test POST /chat/completions (root level)

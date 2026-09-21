@@ -14,7 +14,7 @@ ChatRouter.post(
     ApiKeyAuth,
     EnforceRateLimit,
     ValidateJson(ChatCompletionRequestSchema),
-    EnforcePlanAccess,
+    EnforcePlanAccess(),
     EnforceModelAccess(),
     ChatController.CreateCompletion
 );
@@ -23,7 +23,7 @@ ChatRouter.post(
     ApiKeyAuth,
     EnforceRateLimit,
     ValidateJson(ChatCompletionRequestSchema),
-    EnforcePlanAccess,
+    EnforcePlanAccess(),
     EnforceModelAccess(),
     ChatController.CreateCompletion
 );
