@@ -99,8 +99,11 @@ test("OpenCode Compatibility - supports both /v1 and root endpoints", async (t) 
             })
         })
     );
+    console.error("DIAG chatRes:", typeof chatRes, chatRes?.constructor?.name, "status:", chatRes?.status, "ok:", chatRes?.ok);
+    const text = await chatRes.text();
+    console.error("DIAG body:", text?.slice(0, 500));
     assert.equal(chatRes.status, 200);
-    const chatBody = (await chatRes.json()) as ChatCompletionResponse;
+    const chatBody = JSON.parse(text) as ChatCompletionResponse;
     assert.equal(chatBody.choices[0].message.content, "SRouter siap digunakan!");
 
     // 4. Test POST /chat/completions (root level)
