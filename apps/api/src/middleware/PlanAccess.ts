@@ -1,7 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { Err } from "@/utils/response.js";
-import { userAuthStore } from "@srouter/db";
-import { PLANS, type PlanId, planAllowsTier } from "@srouter/constants";
+import { userAuthStore, getPlanConfigDB } from "@srouter/db";
+import { tierAllowsPlan, type PlanId } from "@srouter/constants";
 
 const PLANS_URL = "https://gate.xeycompany.com/plans";
 
@@ -110,16 +110,17 @@ export function EnforcePlanAccess(): MiddlewareHandler {
         if (user.isAdmin) return await next();
 
         const planId = (user.plan ?? "starter") as PlanId;
-        const plan = PLANS[planId];
-        if (!plan) return await next();
+        // DB-backed config (admin-editable at /admin/plans) with a constants
+        // fallback, so limits change without a redeploy.
+        const plan = await getPlanConfigDB(planId);
 
         // ── 1. Rate limit (requests per minute) ──
-        const rateCheck = trackRequest(userId, plan.requestsPerMinute);
+        const rateCheck = trackRequest(userId, plan.rpm);
         if (!rateCheck.ok) {
             c.header("Retry-After", String(rateCheck.retryAfterSec));
             return Err(
                 c,
-                `Plan limit exceeded: your ${plan.label} plan allows ${plan.requestsPerMinute} requests per minute. Upgrade at ${PLANS_URL}`,
+                `Plan limit exceeded: your ${plan.label} plan allows ${plan.rpm} requests per minute. Upgrade at ${PLANS_URL}`,
                 429,
                 {
                     type: "insufficient_quota",
@@ -135,7 +136,7 @@ export function EnforcePlanAccess(): MiddlewareHandler {
         const body = c.req.valid("json" as never) as { model?: string } | undefined;
         if (body?.model) {
             const modelTier = classifyModelTier(body.model);
-            if (!planAllowsTier(planId, modelTier)) {
+            if (!tierAllowsPlan(plan.minTier, modelTier)) {
                 return Err(
                     c,
                     `Model '${body.model}' requires the ${modelTier === "pro_max" ? "Pro Max" : "Pro"} plan or higher. Your current plan is ${plan.label}. Upgrade at ${PLANS_URL}`,

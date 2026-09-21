@@ -28,6 +28,11 @@ import {
 import { RequireUserAuth } from "@/middleware/UserAuth.js";
 import { GetDirectClientAddress } from "@/middleware/ApiKeyAuth.js";
 import { GrantDailyLoginReward } from "@/services/dailyReward.js";
+import {
+    GetActiveGateway,
+    GetPayableTopupOrder,
+    SettleTopupOrder
+} from "@/services/paymentGateway.js";
 import { Err, Ok } from "@/utils/response.js";
 import { CreateAPIKeySchema } from "@srouter/types";
 
@@ -402,10 +407,11 @@ UserAuthRouter.get("/users/creator-application", RequireUserAuth, async (c) => {
     return Ok(c, { application });
 });
 
-// ── Wallet top-up orders (out-of-band payment, admin-verified) ──
-// The buyer creates an order and pays off-platform; an admin approves it,
-// which credits the wallet and writes the matching ledger row. Only one
-// order may be pending per user at a time.
+// ── Wallet top-up orders (payment-gateway flow, sandbox settlement) ──
+// The buyer creates an order ('pending_payment') and settles it through the
+// active gateway — the sandbox gateway's "pay" endpoint below credits the
+// wallet immediately; a real gateway settles from its webhook. Only one
+// unpaid order may exist per user at a time.
 const TOPUP_MIN_AMOUNT = 5;
 const TOPUP_MAX_AMOUNT = 10000;
 
@@ -419,12 +425,15 @@ UserAuthRouter.post("/users/topups", RequireUserAuth, async (c) => {
     const reference =
         body.reference === undefined ? undefined : String(body.reference).trim().slice(0, 100);
     if (await getPendingTopupOrderDB(userId)) {
-        return Err(c, "A top-up order is already pending. Cancel it or wait for review.", 409, {
+        return Err(c, "A top-up order is already awaiting payment. Pay or cancel it first.", 409, {
             code: "topup_pending_exists"
         });
     }
     const order = await createTopupOrderDB({ userId, amount, reference });
-    return Ok(c, { topup: order });
+    return Ok(c, {
+        topup: order,
+        gateway: { name: GetActiveGateway().name, sandbox: GetActiveGateway().sandbox }
+    });
 });
 
 UserAuthRouter.get("/users/topups", RequireUserAuth, async (c) => {
@@ -443,11 +452,30 @@ UserAuthRouter.post("/users/topups/:id/cancel", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const order = await getTopupOrderDB(c.req.param("id"));
     if (!order || order.userId !== userId) return Err(c, "Top-up order not found", 404);
-    if (order.status !== "pending") {
-        return Err(c, "Only pending orders can be cancelled", 409, { code: "topup_not_pending" });
+    if (order.status !== "pending" && order.status !== "pending_payment") {
+        return Err(c, "Only unpaid orders can be cancelled", 409, { code: "topup_not_pending" });
     }
     const cancelled = await processTopupOrderDB(order.id, "cancelled");
     return Ok(c, { topup: cancelled });
+});
+
+// Sandbox gateway settlement — stands in for the gateway's async "payment
+// succeeded" callback. Owner-only; credits land immediately. A real gateway
+// replaces this with its checkout redirect + webhook into SettleTopupOrder.
+UserAuthRouter.post("/users/topups/:id/pay", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const lookup = await GetPayableTopupOrder(c.req.param("id"), userId);
+    if (!lookup.topup) {
+        return Err(c, lookup.error ?? "Top-up order not found", 404, {
+            code: "topup_not_found"
+        });
+    }
+    if (lookup.error) {
+        return Err(c, lookup.error, 409, { code: "topup_not_payable" });
+    }
+    const settled = await SettleTopupOrder(lookup.topup!.id);
+    if (!settled) return Err(c, "Order is not awaiting payment", 409, { code: "topup_not_payable" });
+    return Ok(c, { topup: settled.topup, credits: settled.credits });
 });
 
 // ── List user's API keys ──

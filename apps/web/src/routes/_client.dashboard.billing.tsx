@@ -16,7 +16,13 @@ const TOPUP_MAX = 10000;
 const TOPUP_PRESETS = [10, 25, 50, 100];
 const LEDGER_PAGE = 25;
 
-type TopupStatus = "pending" | "approved" | "rejected" | "cancelled";
+type TopupStatus =
+    | "pending"
+    | "pending_payment"
+    | "approved"
+    | "paid"
+    | "rejected"
+    | "cancelled";
 
 interface TopupOrder {
     id: string;
@@ -42,14 +48,18 @@ interface LedgerEntry {
 
 const TOPUP_STATUS_STYLES: Record<TopupStatus, string> = {
     pending: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+    pending_payment: "bg-amber-500/10 text-amber-500 border-amber-500/20",
     approved: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+    paid: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
     rejected: "bg-destructive/10 text-destructive border-destructive/20",
     cancelled: "bg-muted/50 text-muted-foreground border-border/60"
 };
 
 const TOPUP_STATUS_LABEL: Record<TopupStatus, string> = {
-    pending: "Pending",
-    approved: "Approved",
+    pending: "In review",
+    pending_payment: "Awaiting payment",
+    approved: "Paid",
+    paid: "Paid",
     rejected: "Rejected",
     cancelled: "Cancelled"
 };
@@ -109,13 +119,27 @@ function BillingPage() {
         onSuccess: (res) => {
             invalidateWallet();
             toast.success(
-                `Top-up order created: $${res.topup.amount.toFixed(2)} — awaiting payment verification`
+                `Order created: $${res.topup.amount.toFixed(2)} — complete the payment to credit your wallet`
             );
             setAmount("");
             setReference("");
         },
         onError: (err) => {
             toast.error(err instanceof Error ? err.message : "Top-up request failed");
+        }
+    });
+
+    const payMut = useMutation({
+        mutationFn: (id: string) =>
+            api.post<{ topup: TopupOrder; credits: number }>(`/v1/users/topups/${id}/pay`, {}),
+        onSuccess: (res) => {
+            invalidateWallet();
+            toast.success(
+                `Payment confirmed — $${res.topup.amount.toFixed(2)} credited (wallet: $${res.credits.toFixed(2)})`
+            );
+        },
+        onError: (err) => {
+            toast.error(err instanceof Error ? err.message : "Payment failed");
         }
     });
 
@@ -189,12 +213,15 @@ function BillingPage() {
                         <div>
                             <div className="flex items-center gap-2">
                                 <span
-                                    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${TOPUP_STATUS_STYLES.pending}`}
+                                    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${TOPUP_STATUS_STYLES[pending.status]}`}
                                 >
-                                    {TOPUP_STATUS_LABEL.pending}
+                                    {TOPUP_STATUS_LABEL[pending.status]}
                                 </span>
                                 <span className="text-sm font-bold text-foreground">
-                                    ${pending.amount.toFixed(2)} top-up in review
+                                    ${pending.amount.toFixed(2)} top-up{" "}
+                                    {pending.status === "pending_payment"
+                                        ? "awaiting your payment"
+                                        : "in review"}
                                 </span>
                             </div>
                             <p className="mt-1.5 text-[11px] text-muted-foreground">
@@ -202,25 +229,53 @@ function BillingPage() {
                                 {pending.reference ? ` · ref ${pending.reference}` : ""}
                             </p>
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                Credits are added to your wallet once the admin verifies your
-                                payment.
+                                {pending.status === "pending_payment" ? (
+                                    <>
+                                        Pay below to complete the checkout — the sandbox gateway
+                                        simulates a successful payment and credits land in your
+                                        wallet instantly. No admin approval needed.
+                                    </>
+                                ) : (
+                                    <>
+                                        This legacy order is awaiting admin verification. Credits
+                                        are added once it is processed.
+                                    </>
+                                )}
                             </p>
                         </div>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 cursor-pointer gap-1.5 text-xs"
-                            disabled={cancelMut.isPending}
-                            onClick={() => cancelMut.mutate(pending.id)}
-                        >
-                            {cancelMut.isPending ? (
-                                <Loader2 className="size-3.5 animate-spin" />
-                            ) : (
-                                <XCircle className="size-3.5" />
+                        <div className="flex items-center gap-2">
+                            {pending.status === "pending_payment" && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-8 cursor-pointer gap-1.5 text-xs"
+                                    disabled={payMut.isPending}
+                                    onClick={() => payMut.mutate(pending.id)}
+                                >
+                                    {payMut.isPending ? (
+                                        <Loader2 className="size-3.5 animate-spin" />
+                                    ) : (
+                                        <CreditCard className="size-3.5" />
+                                    )}
+                                    Pay ${pending.amount.toFixed(2)}
+                                </Button>
                             )}
-                            Cancel order
-                        </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 cursor-pointer gap-1.5 text-xs"
+                                disabled={cancelMut.isPending}
+                                onClick={() => cancelMut.mutate(pending.id)}
+                            >
+                                {cancelMut.isPending ? (
+                                    <Loader2 className="size-3.5 animate-spin" />
+                                ) : (
+                                    <XCircle className="size-3.5" />
+                                )}
+                                Cancel order
+                            </Button>
+                        </div>
                     </div>
                 </section>
             )}
@@ -231,8 +286,8 @@ function BillingPage() {
             >
                 <h2 className="text-sm font-bold tracking-tight text-foreground">Top up wallet</h2>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Create an order, pay out-of-band, and mention your payment reference — the
-                    admin approves it and credits land in your wallet.
+                    Create an order and pay it through the gateway — credits land in your wallet
+                    the moment payment completes. No admin verification.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -314,7 +369,9 @@ function BillingPage() {
                 )}
                 {pending && (
                     <p className="mt-2 text-[11px] text-amber-500">
-                        Resolve your pending top-up order first to create a new one.
+                        {pending.status === "pending_payment"
+                            ? "Pay or cancel your open order first to create a new one."
+                            : "Resolve your pending top-up order first to create a new one."}
                     </p>
                 )}
             </section>

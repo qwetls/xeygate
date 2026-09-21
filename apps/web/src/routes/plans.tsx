@@ -32,6 +32,39 @@ type PlanTier = {
     highlighted?: boolean;
 };
 
+interface PublicPlanConfig {
+    id: string;
+    label: string;
+    priceCentsUsd: number;
+    dailyTokens: number;
+    rpm: number;
+    minTier: string;
+}
+
+function formatLimit(n: number): string {
+    return n === 0 ? "Unlimited" : n.toLocaleString();
+}
+
+function mergePlanConfig(plan: PlanTier, cfg: PublicPlanConfig | undefined): PlanTier {
+    if (!cfg) return plan;
+    const price =
+        cfg.id === "payg"
+            ? plan.price
+            : cfg.priceCentsUsd === 0
+              ? "$0"
+              : `$${(cfg.priceCentsUsd / 100).toFixed(2).replace(/\.00$/, "")}`;
+    const features = plan.features.map((f) => {
+        if (/requests\/minute/i.test(f))
+            return `${formatLimit(cfg.rpm)} requests/minute`;
+        if (/tokens/i.test(f))
+            return cfg.dailyTokens === 0
+                ? "Unlimited tokens"
+                : `${cfg.dailyTokens.toLocaleString()} tokens/day limit`;
+        return f;
+    });
+    return { ...plan, name: cfg.label || plan.name, price, features };
+}
+
 const PLANS: PlanTier[] = [
     {
         id: "starter",
@@ -115,6 +148,19 @@ function PlansPage() {
         retry: false
     });
 
+    const { data: publicPlans } = useQuery({
+        queryKey: ["public-plans"],
+        queryFn: () =>
+            api.get<{ object: "plans"; plans: PublicPlanConfig[] }>("/v1/plans"),
+        retry: false,
+        staleTime: 5 * 60_000
+    });
+
+    const cfgById = new Map(
+        (publicPlans?.plans ?? []).map((c) => [c.id.replace(/_/g, "-"), c])
+    );
+    const plans = PLANS.map((plan) => mergePlanConfig(plan, cfgById.get(plan.id)));
+
     return (
         <div className="min-h-screen bg-background text-foreground font-mono">
             <header className="sticky top-0 z-40 border-b border-border/80 bg-background/90 backdrop-blur-md">
@@ -156,7 +202,7 @@ function PlansPage() {
                 {/* Plans grid */}
                 <section className="mx-auto max-w-6xl px-4 py-16 sm:py-20">
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        {PLANS.map((plan) => (
+                        {plans.map((plan) => (
                             <PlanCard key={plan.id} plan={plan} user={user} />
                         ))}
                     </div>

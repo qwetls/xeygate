@@ -298,6 +298,18 @@ const TABLES: TableDef[] = [
         ]
     },
     {
+        name: "plan_configs",
+        columns: [
+            { name: "plan", definition: "TEXT PRIMARY KEY" },
+            { name: "label", definition: "TEXT NOT NULL" },
+            { name: "price_cents_usd", definition: "INTEGER NOT NULL DEFAULT 0" },
+            { name: "rpm", definition: "INTEGER NOT NULL DEFAULT 0" },
+            { name: "daily_tokens", definition: "INTEGER NOT NULL DEFAULT 0" },
+            { name: "min_tier", definition: "TEXT NOT NULL DEFAULT 'starter'" },
+            { name: "updated_at", definition: "INTEGER NOT NULL" }
+        ]
+    },
+    {
         name: "model_pricing",
         columns: [
             { name: "id", definition: "TEXT PRIMARY KEY" },

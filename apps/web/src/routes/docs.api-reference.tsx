@@ -140,8 +140,10 @@ function ApiReferencePage() {
                 <EndpointRow method="GET" path="/v1/users/me" desc="Current user profile — balance, streak, admin flag, terms consent." auth="Session" />
                 <EndpointRow method="PATCH" path="/v1/users/me" desc="Update display name. Body: {name}." auth="Session" />
                 <EndpointRow method="GET" path="/v1/users/transactions" desc="Wallet transaction ledger with pagination." auth="Session" />
-                <EndpointRow method="POST" path="/v1/users/topups" desc="Create a top-up order. Body: {amount, currency?, reference?}." auth="Session" />
+                <EndpointRow method="POST" path="/v1/users/topups" desc="Create a top-up order (status pending_payment). Body: {amount, currency?, reference?}." auth="Session" />
+                <EndpointRow method="POST" path="/v1/users/topups/:id/pay" desc="Pay an unpaid top-up order through the gateway (currently sandbox) — credits the wallet instantly." auth="Session" />
                 <EndpointRow method="POST" path="/v1/users/topups/:id/cancel" desc="Cancel a pending top-up order." auth="Session" />
+                <EndpointRow method="GET" path="/v1/plans" desc="Public plan catalog — label, price, daily token budget, req/min, and model tier for every plan (DB-backed, admin-editable)." auth="Public" />
                 <EndpointRow method="GET" path="/v1/users/creator-application" desc="Read own creator application." auth="Session" />
                 <EndpointRow method="PUT" path="/v1/users/role" desc="Request creator upgrade. Body: {display_name, reason, link?}." auth="Session" />
             </Section>
@@ -183,7 +185,9 @@ function ApiReferencePage() {
                 <EndpointRow method="POST" path="/v1/admin/users/:id/demote" desc="Demote admin to regular user." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/providers" desc="List all configured providers." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/providers/:id" desc="Provider detail with models, keys, quota." auth="Admin" />
-                <EndpointRow method="POST" path="/v1/admin/topups/:id/process" desc="Approve or reject a top-up order. Body: {action: approve|reject, note?}." auth="Admin" />
+                <EndpointRow method="POST" path="/v1/admin/topups/:id/process" desc="Manually settle or decline a top-up order (fallback when the gateway needs operator correction). Body: {action, note?}." auth="Admin" />
+                <EndpointRow method="GET" path="/v1/admin/plans" desc="Read the DB-backed plan configuration enforced on every request." auth="Admin" />
+                <EndpointRow method="PUT" path="/v1/admin/plans/:plan" desc="Update a plan's label, price, daily token limit, req/min, and model tier. Live immediately." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/platform-analytics" desc="Platform-wide metrics — users, creators, models, tokens, top users." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/settings" desc="Read system settings." auth="Admin" />
                 <EndpointRow method="PATCH" path="/v1/admin/settings" desc="Update system settings. Body: partial settings object." auth="Admin" />

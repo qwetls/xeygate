@@ -81,7 +81,7 @@ test("order lifecycle: create → duplicate guard → list → cancel → re-can
     assert.equal(created.status, 200);
     const order = ((await created.json()) as { topup: { id: string; amount: number; status: string; reference?: string } }).topup;
     assert.equal(order.amount, 25.5);
-    assert.equal(order.status, "pending");
+    assert.equal(order.status, "pending_payment");
     assert.equal(order.reference, "ref-9911");
 
     const duplicate = await postTopup(token, { amount: 10 });
@@ -126,6 +126,56 @@ test("cancel is owner-only", async () => {
         headers: cookie(intruder.token)
     });
     assert.equal(stolen.status, 404);
+});
+
+test("sandbox payment credits the wallet once, without any admin step", async () => {
+    const buyer = await newAccount();
+    const intruder = await newAccount();
+
+    const created = ((await (await postTopup(buyer.token, { amount: 30 })).json()) as {
+        topup: { id: string };
+    }).topup;
+
+    // Not yours → 404 (existence is not leaked).
+    const stolen = await app.request(`/v1/users/topups/${created.id}/pay`, {
+        method: "POST",
+        headers: cookie(intruder.token)
+    });
+    assert.equal(stolen.status, 404);
+
+    const paid = await app.request(`/v1/users/topups/${created.id}/pay`, {
+        method: "POST",
+        headers: cookie(buyer.token)
+    });
+    assert.equal(paid.status, 200);
+    const paidBody = (await paid.json()) as { topup: { status: string }; credits: number };
+    assert.equal(paidBody.topup.status, "paid");
+    assert.equal(paidBody.credits, buyer.credits + 30);
+
+    // Double-pay guard — the conditional flip only matches unpaid rows.
+    const again = await app.request(`/v1/users/topups/${created.id}/pay`, {
+        method: "POST",
+        headers: cookie(buyer.token)
+    });
+    assert.equal(again.status, 409);
+
+    // A paid order can no longer be cancelled either.
+    const cancel = await app.request(`/v1/users/topups/${created.id}/cancel`, {
+        method: "POST",
+        headers: cookie(buyer.token)
+    });
+    assert.equal(cancel.status, 409);
+
+    const ledger = (await (
+        await app.request("/v1/users/transactions", { headers: cookie(buyer.token) })
+    ).json()) as { transactions: Array<{ type: string; amount: number; description: string }> };
+    const row = ledger.transactions.find((t) => t.description.includes(created.id));
+    assert.ok(row, "settlement wrote a ledger row");
+    assert.equal(row.type, "credit");
+    assert.equal(row.amount, 30);
+
+    // The wallet queue is clear again → a new order is accepted.
+    assert.equal((await postTopup(buyer.token, { amount: 5 })).status, 200);
 });
 
 test("admin approval credits the wallet once and writes the ledger row", async () => {

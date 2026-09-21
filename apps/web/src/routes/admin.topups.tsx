@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { CheckCircle2, Coins, CreditCard, Loader2, XCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Coins, CreditCard } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,7 +18,13 @@ export const Route = createFileRoute("/admin/topups")({
     component: AdminTopupsPage
 });
 
-type TopupStatus = "pending" | "approved" | "rejected" | "cancelled";
+type TopupStatus =
+    | "pending"
+    | "pending_payment"
+    | "approved"
+    | "paid"
+    | "rejected"
+    | "cancelled";
 
 interface TopupOrder {
     id: string;
@@ -38,8 +43,10 @@ interface TopupOrder {
 function statusStyles(status: TopupStatus) {
     switch (status) {
         case "pending":
+        case "pending_payment":
             return "bg-amber-500/10 text-amber-500 border-amber-500/20";
         case "approved":
+        case "paid":
             return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
         case "rejected":
             return "bg-destructive/10 text-destructive border-destructive/20";
@@ -49,9 +56,11 @@ function statusStyles(status: TopupStatus) {
 }
 
 const STATUS_LABEL: Record<TopupStatus, string> = {
-    pending: "Pending",
-    approved: "Approved",
-    rejected: "Rejected",
+    pending: "Legacy review",
+    pending_payment: "Awaiting payment",
+    approved: "Paid",
+    paid: "Paid",
+    rejected: "Declined",
     cancelled: "Cancelled"
 };
 
@@ -66,9 +75,7 @@ function StatusBadge({ status }: { status: TopupStatus }) {
 }
 
 function AdminTopupsPage() {
-    const queryClient = useQueryClient();
-    const [actingId, setActingId] = useState<string | null>(null);
-    const [showAll, setShowAll] = useState(false);
+    const [showAll, setShowAll] = useState(true);
 
     const { data, isPending, isError, error, refetch } = useQuery({
         queryKey: ["admin-topups", showAll],
@@ -79,38 +86,11 @@ function AdminTopupsPage() {
         refetchInterval: 30_000
     });
 
-    const processMut = useMutation({
-        mutationFn: ({ id, status }: { id: string; status: "approved" | "rejected" }) =>
-            api.post<{ topup: TopupOrder }>(`/v1/admin/topups/${id}/process`, { status }),
-        onSuccess: (res) => {
-            queryClient.invalidateQueries({ queryKey: ["admin-topups"] });
-            queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-            toast.success(
-                res.topup.status === "approved"
-                    ? `Top-up approved — $${res.topup.amount.toFixed(2)} credited`
-                    : "Top-up rejected"
-            );
-        },
-        onError: (err) => {
-            toast.error(err instanceof Error ? err.message : "Failed to process top-up");
-        }
-    });
-
     const topups = data?.topups ?? [];
-    const pendingCount = topups.filter((t) => t.status === "pending").length;
-    const totalPending = topups
-        .filter((t) => t.status === "pending")
-        .reduce((sum, t) => sum + t.amount, 0);
-
-    const runProcess = (t: TopupOrder, status: "approved" | "rejected") => {
-        setActingId(`${t.id}:${status}`);
-        processMut.mutate(
-            { id: t.id, status },
-            {
-                onSettled: () => setActingId(null)
-            }
-        );
-    };
+    const openOrders = topups.filter(
+        (t) => t.status === "pending" || t.status === "pending_payment"
+    );
+    const totalUnpaid = openOrders.reduce((sum, t) => sum + t.amount, 0);
 
     return (
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 font-mono">
@@ -123,9 +103,9 @@ function AdminTopupsPage() {
                         Top-up Orders
                     </h1>
                     <p className="mt-1 max-w-2xl text-xs text-muted-foreground leading-relaxed">
-                        Review buyer top-up orders. Approve once the payment has been verified
-                        off-platform — the amount is credited to the buyer's wallet and recorded
-                        in their ledger. Reject to close the order without crediting.
+                        Payment log — top-ups settle automatically through the gateway
+                        (currently sandbox) and credit the buyer&apos;s wallet on payment. No
+                        admin approval is needed; use this view to audit orders.
                     </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -136,7 +116,7 @@ function AdminTopupsPage() {
                         onClick={() => setShowAll(false)}
                         className="h-8 text-xs cursor-pointer"
                     >
-                        Pending{pendingCount > 0 ? ` (${pendingCount})` : ""}
+                        Open{openOrders.length > 0 ? ` (${openOrders.length})` : ""}
                     </Button>
                     <Button
                         type="button"
@@ -159,28 +139,28 @@ function AdminTopupsPage() {
                 </div>
             </header>
 
-            {!showAll && (
+            {showAll && (
                 <section className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                     <div className="rounded-xl border border-border/80 bg-card/60 p-4 shadow-2xs">
                         <div className="flex items-center justify-between text-muted-foreground">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">
-                                Pending Orders
+                                Open Orders
                             </span>
                             <CreditCard className="size-3.5 text-amber-500" strokeWidth={1.75} />
                         </div>
                         <div className="mt-2 text-2xl font-bold text-amber-500">
-                            {pendingCount.toLocaleString()}
+                            {openOrders.length.toLocaleString()}
                         </div>
                     </div>
                     <div className="rounded-xl border border-border/80 bg-card/60 p-4 shadow-2xs">
                         <div className="flex items-center justify-between text-muted-foreground">
                             <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">
-                                Total Pending
+                                Unpaid Total
                             </span>
                             <Coins className="size-3.5 text-muted-foreground" strokeWidth={1.75} />
                         </div>
                         <div className="mt-2 text-2xl font-bold text-foreground">
-                            ${totalPending.toFixed(2)}
+                            ${totalUnpaid.toFixed(2)}
                         </div>
                     </div>
                 </section>
@@ -205,7 +185,7 @@ function AdminTopupsPage() {
                         {showAll ? "No top-up orders yet" : "No pending top-ups"}
                     </h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                        Top-up orders created by buyers will appear here for review.
+                        Top-up orders created by buyers will appear here as they are paid.
                     </p>
                 </div>
             ) : (
@@ -219,7 +199,7 @@ function AdminTopupsPage() {
                                 <TableHead>Reference</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead>Processed</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
+                                <TableHead className="text-right">Note</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -256,47 +236,8 @@ function AdminTopupsPage() {
                                             ? new Date(t.processedAt).toLocaleDateString()
                                             : "—"}
                                     </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center justify-end gap-1.5">
-                                            {t.status === "pending" ? (
-                                                <>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={actingId !== null}
-                                                        onClick={() => void runProcess(t, "approved")}
-                                                        className="h-7 gap-1 px-2 text-[11px] cursor-pointer border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10"
-                                                    >
-                                                        {actingId === `${t.id}:approved` ? (
-                                                            <Loader2 className="size-3 animate-spin" />
-                                                        ) : (
-                                                            <CheckCircle2 className="size-3" />
-                                                        )}
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        type="button"
-                                                        variant="outline"
-                                                        size="sm"
-                                                        disabled={actingId !== null}
-                                                        onClick={() => void runProcess(t, "rejected")}
-                                                        className="h-7 gap-1 px-2 text-[11px] cursor-pointer border-rose-500/30 text-rose-500 hover:bg-rose-500/10"
-                                                    >
-                                                        {actingId === `${t.id}:rejected` ? (
-                                                            <Loader2 className="size-3 animate-spin" />
-                                                        ) : (
-                                                            <XCircle className="size-3" />
-                                                        )}
-                                                        Reject
-                                                    </Button>
-                                                </>
-                                            ) : (
-                                                <span className="text-[11px] text-muted-foreground">
-                                                    {t.note ?? "—"}
-                                                </span>
-                                            )}
-                                        </div>
+                                    <TableCell className="text-muted-foreground">
+                                        {t.note ?? "—"}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -307,9 +248,9 @@ function AdminTopupsPage() {
 
             <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
                 <Coins className="size-3" />
-                Approving credits the buyer's wallet instantly and writes a ledger entry. An order
-                can only be processed once — approved, rejected, or buyer-cancelled orders are
-                final.
+                Orders settle automatically when the buyer completes the gateway payment — the
+                wallet is credited and a ledger entry is written in the same step. Paid, declined,
+                and cancelled orders are final.
             </p>
         </div>
     );

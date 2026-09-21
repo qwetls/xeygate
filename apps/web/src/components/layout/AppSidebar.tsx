@@ -7,6 +7,7 @@ import {
     CreditCard,
     Cpu,
     Gauge,
+    Gem,
     GitFork,
     Globe,
     KeyRound,
@@ -40,6 +41,7 @@ const mainNavItems = [
     { to: "/admin/users", label: "Users", icon: Users },
     { to: "/admin/payouts", label: "Payouts", icon: Banknote },
     { to: "/admin/topups", label: "Top-ups", icon: CreditCard },
+    { to: "/admin/plans", label: "Plans", icon: Gem },
     { to: "/admin/keys", label: "API Keys", icon: KeyRound },
     { to: "/admin/providers", label: "Providers", icon: Boxes },
     { to: "/admin/playground", label: "Playground", icon: Terminal }

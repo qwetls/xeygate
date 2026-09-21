@@ -63,3 +63,43 @@ and rate limiting. Values: `starter` (default), `pro`, `pro_max`, `payg`.
 - `EnforcePlanAccess` middleware checks model tier, daily token budget,
   and per-minute request rate. Admins bypass all plan restrictions.
 - Admins can change user plans via `PATCH /v1/admin/users/:id/plan`.
+
+## 2026-09-22 — DB-backed plan configuration (`plan_configs`)
+
+**Change:** Plan limits are no longer hardcoded constants — they live in a new
+`plan_configs` table so admins can edit them at runtime without a redeploy.
+
+- Handled automatically by `initDatabase()` table sync — `plan_configs` is
+  created on first boot in either engine.
+- Columns: `plan` (TEXT PK), `label`, `price_cents_usd` (INTEGER),
+  `rpm` (INTEGER), `daily_tokens` (INTEGER), `min_tier` (TEXT),
+  `updated_at` (INTEGER). On SQLite/PG `rpm`/`daily_tokens`/`price_cents_usd`
+  are BIGINT under PostgreSQL (INTEGER→BIGINT quirk).
+- **Self-seeding:** the table is empty on first read, so `loadAllPlanConfigs()`
+  inserts one row per `PLANS` id from `packages/constants/src/plans.ts` via a
+  multi-row `INSERT ... ON CONFLICT(plan) DO NOTHING`. The constants remain the
+  source of the initial defaults; the DB rows become the live source thereafter.
+- `EnforcePlanAccess` now reads `getPlanConfigDB(planId)` (a 15s-TTL cache) for
+  `rpm`, `daily_tokens`, and `min_tier` on every `/chat/completions` request;
+  `tierAllowsPlan()` in constants does the tier comparison. A 0 limit means
+  unlimited, matching the `pro_max`/`payg` defaults.
+- Admins edit config via `PUT /v1/admin/plans/:plan` (validated); the public
+  `GET /v1/plans` catalog and the `/plans` page now render from these rows.
+
+## 2026-09-22 — Top-up orders settle through a gateway (`pending_payment`)
+
+**Change:** `topup_orders.status` gains two values. A new order is created as
+`pending_payment` (not `pending`); a sandbox payment gateway settles it to
+`paid`, crediting the wallet and writing a ledger row in one step — no admin
+approval is required.
+
+- No schema change: `status` is TEXT, so the new values (`pending_payment`,
+  `paid`) need no migration. Legacy rows keep their status.
+- `pending`/`approved` are still readable and processable so orders created
+  before this change are not stranded; the admin `POST /v1/admin/topups/:id/process`
+  endpoint remains as a manual-correction escape hatch.
+- `processTopupOrderDB` pins open statuses with a conditional
+  `WHERE ... status IN ('pending','pending_payment')`, so a double-settle
+  (buyer pays while an admin approves) can only credit once.
+- Settlement is one function (`SettleTopupOrder`) the sandbox flow calls and a
+  future real-gateway webhook can reuse.

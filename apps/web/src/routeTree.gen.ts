@@ -31,6 +31,7 @@ import { Route as AdminComboRouteImport } from './routes/admin.combo'
 import { Route as AdminKeysRouteImport } from './routes/admin.keys'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
+import { Route as AdminPlansRouteImport } from './routes/admin.plans'
 import { Route as AdminPlaygroundRouteImport } from './routes/admin.playground'
 import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
@@ -161,6 +162,11 @@ const AdminLogsRoute = AdminLogsRouteImport.update({
 const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
   id: '/payouts',
   path: '/payouts',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPlaygroundRoute = AdminPlaygroundRouteImport.update({
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
@@ -386,6 +394,7 @@ export interface FileRoutesById {
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
+  '/admin/plans': typeof AdminPlansRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
@@ -433,6 +442,7 @@ export interface FileRouteTypes {
     | '/admin/keys'
     | '/admin/logs'
     | '/admin/payouts'
+    | '/admin/plans'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
@@ -475,6 +485,7 @@ export interface FileRouteTypes {
     | '/admin/keys'
     | '/admin/logs'
     | '/admin/payouts'
+    | '/admin/plans'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/quota'
@@ -520,6 +531,7 @@ export interface FileRouteTypes {
     | '/admin/keys'
     | '/admin/logs'
     | '/admin/payouts'
+    | '/admin/plans'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
@@ -717,6 +729,13 @@ declare module '@tanstack/react-router' {
       path: '/payouts'
       fullPath: '/admin/payouts'
       preLoaderRoute: typeof AdminPayoutsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plans': {
+      id: '/admin/plans'
+      path: '/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/playground': {
@@ -937,6 +956,7 @@ interface AdminRouteChildren {
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLogsRoute: typeof AdminLogsRoute
   AdminPayoutsRoute: typeof AdminPayoutsRoute
+  AdminPlansRoute: typeof AdminPlansRoute
   AdminPlaygroundRoute: typeof AdminPlaygroundRoute
   AdminPricingRoute: typeof AdminPricingRoute
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
@@ -953,6 +973,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminKeysRoute: AdminKeysRoute,
   AdminLogsRoute: AdminLogsRoute,
   AdminPayoutsRoute: AdminPayoutsRoute,
+  AdminPlansRoute: AdminPlansRoute,
   AdminPlaygroundRoute: AdminPlaygroundRoute,
   AdminPricingRoute: AdminPricingRoute,
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
