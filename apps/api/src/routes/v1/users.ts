@@ -14,13 +14,7 @@ import {
     countTopupOrdersDB,
     getPendingTopupOrderDB,
     processTopupOrderDB,
-    getTopupEnabledDB,
-    createPlanPurchaseDB,
-    getPlanPurchaseDB,
-    getPendingPlanPurchaseDB,
-    settlePlanPurchaseDB,
-    listPlanPurchasesDB,
-    getPlanConfigDB
+    getTopupEnabledDB
 } from "@srouter/db";
 import {
     validateEmail,
@@ -204,8 +198,6 @@ UserAuthRouter.post("/users/login", async (c) => {
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
         credits: reward.awarded ? reward.credits : user.credits,
-        plan: user.plan,
-        planExpiresAt: user.planExpiresAt,
         dailyReward: reward.awarded ? { day: reward.day, amount: reward.amount } : null
     });
 });
@@ -282,8 +274,6 @@ UserAuthRouter.get("/users/me", RequireUserAuth, async (c) => {
         creatorStatus: user.creatorStatus,
         isAdmin: user.isAdmin,
         credits: user.credits,
-        plan: user.plan,
-        planExpiresAt: user.planExpiresAt,
         acceptedTermsAt: user.acceptedTermsAt,
         termsVersion: user.termsVersion,
         createdAt: user.createdAt,
@@ -401,14 +391,6 @@ UserAuthRouter.put("/users/role", RequireUserAuth, async (c) => {
     });
 });
 
-// ── User's subscription plan ──
-UserAuthRouter.get("/users/plan", RequireUserAuth, async (c) => {
-    const userId = c.get("userId") as string;
-    const user = await userAuthStore.getUserById(userId);
-    if (!user) return Err(c, "User not found", 404);
-    return Ok(c, { plan: user.plan, planExpiresAt: user.planExpiresAt });
-});
-
 // The applicant's own application form (mirrors what the admin sees).
 UserAuthRouter.get("/users/creator-application", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
@@ -491,51 +473,6 @@ UserAuthRouter.post("/users/topups/:id/pay", RequireUserAuth, async (c) => {
     const settled = await SettleTopupOrder(lookup.topup.id);
     if (!settled) return Err(c, "Order is not awaiting payment", 409, { code: "topup_not_payable" });
     return Ok(c, { topup: settled.topup, credits: settled.credits });
-});
-
-// ── Plan purchases (self-subscribe) ──
-
-UserAuthRouter.post("/plan-purchases", RequireUserAuth, async (c) => {
-    if (!(await getTopupEnabledDB())) {
-        return Err(c, "Plan purchases are currently disabled by the administrator.", 403, {
-            code: "topup_disabled"
-        });
-    }
-    const userId = c.get("userId") as string;
-    const body = await c.req.json<{ plan?: string }>().catch(() => ({}));
-    const plan = String(body.plan ?? "").trim();
-    const allowed = ["pro", "pro_max"] as const;
-    if (!(allowed as readonly string[]).includes(plan)) {
-        return Err(c, "Invalid plan. Allowed: pro, pro_max", 400, { code: "invalid_plan" });
-    }
-    if (await getPendingPlanPurchaseDB(userId)) {
-        return Err(c, "A plan purchase is already awaiting payment. Pay or cancel it first.", 409, {
-            code: "plan_purchase_pending"
-        });
-    }
-    const config = await getPlanConfigDB(plan as "pro" | "pro_max");
-    const purchase = await createPlanPurchaseDB({ userId, plan, amountCents: config.priceCentsUsd });
-    return Ok(c, { purchase });
-});
-
-UserAuthRouter.post("/plan-purchases/:id/pay", RequireUserAuth, async (c) => {
-    const userId = c.get("userId") as string;
-    const purchase = await getPlanPurchaseDB(c.req.param("id"));
-    if (!purchase || purchase.userId !== userId) {
-        return Err(c, "Plan purchase not found", 404, { code: "plan_purchase_not_found" });
-    }
-    if (purchase.status !== "pending_payment") {
-        return Err(c, "Order is not awaiting payment", 409, { code: "plan_purchase_not_payable" });
-    }
-    const settled = await settlePlanPurchaseDB(purchase.id);
-    if (!settled) return Err(c, "Order is not awaiting payment", 409, { code: "plan_purchase_not_payable" });
-    return Ok(c, { purchase: settled.purchase, expiresAt: settled.expiresAt });
-});
-
-UserAuthRouter.get("/plan-purchases", RequireUserAuth, async (c) => {
-    const userId = c.get("userId") as string;
-    const purchases = await listPlanPurchasesDB(userId);
-    return Ok(c, { purchases });
 });
 
 // ── List user's API keys ──

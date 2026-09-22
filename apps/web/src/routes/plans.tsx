@@ -1,23 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { api, ApiError } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-    Check,
-    Zap,
-    Shield,
-    Rocket,
-    CreditCard,
-    ArrowRight,
-    Clock
-} from "lucide-react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/plans")({
-    component: PlansPage,
+    beforeLoad: () => {
+        throw redirect({ to: "/catalog" });
+    },
+    component: () => null,
     staticData: { title: "Plans" }
 });
 

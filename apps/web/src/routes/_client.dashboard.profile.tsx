@@ -6,7 +6,7 @@ import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { BadgeCheck, Clock, Coins, Flame, Mail, ShieldCheck, UserRound, Gem } from "lucide-react";
+import { BadgeCheck, Clock, Coins, Flame, Mail, ShieldCheck, UserRound } from "lucide-react";
 
 export const Route = createFileRoute("/_client/dashboard/profile")({
     staticData: { title: "Profile" },
@@ -22,8 +22,6 @@ interface UserInfo {
     status: "active" | "pending" | "banned";
     creatorStatus: "none" | "pending" | "approved" | "rejected";
     isAdmin: boolean;
-    plan: string;
-    planExpiresAt: number | null;
     createdAt: number;
     loginStreak: number;
 }
@@ -217,20 +215,6 @@ function ProfilePage() {
                         <div className="flex items-center justify-between border-b border-border/50 pb-2">
                             <dt className="text-muted-foreground">Status</dt>
                             <dd className="font-semibold text-foreground capitalize">{user?.status ?? "…"}</dd>
-                        </div>
-                        <div className="flex items-center justify-between border-b border-border/50 pb-2">
-                            <dt className="text-muted-foreground">Current plan</dt>
-                            <dd className="font-semibold text-foreground">
-                                <span className="inline-flex items-center gap-1.5">
-                                    <Gem className="size-3 text-muted-foreground" strokeWidth={1.75} />
-                                    {user?.plan === "pro_max" ? "Pro Max" : user?.plan === "payg" ? "Pay-as-you-go" : user?.plan === "pro" ? "Pro" : "Starter"}
-                                </span>
-                                {user?.planExpiresAt && (
-                                    <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">
-                                        expires {new Date(user.planExpiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                                    </span>
-                                )}
-                            </dd>
                         </div>
                         <div className="flex items-center justify-between border-b border-border/50 pb-2">
                             <dt className="text-muted-foreground">Creator access</dt>
