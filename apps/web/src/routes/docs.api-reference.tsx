@@ -143,6 +143,7 @@ function ApiReferencePage() {
                 <EndpointRow method="POST" path="/v1/users/topups" desc="Create a top-up order (status pending_payment). Body: {amount, currency?, reference?}." auth="Session" />
                 <EndpointRow method="POST" path="/v1/users/topups/:id/pay" desc="Pay an unpaid top-up order through the gateway (currently sandbox) — credits the wallet instantly." auth="Session" />
                 <EndpointRow method="POST" path="/v1/users/topups/:id/cancel" desc="Cancel a pending top-up order." auth="Session" />
+                <EndpointRow method="GET" path="/v1/users/logs" desc="Recent request activity for the current user's keys (model, tokens, latency, status)." auth="Session" />
                 <EndpointRow method="GET" path="/v1/users/creator-application" desc="Read own creator application." auth="Session" />
                 <EndpointRow method="PUT" path="/v1/users/role" desc="Request creator upgrade. Body: {display_name, reason, link?}." auth="Session" />
             </Section>

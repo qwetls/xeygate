@@ -14,7 +14,8 @@ import {
     countTopupOrdersDB,
     getPendingTopupOrderDB,
     processTopupOrderDB,
-    getTopupEnabledDB
+    getTopupEnabledDB,
+    getUserRecentLogsDB
 } from "@srouter/db";
 import {
     validateEmail,
@@ -529,6 +530,14 @@ UserAuthRouter.get("/users/usage", RequireUserAuth, async (c) => {
     const userId = c.get("userId") as string;
     const usage = await userAuthStore.getUserUsage(userId);
     return Ok(c, usage);
+});
+
+// ── User recent activity ──
+UserAuthRouter.get("/users/logs", RequireUserAuth, async (c) => {
+    const userId = c.get("userId") as string;
+    const limit = Math.min(Number(c.req.query("limit")) || 5, 20);
+    const logs = await getUserRecentLogsDB(userId, limit);
+    return Ok(c, { logs });
 });
 
 // ── Platform stats (authenticated portal users) ──

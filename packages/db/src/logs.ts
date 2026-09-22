@@ -108,6 +108,42 @@ export async function getRecentLogsDB(limit = 50): Promise<RequestLogEntry[]> {
     return Rows.map(mapLogRow);
 }
 
+export interface UserLogEntry {
+    id: string;
+    model: string;
+    statusCode: number;
+    totalTokens: number;
+    latencyMs: number;
+    estimatedCost: number;
+    createdAt: number;
+}
+
+export async function getUserRecentLogsDB(userId: string, limit = 5): Promise<UserLogEntry[]> {
+    const keyRows = (await db
+        .prepare("SELECT id FROM api_keys WHERE user_id = ?")
+        .all(userId)) as unknown as Array<{ id: string }>;
+    if (keyRows.length === 0) return [];
+    const keyIds = keyRows.map((r) => r.id);
+    const placeholders = keyIds.map(() => "?").join(",");
+    const Rows = (await db.prepare(
+        `SELECT id, model, status_code, total_tokens, latency_ms, estimated_cost, created_at
+         FROM request_logs WHERE api_key_id IN (${placeholders})
+         ORDER BY created_at DESC LIMIT ?`
+    ).all(...keyIds, limit)) as unknown as Array<{
+        id: string; model: string; status_code: number; total_tokens: number;
+        latency_ms: number; estimated_cost: number; created_at: number;
+    }>;
+    return Rows.map((r) => ({
+        id: r.id,
+        model: r.model,
+        statusCode: r.status_code,
+        totalTokens: r.total_tokens,
+        latencyMs: r.latency_ms,
+        estimatedCost: r.estimated_cost,
+        createdAt: r.created_at
+    }));
+}
+
 export async function getUsageSummaryDB(): Promise<UsageSummary> {
     const Result = (await db.prepare(`
         SELECT 

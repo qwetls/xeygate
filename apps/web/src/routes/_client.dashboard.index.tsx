@@ -16,7 +16,8 @@ import {
     KeyRound,
     Shield,
     Store,
-    Users
+    Users,
+    Zap
 } from "lucide-react";
 
 export const Route = createFileRoute("/_client/dashboard/")({
@@ -57,6 +58,12 @@ function ClientDashboard() {
     const { data: keysData } = useQuery({
         queryKey: ["user-keys"],
         queryFn: () => api.get<{ keys: Array<{ id: string; name: string; key: string }> }>("/v1/users/keys")
+    });
+
+    const { data: logsData } = useQuery({
+        queryKey: ["user-logs"],
+        queryFn: () => api.get<{ logs: Array<{ id: string; model: string; statusCode: number; totalTokens: number; latencyMs: number; estimatedCost: number; createdAt: number }> }>("/v1/users/logs?limit=5"),
+        enabled: (keysData?.keys.length ?? 0) > 0
     });
 
     const { data: platform } = useQuery({
@@ -215,50 +222,64 @@ function ClientDashboard() {
                 </section>
             )}
 
-            <Card>
-                <CardHeader>
-                    <div className="flex items-center gap-2">
-                        <BookOpen className="size-4 text-muted-foreground" />
-                        <CardTitle className="text-sm">Quick Start</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <p className="text-xs text-muted-foreground">
-                        Use your API key to make requests. Compatible with OpenAI SDKs and tools.
-                    </p>
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-foreground">Gateway Base URL</h4>
-                        <CopyableCode text={gatewayUrl} />
-                    </div>
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-foreground">cURL</h4>
-                        <CopyableCode text={`curl ${gatewayUrl}/chat/completions \\
+            {(keysData?.keys.length ?? 0) === 0 ? (
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <BookOpen className="size-4 text-muted-foreground" />
+                            <CardTitle className="text-sm">Quick Start</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <p className="text-xs text-muted-foreground">
+                            Create an API key above, then use it with any OpenAI-compatible SDK.
+                        </p>
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-foreground">Gateway Base URL</h4>
+                            <CopyableCode text={gatewayUrl} />
+                        </div>
+                        <div className="space-y-2">
+                            <h4 className="text-xs font-semibold text-foreground">cURL</h4>
+                            <CopyableCode text={`curl ${gatewayUrl}/chat/completions \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"model":"gpt-4o-mini","messages":[{"role":"user","content":"Hello!"}]}'`} />
-                    </div>
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-foreground">Python</h4>
-                        <CopyableCode text={`from openai import OpenAI
-client = OpenAI(api_key="YOUR_API_KEY", base_url="${gatewayUrl}")
-resp = client.chat.completions.create(
-    model="gpt-4o-mini",
-    messages=[{"role":"user","content":"Hello!"}]
-)
-print(resp.choices[0].message.content)`} />
-                    </div>
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-semibold text-foreground">JavaScript</h4>
-                        <CopyableCode text={`import OpenAI from "openai";
-const client = new OpenAI({ apiKey: "YOUR_API_KEY", baseURL: "${gatewayUrl}" });
-const resp = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: "Hello!" }]
-});
-console.log(resp.choices[0].message.content);`} />
-                    </div>
-                </CardContent>
-            </Card>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1 cursor-pointer" render={<Link to="/docs" />}>
+                            Full documentation <ArrowRight className="size-3" />
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : (logsData?.logs ?? []).length > 0 ? (
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-2">
+                            <Activity className="size-4 text-muted-foreground" />
+                            <CardTitle className="text-sm">Recent Activity</CardTitle>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-2">
+                            {logsData!.logs.map((log) => (
+                                <div key={log.id} className="flex items-center justify-between rounded-lg border border-border/60 bg-secondary/20 px-3 py-2">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <Zap className={`size-3.5 shrink-0 ${log.statusCode < 400 ? "text-emerald-500" : "text-destructive"}`} />
+                                        <span className="text-xs font-mono text-foreground truncate">{log.model}</span>
+                                    </div>
+                                    <div className="flex items-center gap-4 text-[10px] text-muted-foreground shrink-0 ml-3">
+                                        <span>{log.totalTokens.toLocaleString()} tok</span>
+                                        <span>{log.latencyMs}ms</span>
+                                        <span>{new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-7 text-[11px] gap-1 mt-3 cursor-pointer" render={<Link to="/docs" />}>
+                            API documentation <ArrowRight className="size-3" />
+                        </Button>
+                    </CardContent>
+                </Card>
+            ) : null}
         </div>
     );
 }
