@@ -50,7 +50,6 @@ function CatalogLayout() {
                         <span className="rounded-xs border border-border/70 bg-secondary/70 px-1 py-0.5 text-[8px] font-semibold text-muted-foreground/80 uppercase leading-none">Marketplace</span>
                     </Link>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" render={<Link to="/plans" />} className="text-xs cursor-pointer">Plans</Button>
                         {user ? (
                             <Button size="sm" render={<Link to="/dashboard" />} className="text-xs cursor-pointer">Dashboard</Button>
                         ) : (

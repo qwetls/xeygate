@@ -105,8 +105,7 @@ export function ClientCreateKeyDialog({
                     </div>
 
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                        Rate limits, token quotas, and model access are controlled by your subscription plan.
-                        <a href="/plans" className="text-emerald-500 hover:underline ml-1">View plans</a>
+                        Rate limits, token quotas, and model access are set by the platform.
                     </p>
 
                     <DialogFooter className="pt-2 gap-2">

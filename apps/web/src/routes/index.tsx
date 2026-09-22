@@ -599,9 +599,6 @@ function LandingPage() {
                             <Link to="/catalog" className="block text-muted-foreground transition-colors hover:text-foreground">
                                 Marketplace
                             </Link>
-                            <Link to="/plans" className="block text-muted-foreground transition-colors hover:text-foreground">
-                                Plans
-                            </Link>
                             <Link to="/register" className="block text-muted-foreground transition-colors hover:text-foreground">
                                 Get started
                             </Link>

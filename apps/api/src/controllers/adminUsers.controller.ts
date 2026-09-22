@@ -25,7 +25,6 @@ function toUserPayload(user: {
     creatorStatus: string;
     creatorShare: number;
     isAdmin: boolean;
-    plan?: string;
     createdAt: number;
     updatedAt: number;
 }) {
@@ -39,7 +38,6 @@ function toUserPayload(user: {
         creatorStatus: user.creatorStatus,
         creatorShare: user.creatorShare,
         isAdmin: user.isAdmin,
-        plan: user.plan ?? "starter",
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
     };
@@ -330,19 +328,5 @@ export class AdminUsersController {
             credits = user?.credits;
         }
         return Ok(c, { topup, credits });
-    }
-
-    public static async SetUserPlan(c: Context): Promise<Response> {
-        const id = c.req.param("id");
-        const body = await c.req.json<{ plan?: string }>().catch(() => ({}));
-        const validPlans = ["starter", "pro", "pro_max", "payg"];
-        if (!body.plan || !validPlans.includes(body.plan)) {
-            return Err(c, `Plan must be one of: ${validPlans.join(", ")}`, 400);
-        }
-        const user = await userAuthStore.getUserById(id);
-        if (!user) return Err(c, "User not found", 404);
-        const updated = await userAuthStore.updatePlan(id, body.plan as "starter" | "pro" | "pro_max" | "payg");
-        if (!updated) return Err(c, "Failed to update plan", 500);
-        return Ok(c, { user: toUserPayload(updated), plan: updated.plan });
     }
 }

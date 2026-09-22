@@ -5,7 +5,6 @@ import { ValidateJson } from "@/middleware/Validation.js";
 import { ApiKeyAuth } from "@/middleware/ApiKeyAuth.js";
 import { EnforceModelAccess } from "@/middleware/ModelAccess.js";
 import { EnforceRateLimit } from "@/middleware/RateLimit.js";
-import { EnforcePlanAccess } from "@/middleware/PlanAccess.js";
 
 export const ChatRouter = new Hono();
 
@@ -14,7 +13,6 @@ ChatRouter.post(
     ApiKeyAuth,
     EnforceRateLimit,
     ValidateJson(ChatCompletionRequestSchema),
-    EnforcePlanAccess(),
     EnforceModelAccess(),
     ChatController.CreateCompletion
 );
@@ -23,7 +21,6 @@ ChatRouter.post(
     ApiKeyAuth,
     EnforceRateLimit,
     ValidateJson(ChatCompletionRequestSchema),
-    EnforcePlanAccess(),
     EnforceModelAccess(),
     ChatController.CreateCompletion
 );
