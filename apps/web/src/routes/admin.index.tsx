@@ -15,7 +15,7 @@ import {
 import { api } from "@/lib/api";
 import { formatCompactNumber } from "@/lib/utils";
 import type { UsageStats } from "@srouter/types";
-import { GatewayTopologyMap, ModelUsageOverview, NetworkStatus, UsageByModelTable } from "@/components/dashboard";
+import { ModelUsageOverview, NetworkStatus, UsageByModelTable } from "@/components/dashboard";
 import { Button } from "@/components/ui/button";
 import { DashboardSkeleton } from "@/components/skeletons";
 
@@ -367,9 +367,6 @@ function DashboardPage() {
                 <ModelUsageOverview models={stats?.byModel ?? []} />
                 <NetworkStatus />
             </section>
-
-            {/* Mesh Routing Topology Map */}
-            <GatewayTopologyMap />
 
             {/* Tabular Usage Breakdown */}
             <UsageByModelTable models={stats?.byModel ?? []} />
