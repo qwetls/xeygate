@@ -356,7 +356,7 @@ function PlanCard({ plan, user }: { plan: PlanTier; user: { role?: string; plan?
                 <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center gap-3">
                     <Clock className="size-8 text-amber-500" />
                     <p className="text-sm font-semibold">Awaiting payment</p>
-                    <p className="text-xs text-muted-foreground">Pay ${(plan.priceCentsUsd / 100).toFixed(2)} to activate {plan.name}.</p>
+                    <p className="text-xs text-muted-foreground">Pay {plan.price} to activate {plan.name}.</p>
                     <div className="flex gap-2 mt-1">
                         <Button
                             size="sm"
@@ -364,7 +364,7 @@ function PlanCard({ plan, user }: { plan: PlanTier; user: { role?: string; plan?
                             disabled={payMutation.isPending}
                             onClick={() => payMutation.mutate(pendingId)}
                         >
-                            {payMutation.isPending ? "Paying..." : `Pay $${(plan.priceCentsUsd / 100).toFixed(2)}`}
+                            {payMutation.isPending ? "Paying..." : `Pay ${plan.price}`}
                         </Button>
                         <Button
                             size="sm"
