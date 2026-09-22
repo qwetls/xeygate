@@ -52,7 +52,7 @@ export function ClientCreateKeyDialog({
                     </div>
                     <DialogDescription className="text-xs text-muted-foreground leading-relaxed">
                         Generate a bearer token for SDKs, clients, and automated workloads.
-                        Limits are managed by your subscription plan.
+                        Limits are set by the platform.
                     </DialogDescription>
                 </DialogHeader>
 
