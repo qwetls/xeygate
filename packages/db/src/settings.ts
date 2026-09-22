@@ -55,6 +55,14 @@ export async function setCreatorApplicationsOpenDB(open: boolean): Promise<void>
     await setSettingDB("creator_applications_open", open ? "true" : "false");
 }
 
+export async function getTopupEnabledDB(): Promise<boolean> {
+    return (await getSettingDB("topup_enabled", "true")) === "true";
+}
+
+export async function setTopupEnabledDB(enabled: boolean): Promise<void> {
+    await setSettingDB("topup_enabled", enabled ? "true" : "false");
+}
+
 export async function getRoundRobinDB(providerId: string): Promise<boolean> {
     return (await getSettingDB(`round_robin_${providerId}`, "false")) === "true";
 }

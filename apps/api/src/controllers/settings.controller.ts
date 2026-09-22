@@ -4,9 +4,11 @@ import {
     getCreatorApplicationsOpenDB,
     getRequireApiKeyDB,
     getRequireRegistrationApprovalDB,
+    getTopupEnabledDB,
     setCreatorApplicationsOpenDB,
     setRequireApiKeyDB,
     setRequireRegistrationApprovalDB,
+    setTopupEnabledDB,
     setSettingDB
 } from "@srouter/db";
 import { UpdateSettingsSchema } from "@srouter/types";
@@ -19,6 +21,7 @@ export class SettingsController {
             requireApiKey: await getRequireApiKeyDB(),
             require_registration_approval: await getRequireRegistrationApprovalDB(),
             creator_applications_open: await getCreatorApplicationsOpenDB(),
+            topup_enabled: await getTopupEnabledDB(),
             settings: await getAllSettingsDB()
         });
     }
@@ -40,6 +43,9 @@ export class SettingsController {
             if (typeof Parsed.data.creator_applications_open === "boolean") {
                 await setCreatorApplicationsOpenDB(Parsed.data.creator_applications_open);
             }
+            if (typeof Parsed.data.topup_enabled === "boolean") {
+                await setTopupEnabledDB(Parsed.data.topup_enabled);
+            }
             if (Parsed.data.settings) {
                 for (const [key, value] of Object.entries(Parsed.data.settings)) {
                     if (typeof value === "string") {
@@ -54,6 +60,7 @@ export class SettingsController {
                 requireApiKey: await getRequireApiKeyDB(),
                 require_registration_approval: await getRequireRegistrationApprovalDB(),
                 creator_applications_open: await getCreatorApplicationsOpenDB(),
+                topup_enabled: await getTopupEnabledDB(),
                 settings: await getAllSettingsDB()
             });
         } catch (error) {

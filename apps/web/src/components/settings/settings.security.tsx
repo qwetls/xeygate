@@ -13,6 +13,8 @@ interface SecuritySettingsProps {
     onToggleRequireRegistrationApproval: (required: boolean) => void;
     creatorApplicationsOpen: boolean;
     onToggleCreatorApplications: (open: boolean) => void;
+    topupEnabled: boolean;
+    onToggleTopupEnabled: (enabled: boolean) => void;
     isUpdating: boolean;
     apiBase?: string;
 }
@@ -24,6 +26,8 @@ export function SecuritySettings({
     onToggleRequireRegistrationApproval,
     creatorApplicationsOpen,
     onToggleCreatorApplications,
+    topupEnabled,
+    onToggleTopupEnabled,
     isUpdating
 }: SecuritySettingsProps) {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -166,6 +170,38 @@ export function SecuritySettings({
                             ]}
                             value={creatorApplicationsOpen}
                             onChange={onToggleCreatorApplications}
+                            disabled={isUpdating}
+                        />
+                    </div>
+                }
+            />
+
+            <SettingsRow
+                title="Enable Wallet Top-up"
+                description={
+                    topupEnabled
+                        ? "Buyers can create top-up orders to add funds to their wallet."
+                        : "Top-up is disabled — buyers cannot add funds. Existing balance is unaffected."
+                }
+                control={
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className={[
+                                "hidden sm:inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-mono font-medium border",
+                                topupEnabled
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-muted/50 text-muted-foreground border-border/60"
+                            ].join(" ")}
+                        >
+                            {topupEnabled ? "Enabled" : "Disabled"}
+                        </span>
+                        <SegmentedControl
+                            options={[
+                                { value: false, label: "OFF" },
+                                { value: true, label: "ON" }
+                            ]}
+                            value={topupEnabled}
+                            onChange={onToggleTopupEnabled}
                             disabled={isUpdating}
                         />
                     </div>

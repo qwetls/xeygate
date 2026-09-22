@@ -36,6 +36,7 @@ interface ServerSettingsResponse {
     requireApiKey?: boolean;
     require_registration_approval?: boolean;
     creator_applications_open?: boolean;
+    topup_enabled?: boolean;
     settings?: Record<string, string>;
 }
 
@@ -75,6 +76,7 @@ function SettingsPage() {
     const [requireRegistrationApproval, setRequireRegistrationApproval] =
         useState<boolean>(false);
     const [creatorApplicationsOpen, setCreatorApplicationsOpen] = useState<boolean>(false);
+    const [topupEnabled, setTopupEnabled] = useState<boolean>(true);
 
     useEffect(() => {
         if (serverSettings) {
@@ -87,6 +89,9 @@ function SettingsPage() {
             }
             if (typeof serverSettings.creator_applications_open === "boolean") {
                 setCreatorApplicationsOpen(serverSettings.creator_applications_open);
+            }
+            if (typeof serverSettings.topup_enabled === "boolean") {
+                setTopupEnabled(serverSettings.topup_enabled);
             }
         }
     }, [serverSettings]);
@@ -106,6 +111,12 @@ function SettingsPage() {
                     payload.creator_applications_open
                         ? "Creator applications are now open"
                         : "Creator applications are now closed"
+                );
+            } else if ("topup_enabled" in payload) {
+                toast.success(
+                    payload.topup_enabled
+                        ? "Top-up is now enabled"
+                        : "Top-up is now disabled"
                 );
             } else {
                 toast.success(
@@ -135,6 +146,11 @@ function SettingsPage() {
     const handleToggleCreatorApplications = (value: boolean) => {
         setCreatorApplicationsOpen(value);
         updateServerMutation.mutate({ creator_applications_open: value });
+    };
+
+    const handleToggleTopupEnabled = (value: boolean) => {
+        setTopupEnabled(value);
+        updateServerMutation.mutate({ topup_enabled: value });
     };
 
     const scrollToSection = (id: string) => {
@@ -228,6 +244,8 @@ function SettingsPage() {
                     onToggleRequireRegistrationApproval={handleToggleRequireRegistrationApproval}
                     creatorApplicationsOpen={creatorApplicationsOpen}
                     onToggleCreatorApplications={handleToggleCreatorApplications}
+                    topupEnabled={topupEnabled}
+                    onToggleTopupEnabled={handleToggleTopupEnabled}
                     isUpdating={updateServerMutation.isPending}
                     apiBase={apiBase}
                 />

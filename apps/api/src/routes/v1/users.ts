@@ -13,7 +13,8 @@ import {
     listTopupOrdersDB,
     countTopupOrdersDB,
     getPendingTopupOrderDB,
-    processTopupOrderDB
+    processTopupOrderDB,
+    getTopupEnabledDB
 } from "@srouter/db";
 import {
     validateEmail,
@@ -416,6 +417,11 @@ const TOPUP_MIN_AMOUNT = 5;
 const TOPUP_MAX_AMOUNT = 10000;
 
 UserAuthRouter.post("/users/topups", RequireUserAuth, async (c) => {
+    if (!(await getTopupEnabledDB())) {
+        return Err(c, "Top-up is currently disabled by the administrator.", 403, {
+            code: "topup_disabled"
+        });
+    }
     const userId = c.get("userId") as string;
     const body = await c.req.json<{ amount?: number; reference?: string }>().catch(() => ({}));
     const amount = Math.round(Number(body.amount) * 100) / 100;
