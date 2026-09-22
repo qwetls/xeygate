@@ -18,3 +18,4 @@ export * from "./payouts.js";
 export * from "./topupOrders.js";
 export * from "./modelPricing.js";
 export * from "./platform.js";
+export * from "./notifications.js";

@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import {
     Banknote,
     BarChart2,
+    Bell,
     Boxes,
     Coins,
     CreditCard,
@@ -38,6 +39,7 @@ const mainNavItems = [
     { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
     { to: "/catalog", label: "Marketplace", icon: Globe },
     { to: "/admin/users", label: "Users", icon: Users },
+    { to: "/admin/notifications", label: "Notifications", icon: Bell },
     { to: "/admin/payouts", label: "Payouts", icon: Banknote },
     { to: "/admin/topups", label: "Top-ups", icon: CreditCard },
     { to: "/admin/keys", label: "API Keys", icon: KeyRound },

@@ -18,9 +18,9 @@ import { CatalogRouter } from "@/routes/v1/catalog.js";
 import { AnalyticsRouter } from "@/routes/v1/analytics.js";
 import { QuotaRouter } from "@/routes/v1/quota.js";
 import { SettingsRouter } from "@/routes/v1/settings.js";
-import { TunnelRouter } from "@/routes/v1/tunnel.js";
 import { UserAuthRouter } from "@/routes/v1/users.js";
 import { GitHubUserAuthRouter } from "@/routes/v1/githubAuth.js";
+import { NotificationsRouter } from "@/routes/v1/notifications.js";
 import imagesRouter from "@/routes/v1/images.js";
 import { CreateCorsMiddleware, ParseAllowedOrigins } from "@/middleware/Cors.js";
 import { CreateCsrfOriginGuard } from "@/middleware/CsrfOrigin.js";
@@ -30,7 +30,6 @@ import { startTokenRefreshSweeper } from "@/services/tokenRefresh.js";
 import { resolveWebDistPath } from "@/services/webDist.js";
 import { warmModelRegistry, startProviderRegistry } from "@/services/registry.js";
 import { bootstrapAdminFromEnv } from "@/services/adminAuth.js";
-import { autostartTunnelIfEnabled } from "@/services/cloudflareTunnel.js";
 import { GetPublicUrlBase } from "@/utils/callbackUrl.js";
 import { initDatabase, isPostgres } from "@srouter/db";
 
@@ -83,9 +82,6 @@ app.use("/v1/*", CreateBodyLimitMiddleware());
 // Bootstrap the admin account only when SROUTER_ADMIN_PASSWORD is set.
 // Otherwise first-run setup happens through the dashboard.
 // (Moved into boot() — must run after PG schema init.)
-
-// Re-launch the Cloudflare Tunnel if it was left running when the server last stopped.
-// (Moved into boot() — queries DB, must run after PG schema init.)
 
 // ── Marketplace namespaces ──────────────────────────────────────────────
 // /user/v1 and /official/v1 mount the same routers as /v1 but pin the
@@ -184,10 +180,8 @@ app.route("/v1", UserAuthRouter);
 app.route("/v1", GitHubUserAuthRouter);
 app.route("/v1", QuotaRouter);
 app.route("/v1", SettingsRouter);
+app.route("/v1", NotificationsRouter);
 app.route("/v1/images", imagesRouter);
-
-// Cloudflare Tunnel management (admin-only; guard lives inside TunnelRouter)
-app.route("/v1", TunnelRouter);
 
 // Mount /v1/v1 compatibility routes for SDKs that append /v1 to a baseURL containing /v1
 app.route("/v1/v1", MessagesRouter);
@@ -264,10 +258,9 @@ async function boot(): Promise<void> {
         await initDatabase();
     }
 
-    // Bootstrap admin account & tunnel autostart: query DB, so must run
-    // after schema init (especially for Postgres).
+    // Bootstrap admin account: query DB, so must run after schema init
+    // (especially for Postgres).
     void bootstrapAdminFromEnv();
-    void autostartTunnelIfEnabled();
 
     // Seed default provider rows + load saved providers (must run after DB schema init).
     await startProviderRegistry();

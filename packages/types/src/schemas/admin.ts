@@ -14,10 +14,3 @@ export const AdminBootstrapSchema = z.object({
 });
 
 export type AdminBootstrapZod = z.infer<typeof AdminBootstrapSchema>;
-
-export const TunnelConfigSchema = z.object({
-    token: z.string().optional(),
-    domain: z.string().optional()
-});
-
-export type TunnelConfigZod = z.infer<typeof TunnelConfigSchema>;

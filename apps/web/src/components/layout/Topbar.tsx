@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { KNOWN_PROVIDER_MAP, providerBaseId } from "@srouter/constants";
 import { useProvider } from "@/hooks/useProvider";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 
 type BreadcrumbInfo = {
     section: string;
@@ -77,6 +78,7 @@ export function Topbar() {
 
             {/* Right: Actions */}
             <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+                <NotificationBell />
                 <div className="flex items-center gap-1">
                     <Button
                         type="button"

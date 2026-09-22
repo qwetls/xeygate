@@ -311,6 +311,27 @@ const TABLES: TableDef[] = [
             { name: "updated_at", definition: "INTEGER NOT NULL" },
             { name: "created_at", definition: "INTEGER NOT NULL" }
         ]
+    },
+    {
+        name: "notifications",
+        columns: [
+            { name: "id", definition: "TEXT PRIMARY KEY" },
+            { name: "title", definition: "TEXT NOT NULL" },
+            { name: "message", definition: "TEXT NOT NULL" },
+            { name: "type", definition: "TEXT NOT NULL DEFAULT 'info'" },
+            { name: "target", definition: "TEXT NOT NULL DEFAULT 'all'" },
+            { name: "created_by", definition: "TEXT NOT NULL" },
+            { name: "created_at", definition: "INTEGER NOT NULL" }
+        ]
+    },
+    {
+        name: "user_notification_reads",
+        columns: [
+            { name: "user_id", definition: "TEXT NOT NULL" },
+            { name: "notification_id", definition: "TEXT NOT NULL" },
+            { name: "read_at", definition: "INTEGER NOT NULL" },
+            { name: "PRIMARY KEY (user_id, notification_id)", definition: "" }
+        ]
     }
 ];
 
@@ -329,7 +350,10 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_payouts_user_requested ON payouts(user_id, requested_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_topup_orders_user_requested ON topup_orders(user_id, requested_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_topup_orders_status ON topup_orders(status, requested_at ASC);" },
-    { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" }
+    { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_notification_reads_user ON user_notification_reads(user_id);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_notifications_target_created ON notifications(target, created_at DESC);" }
 ];
 
 /**
