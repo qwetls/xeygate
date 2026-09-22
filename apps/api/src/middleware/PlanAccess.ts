@@ -1,6 +1,6 @@
 import type { Context, MiddlewareHandler } from "hono";
 import { Err } from "@/utils/response.js";
-import { userAuthStore, getPlanConfigDB } from "@srouter/db";
+import { userAuthStore, getPlanConfigDB, db } from "@srouter/db";
 import { tierAllowsPlan, type PlanId } from "@srouter/constants";
 
 const PLANS_URL = "https://gate.xeycompany.com/plans";
@@ -108,6 +108,15 @@ export function EnforcePlanAccess(): MiddlewareHandler {
 
         // Admins bypass all plan restrictions
         if (user.isAdmin) return await next();
+
+        // Auto-revert expired paid plans to starter
+        if (user.planExpiresAt && user.planExpiresAt <= Date.now() && user.plan !== "starter") {
+            await db.prepare(
+                `UPDATE users SET plan = 'starter', plan_expires_at = NULL, updated_at = ? WHERE id = ?`
+            ).run(Date.now(), userId);
+            user.plan = "starter";
+            user.planExpiresAt = null;
+        }
 
         const planId = (user.plan ?? "starter") as PlanId;
         // DB-backed config (admin-editable at /admin/plans) with a constants

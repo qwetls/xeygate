@@ -298,6 +298,18 @@ const TABLES: TableDef[] = [
         ]
     },
     {
+        name: "plan_purchases",
+        columns: [
+            { name: "id", definition: "TEXT PRIMARY KEY" },
+            { name: "user_id", definition: "TEXT NOT NULL" },
+            { name: "plan", definition: "TEXT NOT NULL" },
+            { name: "amount_cents", definition: "INTEGER NOT NULL DEFAULT 0" },
+            { name: "status", definition: "TEXT NOT NULL DEFAULT 'pending_payment'" },
+            { name: "created_at", definition: "INTEGER NOT NULL" },
+            { name: "paid_at", definition: "INTEGER" }
+        ]
+    },
+    {
         name: "plan_configs",
         columns: [
             { name: "plan", definition: "TEXT PRIMARY KEY" },
@@ -341,7 +353,9 @@ const INDEXES: IndexDef[] = [
     { sql: "CREATE INDEX IF NOT EXISTS idx_payouts_user_requested ON payouts(user_id, requested_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_topup_orders_user_requested ON topup_orders(user_id, requested_at DESC);" },
     { sql: "CREATE INDEX IF NOT EXISTS idx_topup_orders_status ON topup_orders(status, requested_at ASC);" },
-    { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" }
+    { sql: "CREATE UNIQUE INDEX IF NOT EXISTS idx_model_pricing_provider_model ON model_pricing(provider_id, model);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_plan_purchases_user ON plan_purchases(user_id, created_at DESC);" },
+    { sql: "CREATE INDEX IF NOT EXISTS idx_plan_purchases_status ON plan_purchases(status);" }
 ];
 
 /**

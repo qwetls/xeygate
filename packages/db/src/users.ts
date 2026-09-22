@@ -21,6 +21,7 @@ export interface User {
     creatorShare: number;
     isAdmin: boolean;
     plan: PlanId;
+    planExpiresAt: number | null;
     acceptedTermsAt: number | null;
     termsVersion: string;
     githubId: string | null;
@@ -47,6 +48,7 @@ interface UserRow {
     creator_share: number;
     is_admin: number | boolean;
     plan: string;
+    plan_expires_at: number | null;
     accepted_terms_at: number | null;
     terms_version: string;
     github_id: string | null;
@@ -200,6 +202,15 @@ export class UserAuthStore {
         try {
             await this.client.exec(
                 `ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'starter'`
+            );
+        } catch {
+            // Column already exists
+        }
+        // Migrate plan_expires_at column (subscription expiry timestamp).
+        // NULL means the plan never expires (admin-assigned or starter).
+        try {
+            await this.client.exec(
+                `ALTER TABLE users ADD COLUMN plan_expires_at INTEGER`
             );
         } catch {
             // Column already exists
@@ -752,6 +763,7 @@ function mapUserRow(row: UserRow): User {
         creatorShare: num(row.creator_share, 0.8),
         isAdmin: row.is_admin === 1 || (row.is_admin as unknown) === true,
         plan: (validPlans as string[]).includes(planVal) ? (planVal as PlanId) : "starter",
+        planExpiresAt: row.plan_expires_at == null ? null : num(row.plan_expires_at),
         acceptedTermsAt:
             row.accepted_terms_at === null || row.accepted_terms_at === undefined
                 ? null

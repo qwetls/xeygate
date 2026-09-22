@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,8 @@ import {
     Shield,
     Rocket,
     CreditCard,
-    ArrowRight
+    ArrowRight,
+    Clock
 } from "lucide-react";
 
 export const Route = createFileRoute("/plans")({
@@ -144,7 +146,7 @@ const PLANS: PlanTier[] = [
 function PlansPage() {
     const { data: user } = useQuery({
         queryKey: ["user-auth-status"],
-        queryFn: () => api.get<{ role?: string }>("/v1/users/me"),
+        queryFn: () => api.get<{ role?: string; plan?: string; planExpiresAt?: number | null }>("/v1/users/me"),
         retry: false
     });
 
@@ -313,74 +315,80 @@ function PlansPage() {
     );
 }
 
-function PlanCard({ plan, user }: { plan: PlanTier; user: { role?: string } | undefined }) {
-    const [showApply, setShowApply] = useState(false);
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [submitted, setSubmitted] = useState(false);
+function PlanCard({ plan, user }: { plan: PlanTier; user: { role?: string; plan?: string; planExpiresAt?: number | null } | undefined }) {
+    const queryClient = useQueryClient();
+    const [pendingId, setPendingId] = useState<string | null>(null);
+
+    const isCurrentPlan = user?.plan === plan.id.replace(/-/g, "_");
+
+    const createMutation = useMutation({
+        mutationFn: () => api.post<{ purchase: { id: string; plan: string; amountCents: number } }>("/v1/plan-purchases", { plan: plan.id.replace(/-/g, "_") }),
+        onSuccess: (data) => {
+            setPendingId(data.purchase.id);
+        },
+        onError: (err) => {
+            toast.error(err instanceof ApiError ? err.message : "Failed to create plan purchase");
+        }
+    });
+
+    const payMutation = useMutation({
+        mutationFn: (purchaseId: string) => api.post<{ purchase: { id: string }; expiresAt: number }>(`/v1/plan-purchases/${purchaseId}/pay`),
+        onSuccess: () => {
+            setPendingId(null);
+            queryClient.invalidateQueries({ queryKey: ["user-auth-status"] });
+            toast.success(`${plan.name} plan activated!`);
+        },
+        onError: (err) => {
+            toast.error(err instanceof ApiError ? err.message : "Payment failed");
+        }
+    });
 
     const Icon = plan.icon;
+    const canBuy = plan.id === "pro" || plan.id === "pro_max";
+    const expiryDate = user?.planExpiresAt ? new Date(user.planExpiresAt) : null;
+    const expiryStr = expiryDate
+        ? expiryDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })
+        : null;
 
-    if (submitted) {
-        return (
-            <Card className="flex flex-col">
-                <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center">
-                    <Check className="size-8 text-emerald-500 mb-3" />
-                    <p className="text-sm font-semibold">Request received</p>
-                    <p className="mt-1 text-xs text-muted-foreground">We&apos;ll reach out to set up your {plan.name} plan.</p>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    if (showApply) {
+    if (pendingId) {
         return (
             <Card className={plan.highlighted ? "border-emerald-500/50" : ""}>
-                <CardContent className="pt-5">
-                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-3">
-                        {plan.name} — subscribe
-                    </p>
-                    <form
-                        onSubmit={(e) => { e.preventDefault(); if (name.trim() && email.trim()) setSubmitted(true); }}
-                        className="space-y-2.5"
-                    >
-                        <Input
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            placeholder="Your name"
-                            autoFocus
-                            className="h-8 text-xs"
-                        />
-                        <Input
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Email address"
-                            type="email"
-                            className="h-8 text-xs"
-                        />
-                        <div className="flex gap-2">
-                            <Button type="submit" size="sm" disabled={!name.trim() || !email.trim()} className="h-7 text-[10px] flex-1 cursor-pointer">
-                                Submit request
-                            </Button>
-                            <Button type="button" variant="outline" size="sm" className="h-7 text-[10px] cursor-pointer" onClick={() => setShowApply(false)}>
-                                Cancel
-                            </Button>
-                        </div>
-                    </form>
+                <CardContent className="flex flex-1 flex-col items-center justify-center py-10 text-center gap-3">
+                    <Clock className="size-8 text-amber-500" />
+                    <p className="text-sm font-semibold">Awaiting payment</p>
+                    <p className="text-xs text-muted-foreground">Pay ${(plan.priceCentsUsd / 100).toFixed(2)} to activate {plan.name}.</p>
+                    <div className="flex gap-2 mt-1">
+                        <Button
+                            size="sm"
+                            className="h-7 text-[10px] cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+                            disabled={payMutation.isPending}
+                            onClick={() => payMutation.mutate(pendingId)}
+                        >
+                            {payMutation.isPending ? "Paying..." : `Pay $${(plan.priceCentsUsd / 100).toFixed(2)}`}
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[10px] cursor-pointer"
+                            onClick={() => setPendingId(null)}
+                        >
+                            Cancel
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         );
     }
 
     return (
-        <Card className={`flex flex-col ${plan.highlighted ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : ""}`}>
+        <Card className={`flex flex-col ${plan.highlighted ? "border-emerald-500/50 ring-1 ring-emerald-500/20" : ""} ${isCurrentPlan ? "ring-2 ring-emerald-500/40" : ""}`}>
             <CardContent className="flex flex-1 flex-col pt-5">
                 <div className="flex items-center gap-2 mb-3">
                     <div className="flex size-7 items-center justify-center rounded-md bg-secondary">
                         <Icon className="size-3.5 text-muted-foreground" />
                     </div>
                     <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground">
-                        {plan.badge}
+                        {isCurrentPlan ? "CURRENT" : plan.badge}
                     </span>
                 </div>
                 <h3 className="text-lg font-bold">{plan.name}</h3>
@@ -391,6 +399,11 @@ function PlanCard({ plan, user }: { plan: PlanTier; user: { role?: string } | un
                 <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
                     {plan.description}
                 </p>
+                {isCurrentPlan && expiryStr && (
+                    <p className="mt-1.5 text-[10px] text-muted-foreground">
+                        Expires {expiryStr}
+                    </p>
+                )}
                 <ul className="mt-4 space-y-1.5 flex-1">
                     {plan.features.map((f) => (
                         <li key={f} className="flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">
@@ -399,24 +412,33 @@ function PlanCard({ plan, user }: { plan: PlanTier; user: { role?: string } | un
                         </li>
                     ))}
                 </ul>
-                <Button
-                    size="sm"
-                    variant={plan.highlighted ? "default" : "outline"}
-                    className={`mt-4 w-full text-xs cursor-pointer ${plan.highlighted ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
-                    onClick={() => {
-                        if (plan.id === "payg" || plan.id === "starter") {
-                            if (user) {
-                                window.location.href = "/dashboard/billing";
-                            } else {
+                {isCurrentPlan ? (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-4 w-full text-xs cursor-pointer"
+                        disabled
+                    >
+                        Current plan
+                    </Button>
+                ) : (
+                    <Button
+                        size="sm"
+                        variant={plan.highlighted ? "default" : "outline"}
+                        className={`mt-4 w-full text-xs cursor-pointer ${plan.highlighted ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}`}
+                        onClick={() => {
+                            if (!user) {
                                 window.location.href = "/register";
+                            } else if (plan.id === "payg" || plan.id === "starter") {
+                                window.location.href = "/dashboard/billing";
+                            } else if (canBuy) {
+                                createMutation.mutate();
                             }
-                        } else {
-                            setShowApply(true);
-                        }
-                    }}
-                >
-                    {plan.cta}
-                </Button>
+                        }}
+                    >
+                        {plan.cta}
+                    </Button>
+                )}
             </CardContent>
         </Card>
     );

@@ -23,6 +23,7 @@ interface UserInfo {
     creatorStatus: "none" | "pending" | "approved" | "rejected";
     isAdmin: boolean;
     plan: string;
+    planExpiresAt: number | null;
     createdAt: number;
     loginStreak: number;
 }
@@ -224,6 +225,11 @@ function ProfilePage() {
                                     <Gem className="size-3 text-muted-foreground" strokeWidth={1.75} />
                                     {user?.plan === "pro_max" ? "Pro Max" : user?.plan === "payg" ? "Pay-as-you-go" : user?.plan === "pro" ? "Pro" : "Starter"}
                                 </span>
+                                {user?.planExpiresAt && (
+                                    <span className="ml-1.5 text-[10px] text-muted-foreground font-normal">
+                                        expires {new Date(user.planExpiresAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                                    </span>
+                                )}
                             </dd>
                         </div>
                         <div className="flex items-center justify-between border-b border-border/50 pb-2">

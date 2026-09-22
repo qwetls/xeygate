@@ -16,6 +16,7 @@ export * from "./transactions.js";
 export * from "./creatorEarnings.js";
 export * from "./payouts.js";
 export * from "./topupOrders.js";
+export * from "./planPurchases.js";
 export * from "./planConfig.js";
 export * from "./modelPricing.js";
 export * from "./platform.js";

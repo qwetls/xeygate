@@ -3,6 +3,18 @@
 This file tracks schema changes that are not automatically handled by the
 declarative `initDatabase()` migration (see `packages/db/src/db.ts`).
 
+## 2026-09-22 — Plan purchases (`plan_purchases` table + `users.plan_expires_at`)
+
+**Change:** Added `plan_purchases` table for buyer-initiated subscription orders and
+`plan_expires_at` INTEGER column to `users` for tracking subscription expiry.
+
+- `plan_purchases` schema is declared in the TABLES array and created automatically
+  by `initDatabase()` — no manual migration needed.
+- `users.plan_expires_at` is added by the `UserAuthStore` migration at boot
+  (try/catch `ALTER TABLE` pattern) — no manual migration needed.
+- NULL `plan_expires_at` means the plan never expires (admin-assigned or starter).
+- `EnforcePlanAccess` auto-reverts expired paid plans to starter on the next request.
+
 ## 2026-09-08 — Admins become user accounts (`users.is_admin`)
 
 **Change:** Admin authentication no longer uses a separate singleton table.
