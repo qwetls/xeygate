@@ -662,11 +662,12 @@ export class UserAuthStore {
         const key = `xg_${crypto.randomUUID().replace(/-/g, "")}`;
         const now = Date.now();
         try {
+            const enabled = opts?.enabled !== undefined ? (opts.enabled ? 1 : 0) : 1;
             await this.client.run(
                 `INSERT INTO api_keys (id, key, name, enabled, rate_limit, quota_limit, usage_tokens, credit_limit, usage_cost, allowed_models, created_at, user_id)
                  VALUES (?, ?, ?, ?, ?, ?, 0, ?, 0, ?, ?, ?)`,
                 id, key, name,
-                opts?.enabled ?? 1,
+                enabled,
                 opts?.rate_limit ?? 0,
                 opts?.quota_limit ?? 0,
                 opts?.credit_limit ?? 0,
@@ -674,7 +675,8 @@ export class UserAuthStore {
                 now, userId
             );
             return { id, name, key };
-        } catch {
+        } catch (err) {
+            console.error("createUserKey failed:", err);
             return null;
         }
     }
