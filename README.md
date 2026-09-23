@@ -7,7 +7,7 @@
 One stable API key. Every provider. Automatic routing, OAuth refresh, failover, and live telemetry.
 
 <p>
-  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.6.0-6366f1?style=flat-square" alt="Version"></a>
+  <a href="https://github.com/qwetls/xeygate/releases"><img src="https://img.shields.io/badge/version-v1.7.0-6366f1?style=flat-square" alt="Version"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22c55e?style=flat-square" alt="MIT License"></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D22-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node.js"></a>
   <a href="https://hono.dev/"><img src="https://img.shields.io/badge/Hono-v4-e36002?style=flat-square" alt="Hono"></a>
@@ -171,7 +171,8 @@ curl -N http://localhost:3000/v1/chat/completions \
 - **Failover & Smart Combo Routing:** Cascade fallback chains recover from rate limits (`429`) or provider outages.
 - **Token Saver Engine:** Prompt compression and tool output optimization to cut inference cost.
 - **Virtual API Keys:** Scoped keys (`sr-live-*`) with rate limits, token quotas, and credit limits.
-- **Cloudflare Tunnel:** Expose your gateway securely with zero open ports.
+- **Bell Notification System:** Broadcast and targeted notifications (announcements, maintenance, model updates) with unread counter badge and dropdown popover in both topbars, plus full `/admin/notifications` management page.
+- **Creator Token Pricing (admin-gated):** Admins can enable/disable custom token pricing per creator (`/admin/settings`). Creators can manage per-model token prices on their own providers at `/dashboard/pricing`.
 - **Embedded Observability:** Track token usage, cache efficiency, and estimated costs in real-time.
 - **Admin User Management:** Approve pending registrations and creator requests, ban/unban accounts, and revoke a user's API access (`/admin/users`).
 - **Account-Based Admins:** Admins are regular user accounts flagged `is_admin` — one login path, promote/demote from `/admin/users`, first-run claim at `/admin`, and env-password recovery (`SROUTER_ADMIN_PASSWORD`).
@@ -433,7 +434,10 @@ All gateway endpoints are served under `/v1`:
 | `GET` | `/v1/catalog` | Public storefront cards: every enabled provider with its listed models + merged pricing |
 | `GET` | `/v1/catalog/models` | Public flat model list: one entry per stored listing id (advertised id = requestable id) — all offers, cheapest highlighted, models.dev metadata |
 | `GET` | `/v1/catalog/models?model=` | Public per-model offerings: every provider listing that model with merged pricing |
-| `GET` / `POST` | `/v1/tunnel/*` | Manage Cloudflare Tunnel daemon state |
+| `GET` / `POST` | `/v1/admin/pricing` | Manage global model pricing (admin only) |
+| `GET` / `POST` | `/v1/user/pricing` | Manage per-creator model pricing (creator session) |
+| `GET` / `POST` | `/v1/notifications` | List user notifications (all authenticated users) |
+| `POST` | `/v1/admin/notifications` | Send broadcast/targeted notification (admin only) |
 | `GET` | `/v1/admin/status` | Setup probe — `{ setupRequired }` while no admin exists |
 | `POST` | `/v1/admin/bootstrap` | First-run admin claim (rejected with 409 once an admin exists) |
 | `POST` | `/v1/admin/users/:id/promote` | Grant the admin flag to an account |

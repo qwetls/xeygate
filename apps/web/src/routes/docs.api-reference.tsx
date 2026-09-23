@@ -153,6 +153,19 @@ function ApiReferencePage() {
                 <EndpointRow method="GET" path="/v1/users/my-providers" desc="List provider connections owned by the current user with model counts." auth="Session" />
                 <EndpointRow method="GET" path="/v1/users/payouts" desc="Creator payout history." auth="Session" />
                 <EndpointRow method="POST" path="/v1/users/payouts" desc="Request a payout. Body: {amount, currency?}." auth="Session" />
+                <EndpointRow method="GET" path="/v1/user/pricing" desc="List custom pricing overrides for the creator's own providers (requires admin toggle enabled)." auth="Creator" />
+                <EndpointRow method="PUT" path="/v1/user/pricing" desc="Set or update custom token pricing for a model on a creator-owned provider. Body: {providerId, model, input, output}." auth="Creator" />
+                <EndpointRow method="DELETE" path="/v1/user/pricing" desc="Delete a pricing override. Query: providerId, model." auth="Creator" />
+            </Section>
+
+            {/* Notifications */}
+            <Section title="Notifications">
+                <EndpointRow method="GET" path="/v1/notifications" desc="List all notifications (with read status for current user)." auth="Session" />
+                <EndpointRow method="POST" path="/v1/notifications" desc="Send a broadcast or targeted notification (admin only). Body: {title, message, type, target}." auth="Admin" />
+                <EndpointRow method="DELETE" path="/v1/notifications/:id" desc="Delete a notification." auth="Admin" />
+                <EndpointRow method="GET" path="/v1/notifications/unread-count" desc="Get unread notification count." auth="Session" />
+                <EndpointRow method="POST" path="/v1/notifications/:id/read" desc="Mark a notification as read." auth="Session" />
+                <EndpointRow method="POST" path="/v1/notifications/read-all" desc="Mark all notifications as read." auth="Session" />
             </Section>
 
             {/* API Keys */}

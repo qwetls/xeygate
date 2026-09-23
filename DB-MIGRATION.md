@@ -3,6 +3,25 @@
 This file tracks schema changes that are not automatically handled by the
 declarative `initDatabase()` migration (see `packages/db/src/db.ts`).
 
+## 2026-09-23 — Bell Notifications system tables
+
+**Change:** Added persistent notification storage and per-user read tracking.
+- `notifications` table: stores broadcast and role-targeted notifications (`id`, `title`, `message`, `type`, `target`, `created_by`, `created_at`).
+- `user_notification_reads` table: junction table tracking which user has read which notification (`user_id`, `notification_id`, `read_at`).
+- Three performance indexes created automatically by `initDatabase()`:
+  - `idx_notifications_created_at`
+  - `idx_notifications_target`
+  - `idx_user_notification_reads_lookup`
+
+**No manual migration required:** tables and indexes are created automatically by `initDatabase()` on boot across both SQLite and PostgreSQL.
+
+## 2026-09-23 — Creator Custom Token Pricing (admin-gated)
+
+**Change:** Added `creator_pricing_enabled` boolean toggle stored in the `system_settings` table (default: `false`).
+- Admin controls whether creators can set custom token pricing for their own provider connections.
+- Creator endpoints `GET/PUT/DELETE /v1/user/pricing` read and enforce this toggle.
+- No schema change needed: stored as a key-value pair in existing `system_settings`.
+
 ## 2026-09-22 — All plan/subscription infrastructure removed
 
 **Change:** XEYGATE is a credits-based marketplace, not a subscription platform.
