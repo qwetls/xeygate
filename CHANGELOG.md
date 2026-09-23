@@ -3,7 +3,7 @@
 All notable changes to **XEYGATE** are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.7.0] - 2026-09-23
 
 ### Added
 - **Admin top-up toggle** — a new `topup_enabled` system setting (default: on) lets admins disable wallet top-ups without affecting existing balances. When off, `POST /v1/users/topups` returns `403 { code: "topup_disabled" }`. The toggle is exposed in **Admin → Settings → Security** as an ON/OFF segmented control alongside the existing auth and creator-application toggles. No schema migration required — stored in the existing `system_settings` key-value table.
