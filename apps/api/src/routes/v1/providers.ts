@@ -136,6 +136,10 @@ ProvidersRouter.patch(
     ProvidersController.ToggleRoundRobin
 );
 
+// Admin provider banning (governance)
+ProvidersRouter.post("/providers/:id/ban", RequireAdmin, ProvidersController.BanProvider);
+ProvidersRouter.post("/providers/:id/unban", RequireAdmin, ProvidersController.UnbanProvider);
+
 // Server-side model disable rules (platform governance). Registered before
 // "/providers/:providerId" is irrelevant — that GET is on a different verb,
 // but the ":providerId" wildcard must not swallow these action segments.
@@ -163,4 +167,11 @@ ProvidersRouter.post(
     "/providers/:providerId/models/bulk-enable",
     RequireAdmin,
     ProvidersController.EnableModelsBulk
+);
+
+// Creator model governance
+ProvidersRouter.post(
+    "/providers/mine/:id/models/toggle",
+    RequireCreator,
+    ProvidersController.ToggleMyModel
 );

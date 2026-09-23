@@ -24,6 +24,7 @@ interface ProviderRow {
     custom_headers: string | null;
     provider_specific_data: string | null;
     enabled: number;
+    banned?: number | null;
     created_at: number;
 }
 
@@ -144,6 +145,16 @@ export async function deleteProviderDB(id: string): Promise<boolean> {
     return Deleted;
 }
 
+export async function banProviderDB(id: string): Promise<boolean> {
+    const Result = await db.prepare("UPDATE providers SET banned = 1, enabled = 0 WHERE id = ?").run(id);
+    return num(Result.changes) > 0;
+}
+
+export async function unbanProviderDB(id: string): Promise<boolean> {
+    const Result = await db.prepare("UPDATE providers SET banned = 0 WHERE id = ?").run(id);
+    return num(Result.changes) > 0;
+}
+
 export interface UpdateProviderTokensInput {
     id: string;
     accessToken: string;
@@ -199,6 +210,7 @@ function mapProviderRow(row: ProviderRow): ProviderConfig {
             ? JSON.parse(str(row.provider_specific_data))
             : undefined,
         enabled: Boolean(row.enabled),
+        banned: row.banned ? Boolean(row.banned) : false,
         createdAt: num(row.created_at)
     };
 }

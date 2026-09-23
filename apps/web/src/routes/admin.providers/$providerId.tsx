@@ -311,10 +311,36 @@ function ProviderDetailPage() {
                         <Plus className="size-3.5" />
                         <span>Manage Models</span>
                     </Button>
+                    {provider.ownerId && (
+                        <Button
+                            type="button"
+                            variant={provider.banned ? "outline" : "destructive"}
+                            onClick={() => {
+                                const action = provider.banned ? "unban" : "ban";
+                                if (confirm(`Are you sure you want to ${action} this provider?`)) {
+                                    if (provider.banned) {
+                                        unbanProviderMutation.mutate(undefined, {
+                                            onSuccess: () => refetch()
+                                        });
+                                    } else {
+                                        banProviderMutation.mutate(undefined, {
+                                            onSuccess: () => refetch()
+                                        });
+                                    }
+                                }
+                            }}
+                            className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+                            disabled={banProviderMutation.isPending || unbanProviderMutation.isPending}
+                        >
+                            <Ban className="size-3.5" />
+                            <span>{provider.banned ? "Unban Provider" : "Ban Provider"}</span>
+                        </Button>
+                    )}
                     <Button
                         type="button"
                         onClick={handleAddConnection}
                         className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+                        disabled={provider.banned}
                     >
                         <Plus className="size-3.5" />
                         <span>{provider.requires_oauth ? "Connect Account" : "Add Key"}</span>
@@ -325,6 +351,7 @@ function ProviderDetailPage() {
                             variant="outline"
                             onClick={() => setIsBulkOpen(true)}
                             className="h-8 text-xs font-semibold cursor-pointer shadow-xs gap-1.5"
+                            disabled={provider.banned}
                         >
                             <Layers className="size-3.5" />
                             <span>Bulk Keys</span>

@@ -143,6 +143,30 @@ export function useProvider(providerId: string) {
         }
     });
 
+    const banProviderMutation = useMutation({
+        mutationFn: () => api.post(`/v1/providers/${providerId}/ban`),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
+            void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+            toast.success("Provider banned successfully");
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to ban provider");
+        }
+    });
+
+    const unbanProviderMutation = useMutation({
+        mutationFn: () => api.post(`/v1/providers/${providerId}/unban`),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ["providers", providerId] });
+            void queryClient.invalidateQueries({ queryKey: ["providers", "catalog"] });
+            toast.success("Provider unbanned successfully");
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || "Failed to unban provider");
+        }
+    });
+
     const addModelsBulkMutation = useMutation({
         mutationFn: (modelIds: string[]) =>
             api.post<{ added: number }>(`/v1/providers/${providerId}/models/bulk`, {
@@ -266,6 +290,8 @@ export function useProvider(providerId: string) {
         addMutation,
         bulkAddMutation,
         deleteMutation,
+        banProviderMutation,
+        unbanProviderMutation,
         toggleRoundRobinMutation,
         addModelMutation,
         deleteModelMutation,

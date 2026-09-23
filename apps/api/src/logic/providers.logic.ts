@@ -32,6 +32,8 @@ import {
     getRoundRobinDB,
     setRoundRobinDB,
     upsertProviderDB,
+    banProviderDB,
+    unbanProviderDB,
     userAuthStore,
     type DisabledModelRow
 } from "@srouter/db";
@@ -449,17 +451,25 @@ export class ProvidersLogic {
 
     public static async ListMyProviders(
         OwnerId: string
-    ): Promise<Array<ProviderConfig & { models: string[]; modelsCount: number }>> {
+    ): Promise<Array<ProviderConfig & { models: Array<{ id: string; disabled: boolean; disabledBy?: string }>; modelsCount: number }>> {
         const Providers = await getProvidersByOwnerDB(OwnerId);
         return Promise.all(
             Providers.map(async (P) => {
                 const Key = (P.providerId || P.id).toLowerCase();
                 const Base = BaseIdOf(Key);
-                const Models = await getCustomModelsForProviderDB(Key, Base);
+                const [CustomModels, DisabledModels] = await Promise.all([
+                    getCustomModelsForProviderDB(Key, Base),
+                    getDisabledModelsByProviderDB(Key)
+                ]);
+                const DisabledSet = new Map(DisabledModels.map(r => [r.modelId.toLowerCase(), r]));
                 return {
                     ...P,
-                    models: Models.map((Row) => Row.modelId),
-                    modelsCount: Models.length
+                    models: CustomModels.map((Row) => ({
+                        id: Row.modelId,
+                        disabled: DisabledSet.has(Row.modelId.toLowerCase()),
+                        disabledBy: DisabledSet.get(Row.modelId.toLowerCase())?.disabledBy
+                    })),
+                    modelsCount: CustomModels.length
                 };
             })
         );
@@ -923,6 +933,34 @@ export class ProvidersLogic {
         } catch (Err) {
             const Msg = Err instanceof Error ? Err.message : "Tidak dapat terhubung ke endpoint.";
             return { success: false, message: `Gagal terhubung ke host: ${Msg}` };
+        }
+    }
+
+    public static async BanProvider(id: string): Promise<boolean> {
+        return banProviderDB(id);
+    }
+
+    public static async UnbanProvider(id: string): Promise<boolean> {
+        return unbanProviderDB(id);
+    }
+
+    public static async ToggleModelForCreator(
+        providerId: string,
+        modelId: string,
+        creatorId: string,
+        disable: boolean
+    ): Promise<DisabledModelRow> {
+        if (disable) {
+            return disableModelDB(providerId, modelId, `creator:${creatorId}`);
+        } else {
+            // Check if an admin has disabled this model — if so, creator cannot override
+            const existing = await getDisabledModelsByProviderDB(providerId);
+            const modelRow = existing.find(r => r.modelId === modelId);
+            if (modelRow && modelRow.disabledBy.startsWith("admin")) {
+                throw new Error("This model is disabled by an administrator and cannot be re-enabled by creators.");
+            }
+            await enableModelDB(providerId, modelId);
+            return { providerId, modelId, disabledBy: `creator:${creatorId}`, createdAt: 0 };
         }
     }
 }

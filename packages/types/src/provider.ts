@@ -60,6 +60,7 @@ export interface ProviderConfig {
     providerSpecificData?: Record<string, string>;
     ownerId?: string | null;
     enabled: boolean;
+    banned?: boolean;
     createdAt?: number;
 }
 

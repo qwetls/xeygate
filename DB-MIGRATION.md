@@ -3,6 +3,20 @@
 This file tracks schema changes that are not automatically handled by the
 declarative `initDatabase()` migration (see `packages/db/src/db.ts`).
 
+## 2026-09-23 — Provider Governance: Banning and Creator Model Toggles
+
+**Change:** Added provider banning and granular creator model control.
+- `providers` table: added `banned` column (`INTEGER NOT NULL DEFAULT 0`).
+  - Admin can ban a creator's provider connection, which automatically disables it.
+  - Creator cannot re-enable a banned provider.
+- `disabled_models` table: now supports `disabled_by` prefixes for governance:
+  - `admin:<adminId>`: Admin-level disable, creator cannot override.
+  - `creator:<creatorId>`: Creator-level disable for their own models.
+- New API endpoints:
+  - `POST /v1/providers/:id/ban` (Admin)
+  - `POST /v1/providers/:id/unban` (Admin)
+  - `POST /v1/providers/mine/:id/models/toggle` (Creator)
+
 ## 2026-09-23 — Bell Notifications system tables
 
 **Change:** Added persistent notification storage and per-user read tracking.

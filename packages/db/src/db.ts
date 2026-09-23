@@ -145,6 +145,7 @@ const TABLES: TableDef[] = [
             { name: "last_refreshed_at", definition: "INTEGER" },
             { name: "owner_id", definition: "TEXT" },
             { name: "enabled", definition: "INTEGER NOT NULL DEFAULT 1" },
+            { name: "banned", definition: "INTEGER NOT NULL DEFAULT 0" },
             { name: "created_at", definition: "INTEGER NOT NULL" }
         ]
     },
