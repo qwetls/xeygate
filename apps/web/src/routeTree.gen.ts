@@ -19,7 +19,6 @@ import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as RefundRouteImport } from './routes/refund'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -30,8 +29,8 @@ import { Route as AdminAnalyticsRouteImport } from './routes/admin.analytics'
 import { Route as AdminComboRouteImport } from './routes/admin.combo'
 import { Route as AdminKeysRouteImport } from './routes/admin.keys'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminPayoutsRouteImport } from './routes/admin.payouts'
-import { Route as AdminPlansRouteImport } from './routes/admin.plans'
 import { Route as AdminPlaygroundRouteImport } from './routes/admin.playground'
 import { Route as AdminPricingRouteImport } from './routes/admin.pricing'
 import { Route as AdminProvidersRouteImport } from './routes/admin.providers'
@@ -104,11 +103,6 @@ const OnboardingRoute = OnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PlansRoute = PlansRouteImport.update({
-  id: '/plans',
-  path: '/plans',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
@@ -159,14 +153,14 @@ const AdminLogsRoute = AdminLogsRouteImport.update({
   path: '/logs',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPayoutsRoute = AdminPayoutsRouteImport.update({
   id: '/payouts',
   path: '/payouts',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminPlansRoute = AdminPlansRouteImport.update({
-  id: '/plans',
-  path: '/plans',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminPlaygroundRoute = AdminPlaygroundRouteImport.update({
@@ -293,7 +287,6 @@ export interface FileRoutesByFullPath {
   '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/plans': typeof PlansRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
@@ -303,8 +296,8 @@ export interface FileRoutesByFullPath {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
-  '/admin/plans': typeof AdminPlansRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
@@ -337,7 +330,6 @@ export interface FileRoutesByTo {
   '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/plans': typeof PlansRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
@@ -346,8 +338,8 @@ export interface FileRoutesByTo {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
-  '/admin/plans': typeof AdminPlansRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/quota': typeof AdminQuotaRoute
@@ -383,7 +375,6 @@ export interface FileRoutesById {
   '/docs': typeof DocsRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/plans': typeof PlansRoute
   '/privacy': typeof PrivacyRoute
   '/refund': typeof RefundRoute
   '/register': typeof RegisterRoute
@@ -393,8 +384,8 @@ export interface FileRoutesById {
   '/admin/combo': typeof AdminComboRoute
   '/admin/keys': typeof AdminKeysRoute
   '/admin/logs': typeof AdminLogsRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/payouts': typeof AdminPayoutsRoute
-  '/admin/plans': typeof AdminPlansRoute
   '/admin/playground': typeof AdminPlaygroundRoute
   '/admin/pricing': typeof AdminPricingRoute
   '/admin/providers': typeof AdminProvidersRouteWithChildren
@@ -431,7 +422,6 @@ export interface FileRouteTypes {
     | '/docs'
     | '/login'
     | '/onboarding'
-    | '/plans'
     | '/privacy'
     | '/refund'
     | '/register'
@@ -441,8 +431,8 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/notifications'
     | '/admin/payouts'
-    | '/admin/plans'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
@@ -475,7 +465,6 @@ export interface FileRouteTypes {
     | '/docs'
     | '/login'
     | '/onboarding'
-    | '/plans'
     | '/privacy'
     | '/refund'
     | '/register'
@@ -484,8 +473,8 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/notifications'
     | '/admin/payouts'
-    | '/admin/plans'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/quota'
@@ -520,7 +509,6 @@ export interface FileRouteTypes {
     | '/docs'
     | '/login'
     | '/onboarding'
-    | '/plans'
     | '/privacy'
     | '/refund'
     | '/register'
@@ -530,8 +518,8 @@ export interface FileRouteTypes {
     | '/admin/combo'
     | '/admin/keys'
     | '/admin/logs'
+    | '/admin/notifications'
     | '/admin/payouts'
-    | '/admin/plans'
     | '/admin/playground'
     | '/admin/pricing'
     | '/admin/providers'
@@ -568,7 +556,6 @@ export interface RootRouteChildren {
   DocsRoute: typeof DocsRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
-  PlansRoute: typeof PlansRoute
   PrivacyRoute: typeof PrivacyRoute
   RefundRoute: typeof RefundRoute
   RegisterRoute: typeof RegisterRoute
@@ -647,13 +634,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/plans': {
-      id: '/plans'
-      path: '/plans'
-      fullPath: '/plans'
-      preLoaderRoute: typeof PlansRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/privacy': {
       id: '/privacy'
       path: '/privacy'
@@ -724,18 +704,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminLogsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/payouts': {
       id: '/admin/payouts'
       path: '/payouts'
       fullPath: '/admin/payouts'
       preLoaderRoute: typeof AdminPayoutsRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/plans': {
-      id: '/admin/plans'
-      path: '/plans'
-      fullPath: '/admin/plans'
-      preLoaderRoute: typeof AdminPlansRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/playground': {
@@ -955,8 +935,8 @@ interface AdminRouteChildren {
   AdminComboRoute: typeof AdminComboRoute
   AdminKeysRoute: typeof AdminKeysRoute
   AdminLogsRoute: typeof AdminLogsRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPayoutsRoute: typeof AdminPayoutsRoute
-  AdminPlansRoute: typeof AdminPlansRoute
   AdminPlaygroundRoute: typeof AdminPlaygroundRoute
   AdminPricingRoute: typeof AdminPricingRoute
   AdminProvidersRoute: typeof AdminProvidersRouteWithChildren
@@ -972,8 +952,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComboRoute: AdminComboRoute,
   AdminKeysRoute: AdminKeysRoute,
   AdminLogsRoute: AdminLogsRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPayoutsRoute: AdminPayoutsRoute,
-  AdminPlansRoute: AdminPlansRoute,
   AdminPlaygroundRoute: AdminPlaygroundRoute,
   AdminPricingRoute: AdminPricingRoute,
   AdminProvidersRoute: AdminProvidersRouteWithChildren,
@@ -1020,7 +1000,6 @@ const rootRouteChildren: RootRouteChildren = {
   DocsRoute: DocsRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
-  PlansRoute: PlansRoute,
   PrivacyRoute: PrivacyRoute,
   RefundRoute: RefundRoute,
   RegisterRoute: RegisterRoute,

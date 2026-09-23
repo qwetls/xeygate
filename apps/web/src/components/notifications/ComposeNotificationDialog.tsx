@@ -74,7 +74,7 @@ export function ComposeNotificationDialog({ open, onClose }: ComposeNotification
     };
 
     return (
-        <Dialog open={open} onClose={onClose}>
+        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
             <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
