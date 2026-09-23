@@ -147,8 +147,10 @@ function describeAliasSettle() {
     });
 
     test("settleMarketplaceUsage resolves provider by alias and strips model prefix for pricing", async () => {
-        // Override is keyed by the canonical row id + BARE model.
-        await upsertModelPricingDB({ providerId, model: "gpt-4o", input: 10, output: 30 });
+        // Override is keyed by the driver/category id (provider.providerId) + BARE model,
+        // which matches how the admin UI stores overrides via the catalog's providerId.
+        const driverId = `${providerId}_uuid`;
+        await upsertModelPricingDB({ providerId: driverId, model: "gpt-4o", input: 10, output: 30 });
         const key = await createAPIKeyDB({ name: "route-key" });
         await db.prepare("UPDATE api_keys SET user_id = ? WHERE id = ?").run(buyer.id, key.id);
         await store.updateCredits(buyer.id, 100);
@@ -173,8 +175,8 @@ function describeAliasSettle() {
 
         const earnings = await getCreatorEarningsDB(creator.id);
         assert.equal(earnings[0].grossAmount, 40);
-        assert.equal(earnings[0].providerId, providerId);
+        assert.equal(earnings[0].providerId, driverId);
 
-        await deleteModelPricingDB(providerId, "gpt-4o");
+        await deleteModelPricingDB(driverId, "gpt-4o");
     });
 }
