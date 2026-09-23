@@ -37,6 +37,8 @@ export interface ProviderDefinition {
     supports_custom_url?: boolean;
     roundRobin?: boolean;
     status: ProviderStatus;
+    ownerId?: string | null;
+    banned?: boolean;
     models: ModelObject[];
     connections?: ProviderConfig[];
 }

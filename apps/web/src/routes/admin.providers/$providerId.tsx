@@ -59,7 +59,9 @@ function ProviderDetailPage() {
         disableModelMutation,
         enableModelMutation,
         disableModelsBulkMutation,
-        enableModelsBulkMutation
+        enableModelsBulkMutation,
+        banProviderMutation,
+        unbanProviderMutation
     } = useProvider(providerId);
 
     const [modelSearch, setModelSearch] = useState("");
