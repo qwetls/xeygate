@@ -198,10 +198,21 @@ function ApiReferencePage() {
                 <EndpointRow method="POST" path="/v1/admin/users/:id/demote" desc="Demote admin to regular user." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/providers" desc="List all configured providers." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/providers/:id" desc="Provider detail with models, keys, quota." auth="Admin" />
+                <EndpointRow method="POST" path="/v1/providers/:id/ban" desc="Ban a creator-owned provider (disables routing + keys)." auth="Admin" />
+                <EndpointRow method="POST" path="/v1/providers/:id/unban" desc="Unban a previously banned provider." auth="Admin" />
                 <EndpointRow method="POST" path="/v1/admin/topups/:id/process" desc="Manually settle or decline a top-up order (fallback when the gateway needs operator correction). Body: {action, note?}." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/platform-analytics" desc="Platform-wide metrics — users, creators, models, tokens, top users." auth="Admin" />
                 <EndpointRow method="GET" path="/v1/admin/settings" desc="Read system settings." auth="Admin" />
                 <EndpointRow method="PATCH" path="/v1/admin/settings" desc="Update system settings. Body: partial settings object." auth="Admin" />
+            </Section>
+
+            {/* Creator */}
+            <Section title="Creator">
+                <EndpointRow method="GET" path="/v1/providers/mine" desc="List your own provider connections with per-model enable state." auth="Creator" />
+                <EndpointRow method="POST" path="/v1/providers/mine" desc="Add a new provider connection." auth="Creator" />
+                <EndpointRow method="PATCH" path="/v1/providers/mine/:id" desc="Update your provider connection (name, key, URL)." auth="Creator" />
+                <EndpointRow method="DELETE" path="/v1/providers/mine/:id" desc="Delete your provider connection." auth="Creator" />
+                <EndpointRow method="POST" path="/v1/providers/mine/:id/models/toggle" desc="Enable or disable one of your models. Body: {model_id, action: 'enable' | 'disable'}. Models disabled by admin cannot be re-enabled." auth="Creator" />
             </Section>
 
             {/* Error format */}
