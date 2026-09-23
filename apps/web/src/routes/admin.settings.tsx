@@ -37,6 +37,7 @@ interface ServerSettingsResponse {
     require_registration_approval?: boolean;
     creator_applications_open?: boolean;
     topup_enabled?: boolean;
+    creator_pricing_enabled?: boolean;
     settings?: Record<string, string>;
 }
 
