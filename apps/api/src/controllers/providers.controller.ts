@@ -3,7 +3,7 @@ import type { CreateProviderPayload } from "@/logic/providers.logic.js";
 import type { ProviderConfig } from "@srouter/types";
 import { ProvidersLogic } from "@/logic/providers.logic.js";
 import { deleteProviderDB, getProviderByIdDB } from "@srouter/db";
-import { AddCustomModelSchema, BulkCreateProviderSchema, BulkDisableModelsSchema, BulkModelsSchema, CreateProviderSchema, DisableModelSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
+import { AddCustomModelSchema, BulkCreateProviderSchema, BulkDisableModelsSchema, BulkModelsSchema, CreateProviderSchema, CreatorToggleModelSchema, DisableModelSchema, ToggleRoundRobinSchema, UpdateMyProviderSchema, VerifyProviderSchema } from "@srouter/types";
 import { loadSavedProvidersFromDB, registry } from "@/services/registry.js";
 import { Err, Ok } from "@/utils/response.js";
 
@@ -378,5 +378,76 @@ export class ProvidersController {
 
         const Result = await ProvidersLogic.VerifyConnection(Parsed.data);
         return Ok(c, Result);
+    }
+
+    // ── Admin provider governance (ban/unban creator-owned connections) ──
+
+    public static async BanProvider(c: Context): Promise<Response> {
+        const Id = c.req.param("id");
+        if (!Id) return Err(c, "Connection ID is required", 400);
+
+        const Existing = await getProviderByIdDB(Id);
+        if (!Existing) {
+            return Err(c, `Connection '${Id}' not found`, 404);
+        }
+
+        await ProvidersLogic.BanProvider(Id);
+        registry.unregisterProvider(Id);
+        await loadSavedProvidersFromDB();
+        return Ok(c, { message: "Provider banned", id: Id });
+    }
+
+    public static async UnbanProvider(c: Context): Promise<Response> {
+        const Id = c.req.param("id");
+        if (!Id) return Err(c, "Connection ID is required", 400);
+
+        const Existing = await getProviderByIdDB(Id);
+        if (!Existing) {
+            return Err(c, `Connection '${Id}' not found`, 404);
+        }
+
+        await ProvidersLogic.UnbanProvider(Id);
+        await loadSavedProvidersFromDB();
+        return Ok(c, { message: "Provider unbanned", id: Id });
+    }
+
+    // ── Creator model governance (enable/disable own models) ──
+
+    public static async ToggleMyModel(c: Context): Promise<Response> {
+        const userId = c.get("userId") as string;
+        const Id = c.req.param("id");
+        if (!Id) return Err(c, "Connection ID is required", 400);
+
+        const Existing = await getProviderByIdDB(Id);
+        if (!Existing || Existing.ownerId !== userId) {
+            return Err(c, `Connection '${Id}' not found`, 404);
+        }
+        if (Existing.banned) {
+            return Err(c, "This provider has been banned by an administrator.", 403);
+        }
+
+        const RawBody = await c.req.json().catch(() => null);
+        const Parsed = CreatorToggleModelSchema.safeParse(RawBody);
+        if (!Parsed.success) {
+            return Err(c, Parsed.error.issues[0]?.message || "Invalid model toggle payload", 400);
+        }
+
+        try {
+            const Row = await ProvidersLogic.ToggleModelForCreator(
+                (Existing.providerId || Existing.id).toLowerCase(),
+                Parsed.data.model_id,
+                userId,
+                Parsed.data.action === "disable"
+            );
+            return Ok(c, {
+                object: "model.toggle",
+                provider: Id,
+                model: Parsed.data.model_id,
+                disabled: Parsed.data.action === "disable",
+                disabled_by: Row.disabledBy ?? null
+            });
+        } catch (error) {
+            return Err(c, error instanceof Error ? error.message : "Failed to toggle model", 400);
+        }
     }
 }

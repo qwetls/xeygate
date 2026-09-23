@@ -141,6 +141,22 @@ export const DisableModelSchema = z.object({
 
 export type DisableModelZod = z.infer<typeof DisableModelSchema>;
 
+export const CreatorToggleModelSchema = z.object({
+    model_id: z
+        .string({ required_error: "Field 'model_id' is required" })
+        .min(1, "Field 'model_id' cannot be empty")
+        .max(200, "Model ID too long")
+        .regex(
+            /^[A-Za-z0-9._\-/: ]+$/,
+            "Model IDs may only contain letters, numbers, dots, dashes, underscores, slashes, colons, and spaces"
+        ),
+    action: z.enum(["enable", "disable"], {
+        required_error: "Field 'action' must be 'enable' or 'disable'"
+    })
+});
+
+export type CreatorToggleModelZod = z.infer<typeof CreatorToggleModelSchema>;
+
 export const BulkDisableModelsSchema = z.object({
     models: z
         .array(

@@ -42,8 +42,10 @@ test("ListMyProviders shows inherited base-id models for official connections", 
     const mine = list.find((p) => p.id === CONN_ID);
     assert.ok(mine, `connection ${CONN_ID} must appear in ListMyProviders`);
     assert.equal(mine!.modelsCount, 2, "modelsCount must include inherited base-id rows");
-    assert.ok(mine!.models.includes(M1));
-    assert.ok(mine!.models.includes(M2));
+    const ids = mine!.models.map((m) => m.id);
+    assert.ok(ids.includes(M1));
+    assert.ok(ids.includes(M2));
+    assert.ok(mine!.models.every((m) => m.disabled === false));
 });
 
 test("ListMyProviders merges own connection rows with inherited base-id rows", async (t) => {
@@ -75,8 +77,9 @@ test("ListMyProviders merges own connection rows with inherited base-id rows", a
     const mine = list.find((p) => p.id === CONN_ID_2);
     assert.ok(mine);
     assert.equal(mine!.modelsCount, 2, "own + inherited = 2 distinct models");
-    assert.ok(mine!.models.includes(BASE_MODEL), "inherited model present");
-    assert.ok(mine!.models.includes(OWN_MODEL), "own model present");
+    const ids = mine!.models.map((m) => m.id);
+    assert.ok(ids.includes(BASE_MODEL), "inherited model present");
+    assert.ok(ids.includes(OWN_MODEL), "own model present");
 });
 
 test("ListMyProviders deduplicates own vs inherited when the same model id appears in both", async (t) => {
@@ -107,5 +110,6 @@ test("ListMyProviders deduplicates own vs inherited when the same model id appea
     const mine = list.find((p) => p.id === CONN_ID_3);
     assert.ok(mine);
     assert.equal(mine!.modelsCount, 1, "shared model must not be double-counted");
-    assert.ok(mine!.models.includes(SHARED));
+    const ids = mine!.models.map((m) => m.id);
+    assert.ok(ids.includes(SHARED));
 });
