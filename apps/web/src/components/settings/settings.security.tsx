@@ -15,6 +15,8 @@ interface SecuritySettingsProps {
     onToggleCreatorApplications: (open: boolean) => void;
     topupEnabled: boolean;
     onToggleTopupEnabled: (enabled: boolean) => void;
+    creatorPricingEnabled: boolean;
+    onToggleCreatorPricingEnabled: (enabled: boolean) => void;
     isUpdating: boolean;
     apiBase?: string;
 }
@@ -28,6 +30,8 @@ export function SecuritySettings({
     onToggleCreatorApplications,
     topupEnabled,
     onToggleTopupEnabled,
+    creatorPricingEnabled,
+    onToggleCreatorPricingEnabled,
     isUpdating
 }: SecuritySettingsProps) {
     const [currentPassword, setCurrentPassword] = useState("");
@@ -202,6 +206,38 @@ export function SecuritySettings({
                             ]}
                             value={topupEnabled}
                             onChange={onToggleTopupEnabled}
+                            disabled={isUpdating}
+                        />
+                    </div>
+                }
+            />
+
+            <SettingsRow
+                title="Creator Custom Pricing"
+                description={
+                    creatorPricingEnabled
+                        ? "Creators can set custom token pricing for their models."
+                        : "Creator custom pricing is disabled — only administrators can set pricing overrides."
+                }
+                control={
+                    <div className="flex items-center gap-2.5">
+                        <span
+                            className={[
+                                "hidden sm:inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-mono font-medium border",
+                                creatorPricingEnabled
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : "bg-muted/50 text-muted-foreground border-border/60"
+                            ].join(" ")}
+                        >
+                            {creatorPricingEnabled ? "Enabled" : "Disabled"}
+                        </span>
+                        <SegmentedControl
+                            options={[
+                                { value: false, label: "OFF" },
+                                { value: true, label: "ON" }
+                            ]}
+                            value={creatorPricingEnabled}
+                            onChange={onToggleCreatorPricingEnabled}
                             disabled={isUpdating}
                         />
                     </div>

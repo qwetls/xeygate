@@ -77,6 +77,7 @@ function SettingsPage() {
         useState<boolean>(false);
     const [creatorApplicationsOpen, setCreatorApplicationsOpen] = useState<boolean>(false);
     const [topupEnabled, setTopupEnabled] = useState<boolean>(true);
+    const [creatorPricingEnabled, setCreatorPricingEnabled] = useState<boolean>(false);
 
     useEffect(() => {
         if (serverSettings) {
@@ -92,6 +93,9 @@ function SettingsPage() {
             }
             if (typeof serverSettings.topup_enabled === "boolean") {
                 setTopupEnabled(serverSettings.topup_enabled);
+            }
+            if (typeof serverSettings.creator_pricing_enabled === "boolean") {
+                setCreatorPricingEnabled(serverSettings.creator_pricing_enabled);
             }
         }
     }, [serverSettings]);
@@ -151,6 +155,11 @@ function SettingsPage() {
     const handleToggleTopupEnabled = (value: boolean) => {
         setTopupEnabled(value);
         updateServerMutation.mutate({ topup_enabled: value });
+    };
+
+    const handleToggleCreatorPricingEnabled = (value: boolean) => {
+        setCreatorPricingEnabled(value);
+        updateServerMutation.mutate({ creator_pricing_enabled: value });
     };
 
     const scrollToSection = (id: string) => {
@@ -246,6 +255,8 @@ function SettingsPage() {
                     onToggleCreatorApplications={handleToggleCreatorApplications}
                     topupEnabled={topupEnabled}
                     onToggleTopupEnabled={handleToggleTopupEnabled}
+                    creatorPricingEnabled={creatorPricingEnabled}
+                    onToggleCreatorPricingEnabled={handleToggleCreatorPricingEnabled}
                     isUpdating={updateServerMutation.isPending}
                     apiBase={apiBase}
                 />

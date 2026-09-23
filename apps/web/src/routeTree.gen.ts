@@ -48,6 +48,7 @@ import { Route as ClientDashboardKeysRouteImport } from './routes/_client.dashbo
 import { Route as ClientDashboardMyApisRouteImport } from './routes/_client.dashboard.my-apis'
 import { Route as ClientDashboardPayoutsRouteImport } from './routes/_client.dashboard.payouts'
 import { Route as ClientDashboardPlaygroundRouteImport } from './routes/_client.dashboard.playground'
+import { Route as ClientDashboardPricingRouteImport } from './routes/_client.dashboard.pricing'
 import { Route as ClientDashboardProfileRouteImport } from './routes/_client.dashboard.profile'
 import { Route as ClientDashboardSettingsRouteImport } from './routes/_client.dashboard.settings'
 import { Route as ClientDashboardUsageRouteImport } from './routes/_client.dashboard.usage'
@@ -250,6 +251,11 @@ const ClientDashboardPlaygroundRoute =
     path: '/playground',
     getParentRoute: () => ClientDashboardRoute,
   } as any)
+const ClientDashboardPricingRoute = ClientDashboardPricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => ClientDashboardRoute,
+} as any)
 const ClientDashboardProfileRoute = ClientDashboardProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -315,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
+  '/dashboard/pricing': typeof ClientDashboardPricingRoute
   '/dashboard/profile': typeof ClientDashboardProfileRoute
   '/dashboard/settings': typeof ClientDashboardSettingsRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
@@ -356,6 +363,7 @@ export interface FileRoutesByTo {
   '/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/dashboard/playground': typeof ClientDashboardPlaygroundRoute
+  '/dashboard/pricing': typeof ClientDashboardPricingRoute
   '/dashboard/profile': typeof ClientDashboardProfileRoute
   '/dashboard/settings': typeof ClientDashboardSettingsRoute
   '/dashboard/usage': typeof ClientDashboardUsageRoute
@@ -403,6 +411,7 @@ export interface FileRoutesById {
   '/_client/dashboard/my-apis': typeof ClientDashboardMyApisRoute
   '/_client/dashboard/payouts': typeof ClientDashboardPayoutsRoute
   '/_client/dashboard/playground': typeof ClientDashboardPlaygroundRoute
+  '/_client/dashboard/pricing': typeof ClientDashboardPricingRoute
   '/_client/dashboard/profile': typeof ClientDashboardProfileRoute
   '/_client/dashboard/settings': typeof ClientDashboardSettingsRoute
   '/_client/dashboard/usage': typeof ClientDashboardUsageRoute
@@ -450,6 +459,7 @@ export interface FileRouteTypes {
     | '/dashboard/my-apis'
     | '/dashboard/payouts'
     | '/dashboard/playground'
+    | '/dashboard/pricing'
     | '/dashboard/profile'
     | '/dashboard/settings'
     | '/dashboard/usage'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/dashboard/my-apis'
     | '/dashboard/payouts'
     | '/dashboard/playground'
+    | '/dashboard/pricing'
     | '/dashboard/profile'
     | '/dashboard/settings'
     | '/dashboard/usage'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
     | '/_client/dashboard/my-apis'
     | '/_client/dashboard/payouts'
     | '/_client/dashboard/playground'
+    | '/_client/dashboard/pricing'
     | '/_client/dashboard/profile'
     | '/_client/dashboard/settings'
     | '/_client/dashboard/usage'
@@ -837,6 +849,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientDashboardPlaygroundRouteImport
       parentRoute: typeof ClientDashboardRoute
     }
+    '/_client/dashboard/pricing': {
+      id: '/_client/dashboard/pricing'
+      path: '/pricing'
+      fullPath: '/dashboard/pricing'
+      preLoaderRoute: typeof ClientDashboardPricingRouteImport
+      parentRoute: typeof ClientDashboardRoute
+    }
     '/_client/dashboard/profile': {
       id: '/_client/dashboard/profile'
       path: '/profile'
@@ -882,6 +901,7 @@ interface ClientDashboardRouteChildren {
   ClientDashboardMyApisRoute: typeof ClientDashboardMyApisRoute
   ClientDashboardPayoutsRoute: typeof ClientDashboardPayoutsRoute
   ClientDashboardPlaygroundRoute: typeof ClientDashboardPlaygroundRoute
+  ClientDashboardPricingRoute: typeof ClientDashboardPricingRoute
   ClientDashboardProfileRoute: typeof ClientDashboardProfileRoute
   ClientDashboardSettingsRoute: typeof ClientDashboardSettingsRoute
   ClientDashboardUsageRoute: typeof ClientDashboardUsageRoute
@@ -895,6 +915,7 @@ const ClientDashboardRouteChildren: ClientDashboardRouteChildren = {
   ClientDashboardMyApisRoute: ClientDashboardMyApisRoute,
   ClientDashboardPayoutsRoute: ClientDashboardPayoutsRoute,
   ClientDashboardPlaygroundRoute: ClientDashboardPlaygroundRoute,
+  ClientDashboardPricingRoute: ClientDashboardPricingRoute,
   ClientDashboardProfileRoute: ClientDashboardProfileRoute,
   ClientDashboardSettingsRoute: ClientDashboardSettingsRoute,
   ClientDashboardUsageRoute: ClientDashboardUsageRoute,

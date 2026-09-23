@@ -49,6 +49,7 @@ const baseNavItems = [
 
 const creatorNavItems = [
     { to: "/dashboard/my-apis", label: "My APIs", icon: Store },
+    { to: "/dashboard/pricing", label: "Pricing", icon: Store },
     { to: "/dashboard/payouts", label: "Payouts", icon: Wallet }
 ] as const;
 

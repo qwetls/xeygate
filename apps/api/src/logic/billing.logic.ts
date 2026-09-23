@@ -45,7 +45,12 @@ export async function resolveMarketplacePrice(options: {
     };
 }): Promise<number> {
     if (!options.breakdown) return options.fallback;
-    const override = await getModelPricingDB(options.providerId, options.model);
+    // Check override under exact model name, bare model, or display model
+    let override = await getModelPricingDB(options.providerId, options.model);
+    if (!override && options.model.includes("/")) {
+        const lastPart = options.model.slice(options.model.lastIndexOf("/") + 1);
+        override = await getModelPricingDB(options.providerId, lastPart);
+    }
     if (!override) return options.fallback;
     return calculateCostFromTokens(
         {
@@ -100,7 +105,10 @@ export async function settleMarketplaceUsage(options: {
         // and the bare model. Re-resolve both before pricing/crediting.
         let provider = await getProviderByIdDB(providerId);
         if (!provider) provider = await getProviderByAliasDB(providerId);
-        const canonicalProviderId = provider?.id ?? providerId;
+        // Use the driver-level providerId (e.g. "openai", "custom") which matches
+        // how admin pricing overrides are keyed in model_pricing — NOT the internal
+        // UUID (provider.id) which is a unique row id that doesn't match any override.
+        const canonicalProviderId = provider?.providerId ?? providerId;
         const bareModel = model.includes("/") ? model.slice(model.indexOf("/") + 1) : model;
 
         // Buyer-facing price: admin override wins, else static estimate.

@@ -2,10 +2,12 @@ import type { Context } from "hono";
 import {
     getAllSettingsDB,
     getCreatorApplicationsOpenDB,
+    getCreatorPricingEnabledDB,
     getRequireApiKeyDB,
     getRequireRegistrationApprovalDB,
     getTopupEnabledDB,
     setCreatorApplicationsOpenDB,
+    setCreatorPricingEnabledDB,
     setRequireApiKeyDB,
     setRequireRegistrationApprovalDB,
     setTopupEnabledDB,
@@ -22,6 +24,7 @@ export class SettingsController {
             require_registration_approval: await getRequireRegistrationApprovalDB(),
             creator_applications_open: await getCreatorApplicationsOpenDB(),
             topup_enabled: await getTopupEnabledDB(),
+            creator_pricing_enabled: await getCreatorPricingEnabledDB(),
             settings: await getAllSettingsDB()
         });
     }
@@ -46,6 +49,9 @@ export class SettingsController {
             if (typeof Parsed.data.topup_enabled === "boolean") {
                 await setTopupEnabledDB(Parsed.data.topup_enabled);
             }
+            if (typeof Parsed.data.creator_pricing_enabled === "boolean") {
+                await setCreatorPricingEnabledDB(Parsed.data.creator_pricing_enabled);
+            }
             if (Parsed.data.settings) {
                 for (const [key, value] of Object.entries(Parsed.data.settings)) {
                     if (typeof value === "string") {
@@ -61,6 +67,7 @@ export class SettingsController {
                 require_registration_approval: await getRequireRegistrationApprovalDB(),
                 creator_applications_open: await getCreatorApplicationsOpenDB(),
                 topup_enabled: await getTopupEnabledDB(),
+                creator_pricing_enabled: await getCreatorPricingEnabledDB(),
                 settings: await getAllSettingsDB()
             });
         } catch (error) {

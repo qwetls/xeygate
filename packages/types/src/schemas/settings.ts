@@ -5,6 +5,7 @@ export const UpdateSettingsSchema = z.object({
     require_registration_approval: z.boolean().optional(),
     creator_applications_open: z.boolean().optional(),
     topup_enabled: z.boolean().optional(),
+    creator_pricing_enabled: z.boolean().optional(),
     settings: z.record(z.string()).optional()
 });
 
