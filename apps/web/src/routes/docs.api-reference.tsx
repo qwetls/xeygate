@@ -154,7 +154,7 @@ function ApiReferencePage() {
                 <EndpointRow method="GET" path="/v1/users/payouts" desc="Creator payout history." auth="Session" />
                 <EndpointRow method="POST" path="/v1/users/payouts" desc="Request a payout. Body: {amount, currency?}." auth="Session" />
                 <EndpointRow method="GET" path="/v1/user/pricing" desc="List custom pricing overrides for the creator's own providers (requires admin toggle enabled)." auth="Creator" />
-                <EndpointRow method="PUT" path="/v1/user/pricing" desc="Set or update custom token pricing for a model on a creator-owned provider. Body: {providerId, model, input, output}." auth="Creator" />
+                <EndpointRow method="PUT" path="/v1/user/pricing" desc="Set or update custom token pricing for a model by driver (e.g. 'openai'). Body: {providerId (driver key), model, input, output}." auth="Creator" />
                 <EndpointRow method="DELETE" path="/v1/user/pricing" desc="Delete a pricing override. Query: providerId, model." auth="Creator" />
             </Section>
 

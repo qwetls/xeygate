@@ -76,29 +76,69 @@ PricingRouter.delete("/admin/pricing", async (c) => {
 
 // ── Creator Pricing Routes ──────────────────────────────────────────────
 // Creator pricing is gated by the `creator_pricing_enabled` system setting.
-// Creators can only set pricing for their own provider connections.
+// Pricing is keyed by *driver* (e.g. "openai", "anthropic"), not by
+// individual connection UUID — so a creator who has 3 OpenAI keys sets the
+// price once and it applies to all of them.
 
 PricingRouter.use("/user/pricing/*", RequireCreator);
 PricingRouter.use("/user/pricing", RequireCreator);
 
-// List pricing for the creator's own providers.
+/** Group owned connections by driver key and merge model lists. */
+function groupByDriver(owned: import("@srouter/types").ProviderConfig[]): Array<{
+    id: string;
+    providerId: string;
+    name: string;
+    alias?: string;
+    models: string[];
+}> {
+    const groups = new Map<string, { id: string; providerId: string; name: string; alias?: string; models: Set<string> }>();
+    for (const p of owned) {
+        const key = (p.providerId || p.id).toLowerCase();
+        let g = groups.get(key);
+        if (!g) {
+            g = { id: key, providerId: key, name: p.name || p.providerId, alias: p.alias, models: new Set() };
+            groups.set(key, g);
+        }
+        if (p.models) {
+            for (const m of p.models) g.models.add(m);
+        }
+    }
+    return [...groups.values()].map((g) => ({
+        id: g.id,
+        providerId: g.providerId,
+        name: g.name,
+        alias: g.alias,
+        models: [...g.models],
+    }));
+}
+
+/** Check if the creator owns at least one connection for the given driver key. */
+function ownsDriver(owned: import("@srouter/types").ProviderConfig[], driverKey: string): boolean {
+    const lk = driverKey.toLowerCase();
+    return owned.some((p) => (p.providerId || p.id).toLowerCase() === lk);
+}
+
+// List pricing for the creator's own providers (grouped by driver).
 PricingRouter.get("/user/pricing", async (c) => {
     if (!(await getCreatorPricingEnabledDB())) {
         return Err(c, "Creator pricing is currently disabled by the administrator.", 403);
     }
 
     const userId = c.get("userId") as string;
-    const ownedProviders = await getProvidersByOwnerDB(userId);
-    const ownedIds = ownedProviders.map((p) => p.id);
+    const ownedConnections = await getProvidersByOwnerDB(userId);
+    const drivers = groupByDriver(ownedConnections);
+    const driverKeys = drivers.map((d) => d.providerId);
 
-    // Fetch all pricing overrides and filter for owned providers.
+    // Fetch pricing overrides that belong to any of the creator's drivers.
     const allOverrides = await listModelPricingDB();
-    const ownedOverrides = allOverrides.filter((o) => ownedIds.includes(o.providerId));
+    const ownedOverrides = allOverrides.filter((o) =>
+        driverKeys.includes(o.providerId.toLowerCase())
+    );
 
-    return Ok(c, { overrides: ownedOverrides, providers: ownedProviders });
+    return Ok(c, { overrides: ownedOverrides, providers: drivers });
 });
 
-// Get pricing for a specific model on a creator's provider.
+// Get pricing for a specific model on a creator's driver.
 PricingRouter.get("/user/pricing/detail", async (c) => {
     if (!(await getCreatorPricingEnabledDB())) {
         return Err(c, "Creator pricing is currently disabled by the administrator.", 403);
@@ -110,8 +150,8 @@ PricingRouter.get("/user/pricing/detail", async (c) => {
 
     if (!providerId || !model) return Err(c, "providerId and model are required", 400);
 
-    const ownedProviders = await getProvidersByOwnerDB(userId);
-    if (!ownedProviders.some((p) => p.id === providerId)) {
+    const ownedConnections = await getProvidersByOwnerDB(userId);
+    if (!ownsDriver(ownedConnections, providerId)) {
         return Err(c, "You do not own this provider.", 403);
     }
 
@@ -121,7 +161,7 @@ PricingRouter.get("/user/pricing/detail", async (c) => {
     return Ok(c, override);
 });
 
-// Create or update pricing for a creator's provider model.
+// Create or update pricing for a creator's driver model.
 PricingRouter.put("/user/pricing", async (c) => {
     if (!(await getCreatorPricingEnabledDB())) {
         return Err(c, "Creator pricing is currently disabled by the administrator.", 403);
@@ -143,8 +183,8 @@ PricingRouter.put("/user/pricing", async (c) => {
         return Err(c, "input and output rates (per million tokens) are required", 400);
     }
 
-    const ownedProviders = await getProvidersByOwnerDB(userId);
-    if (!ownedProviders.some((p) => p.id === body.providerId)) {
+    const ownedConnections = await getProvidersByOwnerDB(userId);
+    if (!ownsDriver(ownedConnections, body.providerId)) {
         return Err(c, "You do not own this provider.", 403);
     }
 
@@ -160,7 +200,7 @@ PricingRouter.put("/user/pricing", async (c) => {
     return Ok(c, override);
 });
 
-// Delete pricing for a creator's provider model.
+// Delete pricing for a creator's driver model.
 PricingRouter.delete("/user/pricing", async (c) => {
     if (!(await getCreatorPricingEnabledDB())) {
         return Err(c, "Creator pricing is currently disabled by the administrator.", 403);
@@ -172,8 +212,8 @@ PricingRouter.delete("/user/pricing", async (c) => {
 
     if (!providerId || !model) return Err(c, "providerId and model are required", 400);
 
-    const ownedProviders = await getProvidersByOwnerDB(userId);
-    if (!ownedProviders.some((p) => p.id === providerId)) {
+    const ownedConnections = await getProvidersByOwnerDB(userId);
+    if (!ownsDriver(ownedConnections, providerId)) {
         return Err(c, "You do not own this provider.", 403);
     }
 

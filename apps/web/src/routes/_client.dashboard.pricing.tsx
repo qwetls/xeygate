@@ -92,7 +92,7 @@ function CreatorPricingPage() {
                                 <p className="text-xs text-muted-foreground">No models exposed.</p>
                             ) : (
                                 p.models.map((model) => {
-                                    const key = `${p.id}:${model}`;
+                                    const key = `${p.providerId}:${model}`;
                                     const isEditing = editingKey === key;
                                     const existing = overridesMap.get(key);
 
@@ -104,7 +104,7 @@ function CreatorPricingPage() {
                                                 <div className="flex items-end gap-2">
                                                     <Input placeholder="Input" className="w-20" value={form.input} onChange={(e) => setForm({...form, input: e.target.value})} />
                                                     <Input placeholder="Output" className="w-20" value={form.output} onChange={(e) => setForm({...form, output: e.target.value})} />
-                                                    <Button size="icon" className="shrink-0" onClick={() => upsert.mutate({ providerId: p.id, model, body: { input: Number(form.input), output: Number(form.output) } })}>
+                                                    <Button size="icon" className="shrink-0" onClick={() => upsert.mutate({ providerId: p.providerId, model, body: { input: Number(form.input), output: Number(form.output) } })}>
                                                         <Save className="size-4" />
                                                     </Button>
                                                     <Button size="icon" variant="ghost" className="shrink-0" onClick={() => setEditingKey(null)}>
