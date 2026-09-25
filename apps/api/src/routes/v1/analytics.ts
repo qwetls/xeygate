@@ -12,6 +12,7 @@ import { AnalyticsController } from "@/controllers/analytics.controller.js";
 export const AnalyticsRouter = new Hono();
 
 AnalyticsRouter.get("/analytics/overview", AnalyticsController.GetOverview);
+AnalyticsRouter.get("/analytics/health", AnalyticsController.GetHealth);
 AnalyticsRouter.get("/analytics/models", AnalyticsController.GetLeaderboard);
 AnalyticsRouter.get("/analytics/models/:model{.+}", AnalyticsController.GetModelStats);
 AnalyticsRouter.get("/analytics/endpoints", AnalyticsController.GetEndpointStats);

@@ -3,6 +3,7 @@ import {
     getBucketCount,
     getBucketSizeMs,
     getMarketplaceGlobalP95DB,
+    getMarketplaceHealthSeriesDB,
     getMarketplaceLatencyPercentilesDB,
     getMarketplaceModelProviderStatsDB,
     getMarketplaceTimeSeriesDB
@@ -11,6 +12,9 @@ import type {
     MarketplaceAnalyticsOverview,
     MarketplaceAnalyticsWindow,
     MarketplaceEndpointStat,
+    MarketplaceHealthBucket,
+    MarketplaceHealthEntry,
+    MarketplaceHealthResponse,
     MarketplaceLeaderboard,
     MarketplaceModelStat,
     MarketplaceModelStats,
@@ -421,7 +425,68 @@ async function BuildSeries(
     return points;
 }
 
-// ── Public surface ──────────────────────────────────────────────────────
+/**
+ * GET /v1/analytics/health — per-model 7-day uptime series for the
+ * marketplace uptime stripes. One row per catalog model with 28 × 6-hour
+ * buckets of request/error counts plus a window-wide success rate. Zero
+ * buckets are zero-filled so the client treats them as "no data" (gray).
+ *
+ * Alias and bare spellings merge onto the same bare key, exactly like the
+ * other public aggregates, so health matches the usage pages.
+ */
+export async function GetHealth(): Promise<MarketplaceHealthResponse> {
+    const Spec = WindowSpecFor("7d");
+    const rows = await getMarketplaceHealthSeriesDB(Spec.windowMs, Spec.bucketSizeMs);
+
+    const byBare = new Map<string, { display: string; buckets: Map<number, MarketplaceHealthBucket> }>();
+    for (const row of rows) {
+        const bare = BareKey(row.model);
+        if (!bare) continue;
+        let entry = byBare.get(bare.toLowerCase());
+        if (!entry) {
+            entry = { display: bare, buckets: new Map() };
+            byBare.set(bare.toLowerCase(), entry);
+        }
+        const bucket = entry.buckets.get(row.bucket) ?? { ts: row.bucket, requests: 0, errors: 0 };
+        bucket.requests += row.totalRequests;
+        bucket.errors += row.errorRequests;
+        entry.buckets.set(row.bucket, bucket);
+    }
+
+    const now = Date.now();
+    const end = Math.floor(now / Spec.bucketSizeMs) * Spec.bucketSizeMs;
+    const start = end - (Spec.bucketCount - 1) * Spec.bucketSizeMs;
+
+    const models: MarketplaceHealthEntry[] = [];
+    for (const entry of byBare.values()) {
+        let requests = 0;
+        let errors = 0;
+        const series: MarketplaceHealthBucket[] = [];
+        for (let i = 0; i < Spec.bucketCount; i++) {
+            const ts = start + i * Spec.bucketSizeMs;
+            const bucket = entry.buckets.get(ts) ?? { ts, requests: 0, errors: 0 };
+            requests += bucket.requests;
+            errors += bucket.errors;
+            series.push({ ts, requests: bucket.requests, errors: bucket.errors });
+        }
+        models.push({
+            model: entry.display,
+            successRate: requests > 0 ? Round((requests - errors) / requests, 3) : 0,
+            requests,
+            errors,
+            series
+        });
+    }
+    models.sort((a, b) => b.requests - a.requests || a.model.localeCompare(b.model));
+
+    return {
+        object: "marketplace.health",
+        generatedAt: now,
+        window: "7d",
+        totalModels: models.length,
+        models
+    };
+}
 
 /**
  * GET /v1/analytics/models — token-volume leaderboard across the marketplace.

@@ -3,6 +3,7 @@ import type {
     AnalyticsWindow,
     MarketplaceAnalyticsOverview,
     MarketplaceAnalyticsWindow,
+    MarketplaceHealthResponse,
     MarketplaceLeaderboard,
     MarketplaceModelStats,
     MarketplaceProviderStats
@@ -179,6 +180,11 @@ export const Api = {
         api.get<MarketplaceModelStats>(
             `/v1/analytics/models/${encodeURIComponent(model)}?window=${window}`
         ),
+
+    // Per-model 7-day uptime stripes (no auth). One fetch powers the hover
+    // bars on every marketplace page — no per-model endpoint round-trips.
+    getMarketplaceHealth: (): Promise<MarketplaceHealthResponse> =>
+        api.get<MarketplaceHealthResponse>("/v1/analytics/health"),
 
     // Public model-centric catalog (no auth). Flat list aggregates every
     // enabled offering per bare model id; the detail call lists all providers

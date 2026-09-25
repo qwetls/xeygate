@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
-import { ArrowLeft, BadgeCheck, Clock, Gauge, Layers, Percent, Search, Zap } from "lucide-react";
+import { ArrowLeft, Activity, BadgeCheck, Clock, Gauge, Layers, Percent, Search, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCatalogModel, useCatalogModels, useMarketplaceModelStats, useSessionUser } from "@/hooks/usePublicCatalog";
+import { useCatalogModel, useCatalogModels, useMarketplaceHealth, useMarketplaceModelStats, useSessionUser } from "@/hooks/usePublicCatalog";
+import { UptimeStrip } from "@/components/marketplace/marketplace.uptime-strip";
 import type { MarketplaceAnalyticsWindow } from "@srouter/types";
 import type { CatalogFlatOffer } from "@/lib/api";
 
@@ -66,6 +67,7 @@ export function CatalogModelDetailPage() {
     const model = (flat.data?.models ?? []).find((m) => m.id === modelId);
     const offerings = useCatalogModel(modelId);
     const stats = useMarketplaceModelStats(modelId, window);
+    const health = useMarketplaceHealth();
 
     const meta = model?.metadata ?? null;
     const bestKey = model?.bestOffer ? offerKey(model.bestOffer) : null;
@@ -110,6 +112,16 @@ export function CatalogModelDetailPage() {
                     </div>
                 ) : null}
             </div>
+
+            {/* Uptime strip */}
+            <section className="space-y-2">
+                <h2 className="flex items-center gap-2 text-sm font-semibold">
+                    <Activity className="size-4 text-muted-foreground" /> Uptime · 7d
+                </h2>
+                <div className="rounded-xl border border-border/60 bg-card px-4 py-3">
+                    <UptimeStrip health={health.find(modelId)} />
+                </div>
+            </section>
 
             {/* Pricing across supply endpoints */}
             <section className="space-y-3">

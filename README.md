@@ -432,6 +432,7 @@ All gateway endpoints are served under `/v1`:
 | `GET` | `/v1/analytics/models` | Public model leaderboard by token volume (`&limit=1..100`) |
 | `GET` | `/v1/analytics/models/:model` | Public per-model page: endpoints serving it + series (404 when no traffic) |
 | `GET` | `/v1/analytics/endpoints` | Public supply-side stats per connection (creator storefronts + official) |
+| `GET` | `/v1/analytics/health` | Per-model 7-day uptime series (28 × 6h request/error buckets) for marketplace health strips |
 | `GET` | `/v1/catalog` | Public storefront cards: every enabled provider with its listed models + merged pricing |
 | `GET` | `/v1/catalog/models` | Public flat model list: one entry per stored listing id (advertised id = requestable id) — all offers, cheapest highlighted, models.dev metadata |
 | `GET` | `/v1/catalog/models?model=` | Public per-model offerings: every provider listing that model with merged pricing |

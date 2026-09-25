@@ -122,6 +122,7 @@ function ApiReferencePage() {
                 <EndpointRow method="GET" path="/v1/analytics/models" desc="Token-volume model leaderboard. ?window=&limit= parameters." auth="Public" />
                 <EndpointRow method="GET" path="/v1/analytics/models/:model" desc="Per-model traffic stats — latency, tokens, success rate, endpoints." auth="Public" />
                 <EndpointRow method="GET" path="/v1/analytics/endpoints" desc="Supply endpoint performance breakdown." auth="Public" />
+                <EndpointRow method="GET" path="/v1/analytics/health" desc="Per-model 7-day uptime series (28 × 6h request/error buckets) for marketplace health strips." auth="Public" />
             </Section>
 
             {/* User Auth */}

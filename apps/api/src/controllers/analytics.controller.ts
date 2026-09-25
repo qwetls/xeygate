@@ -6,6 +6,7 @@ import {
 } from "@srouter/types";
 import {
     GetEndpointStats,
+    GetHealth,
     GetLeaderboard,
     GetModelStats,
     GetOverview
@@ -55,6 +56,11 @@ export class AnalyticsController {
             return Err(c, "window must be one of 24h, 7d, 30d and limit a number 1-100", 400);
         }
         return Ok(c, await GetLeaderboard(Parsed.data.window, Parsed.data.limit));
+    }
+
+    /** GET /v1/analytics/health — public 7-day per-model uptime stripes. */
+    public static async GetHealth(c: Context): Promise<Response> {
+        return Ok(c, await GetHealth());
     }
 
     /** GET /v1/analytics/models/:model — public stats page for one model. */

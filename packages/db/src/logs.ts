@@ -691,3 +691,48 @@ export async function getMarketplaceGlobalP95DB(windowMs: number): Promise<numbe
         | undefined;
     return Row ? num(Row.latency_ms) : 0;
 }
+
+export interface MarketplaceHealthRow {
+    bucket: number;
+    model: string;
+    totalRequests: number;
+    errorRequests: number;
+}
+
+/**
+ * Per-model, per-bucket request/error counts for the public uptime strip.
+ *
+ * Rows are grouped by (bucket, model) where `bucket` is the start of each
+ * `bucketSizeMs` slot. Callers map `model` through the same bare-key logic the
+ * rest of public analytics uses so alias and bare spellings merge.
+ */
+export async function getMarketplaceHealthSeriesDB(
+    windowMs: number,
+    bucketSizeMs: number
+): Promise<MarketplaceHealthRow[]> {
+    const Since = Date.now() - windowMs;
+    const Rows = (await db
+        .prepare(
+            `SELECT
+                CAST(created_at / ? AS BIGINT) * ?              AS "bucket",
+                model                                           AS "model",
+                COUNT(*)                                        AS "totalRequests",
+                ${MARKETPLACE_ERRORS}                           AS "errorRequests"
+            FROM request_logs
+            WHERE created_at >= ?
+            GROUP BY "bucket", model
+            ORDER BY "bucket" ASC`
+        )
+        .all(bucketSizeMs, bucketSizeMs, Since)) as unknown as Array<{
+        bucket: unknown;
+        model: unknown;
+        totalRequests: unknown;
+        errorRequests: unknown;
+    }>;
+    return Rows.map((Row) => ({
+        bucket: num(Row.bucket),
+        model: str(Row.model),
+        totalRequests: num(Row.totalRequests),
+        errorRequests: num(Row.errorRequests)
+    }));
+}

@@ -240,6 +240,31 @@ export interface MarketplaceAnalyticsOverview {
     topModels: MarketplaceModelStat[];
 }
 
+/** Per-bucket health sample: requests and errors in one 6-hour slot. */
+export interface MarketplaceHealthBucket {
+    ts: number; // epoch ms, bucket start
+    requests: number;
+    errors: number;
+}
+
+/** Per-model health summary for the 7-day uptime strip. */
+export interface MarketplaceHealthEntry {
+    model: string;
+    successRate: number; // 0..1 over the full 7d window
+    requests: number;
+    errors: number;
+    series: MarketplaceHealthBucket[];
+}
+
+/** Full health response — every catalog model's 7-day uptime strip. */
+export interface MarketplaceHealthResponse {
+    object: "marketplace.health";
+    generatedAt: number;
+    window: "7d";
+    totalModels: number;
+    models: MarketplaceHealthEntry[];
+}
+
 export const MarketplaceAnalyticsQuerySchema = z.object({
     window: z.enum(["24h", "7d", "30d"]).default("24h")
 });

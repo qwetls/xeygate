@@ -3,7 +3,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, BadgeCheck, Boxes, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCatalogModels, useSessionUser } from "@/hooks/usePublicCatalog";
+import { useCatalogModels, useMarketplaceHealth, useSessionUser } from "@/hooks/usePublicCatalog";
+import { UptimeStrip } from "@/components/marketplace/marketplace.uptime-strip";
 import type { CatalogFlatModel } from "@/lib/api";
 
 export const Route = createFileRoute("/catalog/")({ component: CatalogModelsPage });
@@ -24,6 +25,7 @@ function matches(m: CatalogFlatModel, term: string): boolean {
 
 export function CatalogModelsPage() {
     const catalog = useCatalogModels();
+    const health = useMarketplaceHealth();
     const { user } = useSessionUser();
     const [q, setQ] = useState("");
 
@@ -83,6 +85,7 @@ export function CatalogModelsPage() {
                                     </span>
                                 ) : null}
                             </div>
+                            <UptimeStrip health={health.find(m.id)} compact />
                             <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                                 <span className="inline-flex items-center gap-1">
                                     <span className="font-semibold">{formatPrice(m.bestOffer?.input)} in</span>

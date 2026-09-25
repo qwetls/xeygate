@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api, Api, ApiError } from "@/lib/api";
 import type { ShellUserInfo } from "@/components/layout";
-import type { MarketplaceAnalyticsWindow } from "@srouter/types";
+import type { MarketplaceAnalyticsWindow, MarketplaceHealthEntry } from "@srouter/types";
 
 // Public (unauthenticated) model-centric storefront data. Keyed separately
 // from the admin catalog hook so the two surfaces never share cache entries.
@@ -42,6 +43,38 @@ export function useMarketplaceModelStats(model: string | undefined, window: Mark
         placeholderData: (prev) => prev,
         refetchInterval: 60_000
     });
+}
+
+/**
+ * Per-model 7-day uptime stripes, keyed by bare model id. One fetch feeds the
+ * strip on every marketplace card and detail page, so lookups are a Map
+ * join — never a per-model request.
+ */
+export function useMarketplaceHealth() {
+    const query = useQuery({
+        queryKey: ["marketplace-health"],
+        queryFn: () => Api.getMarketplaceHealth(),
+        staleTime: 60_000,
+        refetchInterval: 5 * 60_000
+    });
+
+    const byId = useMemo(() => {
+        const map = new Map<string, MarketplaceHealthEntry>();
+        for (const entry of query.data?.models ?? []) {
+            map.set(entry.model.toLowerCase(), entry);
+            // A prefixed listing id ("cx/gpt-6-astra") is also reachable under
+            // its bare tail, the same tolerant matching the detail route uses.
+            const slash = entry.model.lastIndexOf("/");
+            if (slash >= 0) map.set(entry.model.slice(slash + 1).toLowerCase(), entry);
+        }
+        return map;
+    }, [query.data]);
+
+    return {
+        ...query,
+        find: (modelId: string | undefined): MarketplaceHealthEntry | undefined =>
+            modelId ? byId.get(modelId.toLowerCase()) : undefined
+    };
 }
 
 /**
